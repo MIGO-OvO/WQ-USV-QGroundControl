@@ -2,6 +2,8 @@
  *
  * USV AutoPilot Plugin Implementation - 无人船自动驾驶插件实现
  *
+ * 同时支持 ArduPilot 和 PX4 固件
+ *
  ****************************************************************************/
 
 #include "USVAutoPilotPlugin.h"
@@ -12,17 +14,51 @@
 
 Q_DECLARE_LOGGING_CATEGORY(USVFirmwarePluginLog)
 
-USVAutoPilotPlugin::USVAutoPilotPlugin(Vehicle *vehicle, QObject *parent)
+/// @brief 通用组件过滤逻辑
+/// @param name 组件名称
+/// @return true 如果应该排除该组件
+static bool shouldExcludeComponent(const QString &name)
+{
+    // 空速计设置 - 无人船不需要
+    if (name.contains(QStringLiteral("Airspeed"), Qt::CaseInsensitive)) {
+        return true;
+    }
+
+    // 副翼/升降舵设置 - 固定翼专用
+    if (name.contains(QStringLiteral("Aileron"), Qt::CaseInsensitive) ||
+        name.contains(QStringLiteral("Elevator"), Qt::CaseInsensitive)) {
+        return true;
+    }
+
+    // 多旋翼螺旋桨设置
+    if (name.contains(QStringLiteral("Propeller"), Qt::CaseInsensitive) &&
+        name.contains(QStringLiteral("Multi"), Qt::CaseInsensitive)) {
+        return true;
+    }
+
+    // VTOL 相关设置
+    if (name.contains(QStringLiteral("VTOL"), Qt::CaseInsensitive)) {
+        return true;
+    }
+
+    return false;
+}
+
+/*===========================================================================*/
+// USVAPMAutoPilotPlugin - ArduPilot 实现
+/*===========================================================================*/
+
+USVAPMAutoPilotPlugin::USVAPMAutoPilotPlugin(Vehicle *vehicle, QObject *parent)
     : APMAutoPilotPlugin(vehicle, parent)
 {
-    qCDebug(USVFirmwarePluginLog) << "USVAutoPilotPlugin created for vehicle" << vehicle->id();
+    qCDebug(USVFirmwarePluginLog) << "USVAPMAutoPilotPlugin created for vehicle" << vehicle->id();
 }
 
-USVAutoPilotPlugin::~USVAutoPilotPlugin()
+USVAPMAutoPilotPlugin::~USVAPMAutoPilotPlugin()
 {
 }
 
-const QVariantList &USVAutoPilotPlugin::vehicleComponents()
+const QVariantList &USVAPMAutoPilotPlugin::vehicleComponents()
 {
     if (!_componentsFiltered) {
         _filterVehicleComponents();
@@ -31,9 +67,8 @@ const QVariantList &USVAutoPilotPlugin::vehicleComponents()
     return _filteredComponents;
 }
 
-void USVAutoPilotPlugin::_filterVehicleComponents()
+void USVAPMAutoPilotPlugin::_filterVehicleComponents()
 {
-    // 获取父类的组件列表
     const QVariantList &baseComponents = APMAutoPilotPlugin::vehicleComponents();
 
     _filteredComponents.clear();
@@ -46,50 +81,65 @@ void USVAutoPilotPlugin::_filterVehicleComponents()
 
         const QString &name = component->name();
 
-        // 过滤掉不适用于无人船的组件
-        // 注意：组件名称可能因固件版本而异，需要根据实际情况调整
-
-        // 保留的组件:
-        // - "Summary" - 摘要
-        // - "Sensors" - 传感器
-        // - "Radio" - 遥控器
-        // - "Flight Modes" - 飞行模式
-        // - "Power" - 电源
-        // - "Safety" - 安全
-        // - "Motors" - 电机
-        // - "Tuning" - 调参
-        // - "Camera" - 相机 (如果有)
-
-        // 排除的组件:
-        bool exclude = false;
-
-        // 空速计设置 - 无人船不需要
-        if (name.contains(QStringLiteral("Airspeed"), Qt::CaseInsensitive)) {
-            exclude = true;
-            qCDebug(USVFirmwarePluginLog) << "Excluding component:" << name;
+        if (shouldExcludeComponent(name)) {
+            qCDebug(USVFirmwarePluginLog) << "APM: Excluding component:" << name;
+            continue;
         }
 
-        // 副翼/升降舵/方向舵设置 - 固定翼专用
-        if (name.contains(QStringLiteral("Aileron"), Qt::CaseInsensitive) ||
-            name.contains(QStringLiteral("Elevator"), Qt::CaseInsensitive) ||
-            name.contains(QStringLiteral("Rudder"), Qt::CaseInsensitive)) {
-            exclude = true;
-            qCDebug(USVFirmwarePluginLog) << "Excluding component:" << name;
-        }
-
-        // 螺旋桨设置 - 多旋翼专用
-        if (name.contains(QStringLiteral("Propeller"), Qt::CaseInsensitive) &&
-            name.contains(QStringLiteral("Multi"), Qt::CaseInsensitive)) {
-            exclude = true;
-            qCDebug(USVFirmwarePluginLog) << "Excluding component:" << name;
-        }
-
-        if (!exclude) {
-            _filteredComponents.append(componentVar);
-        }
+        _filteredComponents.append(componentVar);
     }
 
-    qCDebug(USVFirmwarePluginLog) << "Filtered vehicle components:"
+    qCDebug(USVFirmwarePluginLog) << "APM: Filtered vehicle components:"
+                                   << baseComponents.count() << "->"
+                                   << _filteredComponents.count();
+}
+
+/*===========================================================================*/
+// USVPX4AutoPilotPlugin - PX4 实现
+/*===========================================================================*/
+
+USVPX4AutoPilotPlugin::USVPX4AutoPilotPlugin(Vehicle *vehicle, QObject *parent)
+    : PX4AutoPilotPlugin(vehicle, parent)
+{
+    qCDebug(USVFirmwarePluginLog) << "USVPX4AutoPilotPlugin created for vehicle" << vehicle->id();
+}
+
+USVPX4AutoPilotPlugin::~USVPX4AutoPilotPlugin()
+{
+}
+
+const QVariantList &USVPX4AutoPilotPlugin::vehicleComponents()
+{
+    if (!_componentsFiltered) {
+        _filterVehicleComponents();
+        _componentsFiltered = true;
+    }
+    return _filteredComponents;
+}
+
+void USVPX4AutoPilotPlugin::_filterVehicleComponents()
+{
+    const QVariantList &baseComponents = PX4AutoPilotPlugin::vehicleComponents();
+
+    _filteredComponents.clear();
+
+    for (const QVariant &componentVar : baseComponents) {
+        VehicleComponent *component = componentVar.value<VehicleComponent*>();
+        if (!component) {
+            continue;
+        }
+
+        const QString &name = component->name();
+
+        if (shouldExcludeComponent(name)) {
+            qCDebug(USVFirmwarePluginLog) << "PX4: Excluding component:" << name;
+            continue;
+        }
+
+        _filteredComponents.append(componentVar);
+    }
+
+    qCDebug(USVFirmwarePluginLog) << "PX4: Filtered vehicle components:"
                                    << baseComponents.count() << "->"
                                    << _filteredComponents.count();
 }

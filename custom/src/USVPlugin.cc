@@ -120,12 +120,17 @@ void USVPlugin::adjustSettingMetaData(const QString &settingsGroup,
             return;
         }
 
-        // ========== 锁定固件类型为 ArduPilot (ArduRover) ==========
+        // ========== 固件类型：允许选择 ArduPilot 或 PX4 ==========
         if (name == QStringLiteral("offlineEditingFirmwareClass")) {
-            // 使用 ArduPilot，因为 ArduRover 对无人船支持更好
+            // 默认使用 ArduPilot，但允许用户选择 PX4
             metaData.setRawDefaultValue(QGCMAVLink::FirmwareClassArduPilot);
-            visible = false;
-            qCDebug(USVPluginLog) << "Locked firmware class to ArduPilot";
+            // 修改枚举选项，仅保留 ArduPilot 和 PX4
+            metaData.setEnumInfo(
+                QStringList() << QStringLiteral("ArduPilot") << QStringLiteral("PX4"),
+                QVariantList() << QGCMAVLink::FirmwareClassArduPilot << QGCMAVLink::FirmwareClassPX4
+            );
+            visible = true;  // 允许用户选择
+            qCDebug(USVPluginLog) << "Firmware class: ArduPilot/PX4 selectable";
             return;
         }
 

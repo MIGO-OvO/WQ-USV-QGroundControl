@@ -2,6 +2,8 @@
  *
  * USV Firmware Plugin Implementation - 无人船固件插件实现
  *
+ * 同时支持 ArduPilot 和 PX4 固件
+ *
  ****************************************************************************/
 
 #include "USVFirmwarePlugin.h"
@@ -11,25 +13,13 @@
 
 QGC_LOGGING_CATEGORY(USVFirmwarePluginLog, "USV.FirmwarePlugin")
 
-USVFirmwarePlugin::USVFirmwarePlugin(QObject *parent)
-    : ArduRoverFirmwarePlugin(parent)
-{
-    qCDebug(USVFirmwarePluginLog) << "USVFirmwarePlugin created";
-}
+/*===========================================================================*/
+// USVMissionCommands - 通用任务命令
+/*===========================================================================*/
 
-USVFirmwarePlugin::~USVFirmwarePlugin()
+QList<MAV_CMD> USVMissionCommands::supportedCommands()
 {
-}
-
-QList<MAV_CMD> USVFirmwarePlugin::supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass) const
-{
-    Q_UNUSED(vehicleClass);
-    return _usvSupportedCommands();
-}
-
-QList<MAV_CMD> USVFirmwarePlugin::_usvSupportedCommands() const
-{
-    // 无人船适用的任务命令列表
+    // 无人船适用的任务命令列表 (ArduPilot 和 PX4 通用)
     QList<MAV_CMD> commands;
 
     // ========== 导航命令 ==========
@@ -71,15 +61,36 @@ QList<MAV_CMD> USVFirmwarePlugin::_usvSupportedCommands() const
     // MAV_CMD_DO_CHANGE_ALTITUDE       - 改变高度
     // MAV_CMD_CONDITION_ALTITUDE       - 高度条件
 
-    qCDebug(USVFirmwarePluginLog) << "Supported mission commands count:" << commands.count();
+    qCDebug(USVFirmwarePluginLog) << "USV supported mission commands count:" << commands.count();
     return commands;
 }
 
-QStringList USVFirmwarePlugin::flightModes(Vehicle *vehicle) const
+/*===========================================================================*/
+// USVArduPilotFirmwarePlugin - ArduPilot 实现
+/*===========================================================================*/
+
+USVArduPilotFirmwarePlugin::USVArduPilotFirmwarePlugin(QObject *parent)
+    : ArduRoverFirmwarePlugin(parent)
+{
+    qCDebug(USVFirmwarePluginLog) << "USVArduPilotFirmwarePlugin created";
+}
+
+USVArduPilotFirmwarePlugin::~USVArduPilotFirmwarePlugin()
+{
+}
+
+QList<MAV_CMD> USVArduPilotFirmwarePlugin::supportedMissionCommands(
+    QGCMAVLink::VehicleClass_t vehicleClass) const
+{
+    Q_UNUSED(vehicleClass);
+    return USVMissionCommands::supportedCommands();
+}
+
+QStringList USVArduPilotFirmwarePlugin::flightModes(Vehicle *vehicle) const
 {
     Q_UNUSED(vehicle);
 
-    // 无人船适用的飞行模式
+    // ArduRover/ArduBoat 适用的飞行模式
     QStringList modes;
 
     modes << QStringLiteral("Manual");      // 手动模式
@@ -93,37 +104,93 @@ QStringList USVFirmwarePlugin::flightModes(Vehicle *vehicle) const
     modes << QStringLiteral("Guided");      // 引导模式
     modes << QStringLiteral("Simple");      // 简单模式
 
-    // 排除不适用的模式:
-    // - "Flip" - 翻转 (飞行器专用)
-    // - "Circle" - 盘旋 (飞行器专用)
-    // - "Drift" - 漂移 (飞行器专用)
-    // - "Sport" - 运动模式 (飞行器专用)
-    // - "AutoTune" - 自动调参 (需要飞行)
-
     return modes;
 }
 
-QString USVFirmwarePlugin::vehicleImageOpaque(const Vehicle *vehicle) const
-{
-    Q_UNUSED(vehicle);
-    // 可以替换为无人船图标
-    // 如果没有自定义图标，使用默认 Rover 图标
-    return QStringLiteral("/qmlimages/Boat.svg");
-}
-
-QString USVFirmwarePlugin::vehicleImageOutline(const Vehicle *vehicle) const
+QString USVArduPilotFirmwarePlugin::vehicleImageOpaque(const Vehicle *vehicle) const
 {
     Q_UNUSED(vehicle);
     return QStringLiteral("/qmlimages/Boat.svg");
 }
 
-QString USVFirmwarePlugin::brandImageIndoor(const Vehicle *vehicle) const
+QString USVArduPilotFirmwarePlugin::vehicleImageOutline(const Vehicle *vehicle) const
+{
+    Q_UNUSED(vehicle);
+    return QStringLiteral("/qmlimages/Boat.svg");
+}
+
+QString USVArduPilotFirmwarePlugin::brandImageIndoor(const Vehicle *vehicle) const
 {
     Q_UNUSED(vehicle);
     return QStringLiteral("/custom/img/usv-logo-white.svg");
 }
 
-QString USVFirmwarePlugin::brandImageOutdoor(const Vehicle *vehicle) const
+QString USVArduPilotFirmwarePlugin::brandImageOutdoor(const Vehicle *vehicle) const
+{
+    Q_UNUSED(vehicle);
+    return QStringLiteral("/custom/img/usv-logo-black.svg");
+}
+
+/*===========================================================================*/
+// USVPX4FirmwarePlugin - PX4 实现
+/*===========================================================================*/
+
+USVPX4FirmwarePlugin::USVPX4FirmwarePlugin(QObject *parent)
+    : PX4FirmwarePlugin()
+{
+    Q_UNUSED(parent);
+    qCDebug(USVFirmwarePluginLog) << "USVPX4FirmwarePlugin created";
+}
+
+USVPX4FirmwarePlugin::~USVPX4FirmwarePlugin()
+{
+}
+
+QList<MAV_CMD> USVPX4FirmwarePlugin::supportedMissionCommands(
+    QGCMAVLink::VehicleClass_t vehicleClass) const
+{
+    Q_UNUSED(vehicleClass);
+    return USVMissionCommands::supportedCommands();
+}
+
+QStringList USVPX4FirmwarePlugin::flightModes(Vehicle *vehicle) const
+{
+    Q_UNUSED(vehicle);
+
+    // PX4 Rover 适用的飞行模式
+    QStringList modes;
+
+    modes << QStringLiteral("Manual");      // 手动模式
+    modes << QStringLiteral("Acro");        // 特技模式
+    modes << QStringLiteral("Stabilized");  // 稳定模式
+    modes << QStringLiteral("Position");    // 位置模式
+    modes << QStringLiteral("Hold");        // 保持模式
+    modes << QStringLiteral("Mission");     // 任务模式
+    modes << QStringLiteral("Return");      // 返航模式
+    modes << QStringLiteral("Offboard");    // 外部控制模式
+
+    return modes;
+}
+
+QString USVPX4FirmwarePlugin::vehicleImageOpaque(const Vehicle *vehicle) const
+{
+    Q_UNUSED(vehicle);
+    return QStringLiteral("/qmlimages/Boat.svg");
+}
+
+QString USVPX4FirmwarePlugin::vehicleImageOutline(const Vehicle *vehicle) const
+{
+    Q_UNUSED(vehicle);
+    return QStringLiteral("/qmlimages/Boat.svg");
+}
+
+QString USVPX4FirmwarePlugin::brandImageIndoor(const Vehicle *vehicle) const
+{
+    Q_UNUSED(vehicle);
+    return QStringLiteral("/custom/img/usv-logo-white.svg");
+}
+
+QString USVPX4FirmwarePlugin::brandImageOutdoor(const Vehicle *vehicle) const
 {
     Q_UNUSED(vehicle);
     return QStringLiteral("/custom/img/usv-logo-black.svg");
