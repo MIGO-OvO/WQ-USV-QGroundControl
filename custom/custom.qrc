@@ -1,0 +1,18 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <!-- USV Custom Build Resources -->
+    <!-- 无人船定制构建资源文件 -->
+
+    <qresource prefix="/custom">
+        <!-- 品牌图片 -->
+        <file alias="img/usv-logo-white.svg">res/img/usv-logo-white.svg</file>
+        <file alias="img/usv-logo-black.svg">res/img/usv-logo-black.svg</file>
+    </qresource>
+
+    <qresource prefix="/qml/USV">
+        <!-- USV 专用 QML 文件 -->
+        <file alias="USVChecklist.qml">res/USVChecklist.qml</file>
+        <file alias="USVFlyViewCustomLayer.qml">res/USVFlyViewCustomLayer.qml</file>
+    </qresource>
+
+</RCC>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- USV Logo - White Version (for dark backgrounds) -->
+<!-- 无人船 Logo - 白色版本 (用于深色背景) -->
+<!-- 请替换为你的实际 Logo -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- 船体 -->
+  <path d="M10 60 Q50 80 90 60 L85 70 Q50 90 15 70 Z" fill="white"/>
+  <!-- 船舱 -->
+  <rect x="35" y="45" width="30" height="15" rx="3" fill="white"/>
+  <!-- 天线 -->
+  <line x1="50" y1="45" x2="50" y2="30" stroke="white" stroke-width="2"/>
+  <circle cx="50" cy="28" r="3" fill="white"/>
+  <!-- 波浪 -->
+  <path d="M5 75 Q15 70 25 75 Q35 80 45 75 Q55 70 65 75 Q75 80 85 75 Q95 70 100 75"
+        fill="none" stroke="white" stroke-width="2" opacity="0.5"/>
+</svg>
