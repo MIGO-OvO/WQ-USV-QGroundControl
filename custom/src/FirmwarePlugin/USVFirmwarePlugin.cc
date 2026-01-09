@@ -65,13 +65,13 @@ QString USVArduPilotFirmwarePlugin::vehicleImageOutline(const Vehicle *vehicle) 
 QString USVArduPilotFirmwarePlugin::brandImageIndoor(const Vehicle *vehicle) const
 {
     Q_UNUSED(vehicle);
-    return QStringLiteral("/custom/img/usv-logo-white.svg");
+    return QStringLiteral("/custom/img/usv-logo-white.png");
 }
 
 QString USVArduPilotFirmwarePlugin::brandImageOutdoor(const Vehicle *vehicle) const
 {
     Q_UNUSED(vehicle);
-    return QStringLiteral("/custom/img/usv-logo-black.svg");
+    return QStringLiteral("/custom/img/usv-logo-black.png");
 }
 
 /*===========================================================================*/
@@ -117,11 +117,11 @@ QString USVPX4FirmwarePlugin::vehicleImageOutline(const Vehicle *vehicle) const
 QString USVPX4FirmwarePlugin::brandImageIndoor(const Vehicle *vehicle) const
 {
     Q_UNUSED(vehicle);
-    return QStringLiteral("/custom/img/usv-logo-white.svg");
+    return QStringLiteral("/custom/img/usv-logo-white.png");
 }
 
 QString USVPX4FirmwarePlugin::brandImageOutdoor(const Vehicle *vehicle) const
 {
     Q_UNUSED(vehicle);
-    return QStringLiteral("/custom/img/usv-logo-black.svg");
+    return QStringLiteral("/custom/img/usv-logo-black.png");
 }

@@ -74,6 +74,25 @@ set(CUSTOM_SOURCES
 )
 
 # ============================================================================
+# USV Translation Files
+# ============================================================================
+
+# 收集 USV 专用翻译文件
+file(GLOB USV_TS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/translations/usv_*.ts")
+
+if(USV_TS_SOURCES)
+    message(STATUS "QGC: Adding USV translation files: ${USV_TS_SOURCES}")
+
+    # 设置翻译文件输出位置到 i18n 目录
+    set_source_files_properties(${USV_TS_SOURCES} PROPERTIES OUTPUT_LOCATION "${CMAKE_BINARY_DIR}/i18n")
+
+    # 将 USV 翻译文件添加到主项目的翻译列表
+    set(USV_TRANSLATIONS ${USV_TS_SOURCES} CACHE INTERNAL "USV Translation files" FORCE)
+
+    message(STATUS "QGC: USV translations will be compiled to: ${CMAKE_BINARY_DIR}/i18n")
+endif()
+
+# ============================================================================
 # Custom Build Configuration
 # ============================================================================
 

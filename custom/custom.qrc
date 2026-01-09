@@ -4,15 +4,27 @@
     <!-- 无人船定制构建资源文件 -->
 
     <qresource prefix="/custom">
-        <!-- 品牌图片 -->
-        <file alias="img/usv-logo-white.svg">res/img/usv-logo-white.svg</file>
-        <file alias="img/usv-logo-black.svg">res/img/usv-logo-black.svg</file>
+        <!-- 品牌图片 (用于 Vehicle 连接后显示) -->
+        <!-- 支持 SVG、PNG、JPG 等格式 -->
+        <file alias="img/usv-logo-white.png">res/img/usv-logo-white.png</file>
+        <file alias="img/usv-logo-black.png">res/img/usv-logo-black.png</file>
     </qresource>
 
+    <!-- 工具栏 Logo 替换 -->
+    <!-- 注意: QGC 工具栏使用 /res/QGCLogoFull.svg，需要保持相同的别名 -->
+    <qresource prefix="/USV/res">
+        <file alias="QGCLogoFull.svg">res/img/usv-logo-white.png</file>
+    </qresource>
+
+    <!-- QML 资源覆盖 - 使用与 URL 拦截器匹配的路径 -->
+    <!-- 拦截器检查 :/USV + 原始路径 -->
+    <qresource prefix="/USV/qml/QGroundControl/FlyView">
+        <file alias="FlyViewCustomLayer.qml">res/USVFlyViewCustomLayer.qml</file>
+    </qresource>
+
+    <!-- USV 专用 QML 模块文件 -->
     <qresource prefix="/qml/USV">
-        <!-- USV 专用 QML 文件 -->
         <file alias="USVChecklist.qml">res/USVChecklist.qml</file>
-        <file alias="USVFlyViewCustomLayer.qml">res/USVFlyViewCustomLayer.qml</file>
     </qresource>
 
 </RCC>

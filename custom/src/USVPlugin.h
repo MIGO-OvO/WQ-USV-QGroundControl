@@ -17,6 +17,7 @@
 
 class USVOptions;
 class QQmlApplicationEngine;
+class QTranslator;
 
 Q_DECLARE_LOGGING_CATEGORY(USVPluginLog)
 
@@ -86,9 +87,13 @@ private slots:
     void _advancedChanged(bool advanced);
 
 private:
+    /// @brief 加载 USV 专用翻译文件
+    void _loadUSVTranslations();
+
     USVOptions *_usvOptions = nullptr;
     QQmlApplicationEngine *_qmlEngine = nullptr;
     class USVQmlOverrideInterceptor *_interceptor = nullptr;
+    QTranslator *_usvTranslator = nullptr;  ///< USV 专用翻译器
 };
 
 /*===========================================================================*/

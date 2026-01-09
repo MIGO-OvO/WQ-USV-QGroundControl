@@ -1,0 +1,800 @@
+{"_": "meta", "file": "qgc_json_zh_CN.ts"}
+{"s": "Gimbal Roll", "t": "云台横滚", "c": "GimbalFact.json"}
+{"s": "Gimbal Pitch", "t": "云台俯仰", "c": "GimbalFact.json"}
+{"s": "Gimbal Yaw", "t": "云台偏航", "c": "GimbalFact.json"}
+{"s": "Azimuth", "t": "方位角", "c": "GimbalFact.json"}
+{"s": "gimbal device Id", "t": "云台设备ID", "c": "GimbalFact.json"}
+{"s": "Take off from the ground and ascend to specified altitude.", "t": "从地面起飞并升至特定高度。", "c": "APM-MavCmdInfoCommon.json"}
+{"s": "Takeoff to specified altitude.", "t": "起飞至指定高度", "c": "APM-MavCmdInfoCommon.json"}
+{"s": "VTOL", "t": "垂直起降", "c": "APM-MavCmdInfoCommon.json"}
+{"s": "Land using VTOL mode.", "t": "使用VTOL模式降落", "c": "APM-MavCmdInfoCommon.json"}
+{"s": "Setting", "t": "设置", "c": "APM-MavCmdInfoCommon.json"}
+{"s": "On,Off", "t": "开启，关闭", "c": "APM-MavCmdInfoCommon.json"}
+{"s": "Pitch", "t": "俯仰", "c": "APM-MavCmdInfoCommon.json"}
+{"s": "Roll", "t": "滚转", "c": "APM-MavCmdInfoCommon.json"}
+{"s": "Yaw", "t": "偏航", "c": "APM-MavCmdInfoCommon.json"}
+{"s": "Enable", "t": "启用", "c": "APM-MavCmdInfoCommon.json"}
+{"s": "Enable,Disable", "t": "启用,禁用", "c": "APM-MavCmdInfoCommon.json"}
+{"s": "Distance between approach and land points.", "t": "进近点与降落点之间的距离。", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "Heading from approach to land point.", "t": "从进近点到降落点的航向。", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "Altitude to begin landing approach from.", "t": "开始降落进近的高度。", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "Command a specific speed for the approach, useful for reducing energy before the glide slope.", "t": "为进近指定一个特定速度，用于在进入下滑道前降低能量。", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "Speed to perform the approach at.", "t": "执行进近的速度。", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "Loiter radius.", "t": "悬停半径。", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "Loiter clockwise around the final approach point.", "t": "围绕最终进近点顺时针悬停。", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "Altitude for landing point.", "t": "降落点高度。", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "The glide slope between the loiter and landing point.", "t": "悬停点与降落点之间的下滑道。", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "Value controller approach point is distance", "t": "值控制器进近点为距离", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "Use a loiter to altitude item for final appoach. Otherwise use a regular waypoint.", "t": "使用悬停至高度项目进行最终进近。否则使用常规航点。", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "Stop taking photos", "t": "停止拍照", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "Stop taking video", "t": "停止录像", "c": "FWLandingPattern.FactMetaData.json"}
+{"s": "Distance between approach and land points.", "t": "进近点与降落点之间的距离。", "c": "VTOLLandingPattern.FactMetaData.json"}
+{"s": "Heading from approach to land point.", "t": "从进近点到降落点的航向。", "c": "VTOLLandingPattern.FactMetaData.json"}
+{"s": "Altitude to begin landing approach from.", "t": "开始降落进近的高度。", "c": "VTOLLandingPattern.FactMetaData.json"}
+{"s": "Command a specific speed for the approach, useful for reducing energy before the glide slope.", "t": "为进近指定一个特定速度，用于在进入下滑道前降低能量。", "c": "VTOLLandingPattern.FactMetaData.json"}
+{"s": "Speed to perform the approach at.", "t": "执行进近的速度。", "c": "VTOLLandingPattern.FactMetaData.json"}
+{"s": "Loiter radius.", "t": "悬停半径。", "c": "VTOLLandingPattern.FactMetaData.json"}
+{"s": "Loiter clockwise around the final approach point.", "t": "围绕最终进近点顺时针悬停。", "c": "VTOLLandingPattern.FactMetaData.json"}
+{"s": "Altitude for landing point on ground.", "t": "地面降落点高度", "c": "VTOLLandingPattern.FactMetaData.json"}
+{"s": "Use a loiter to altitude item for final appoach. Otherwise use a regular waypoint.", "t": "在最终进近阶段使用“悬停至高度”指令。否则使用普通航点。", "c": "VTOLLandingPattern.FactMetaData.json"}
+{"s": "Stop taking photos", "t": "停止拍照", "c": "VTOLLandingPattern.FactMetaData.json"}
+{"s": "Stop taking video", "t": "停止录像", "c": "VTOLLandingPattern.FactMetaData.json"}
+{"s": "Pitch", "t": "俯仰", "c": "MavCmdInfoFixedWing.json"}
+{"s": "Launch position altitude", "t": "发射点高度", "c": "MissionSettings.FactMetaData.json"}
+{"s": "Set the current flight speed", "t": "设置当前飞行速度", "c": "SpeedSection.FactMetaData.json"}
+{"s": "Camera name.", "t": "相机名称。", "c": "CameraSpec.FactMetaData.json"}
+{"s": "Width of camera image sensor.", "t": "相机图像传感器宽度。", "c": "CameraSpec.FactMetaData.json"}
+{"s": "Height of camera image sensor.", "t": "相机图像传感器高度。", "c": "CameraSpec.FactMetaData.json"}
+{"s": "Camera image resolution width.", "t": "相机图像分辨率宽度。", "c": "CameraSpec.FactMetaData.json"}
+{"s": "Camera image resolution height.", "t": "相机图像分辨率高度。", "c": "CameraSpec.FactMetaData.json"}
+{"s": "Focal length of camera lens.", "t": "相机镜头焦距。", "c": "CameraSpec.FactMetaData.json"}
+{"s": "Camera on vehicle is in landscape orientation.", "t": "载具上的相机为横向安装方向。", "c": "CameraSpec.FactMetaData.json"}
+{"s": "Camera orientation ix fixed and cannot be changed.", "t": "相机安装方向固定且无法更改。", "c": "CameraSpec.FactMetaData.json"}
+{"s": "Minimum amount of time between each camera trigger.", "t": "相机每次触发之间的最短时间间隔。", "c": "CameraSpec.FactMetaData.json"}
+{"s": "Gimbal pitch rotation.", "t": "云台俯仰旋转。", "c": "StructureScan.SettingsGroup.json"}
+{"s": "Vehicle will fly to/from the structure at this altitude.", "t": "载具将在此高度飞向/飞离结构。", "c": "StructureScan.SettingsGroup.json"}
+{"s": "Altitude for the bottomost covered area of the scan. You can adjust this value such that the Bottom Layer Alt will fly above obstacles on the ground.", "t": "扫描最底层覆盖区域的高度。您可以调整此值，使底层高度能飞越地面障碍物。", "c": "StructureScan.SettingsGroup.json"}
+{"s": "Number of scan layers.", "t": "扫描层数。", "c": "StructureScan.SettingsGroup.json"}
+{"s": "Height of structure being scanned.", "t": "被扫描建筑的高度。", "c": "StructureScan.SettingsGroup.json"}
+{"s": "Start scanning from top of structure.", "t": "从建筑顶部开始扫描。", "c": "StructureScan.SettingsGroup.json"}
+{"s": "Specify whether the camera should take photos or video", "t": "指定相机应拍摄照片还是视频。", "c": "CameraSection.FactMetaData.json"}
+{"s": "No change,Take photo,Take photos (time),Take photos (distance),Stop taking photos,Start recording video,Stop recording video", "t": "无变动，拍照，拍摄照片(时间)，拍照(远距离)，停止拍照，开始录制视频，停止录制视频", "c": "CameraSection.FactMetaData.json"}
+{"s": "Specify the distance between each photo", "t": "指定每张照片之间的距离。", "c": "CameraSection.FactMetaData.json"}
+{"s": "Specify the time between each photo", "t": "指定每张照片之间的时间间隔。", "c": "CameraSection.FactMetaData.json"}
+{"s": "Gimbal pitch rotation.", "t": "云台俯仰旋转。", "c": "CameraSection.FactMetaData.json"}
+{"s": "Gimbal yaw rotation.", "t": "云台偏航旋转。", "c": "CameraSection.FactMetaData.json"}
+{"s": "Specify whether the camera should switch to Photo, Video or Survey mode", "t": "指定相机应切换至照片、视频还是测绘模式。", "c": "CameraSection.FactMetaData.json"}
+{"s": "Photo,Video,Survey", "t": "照片,视频,测绘", "c": "CameraSection.FactMetaData.json"}
+{"s": "Angle for parallel lines of grid.", "t": "网格平行线的角度。", "c": "Survey.SettingsGroup.json"}
+{"s": "Fly every other transect in each pass.", "t": "每次飞行间隔一条测线。", "c": "Survey.SettingsGroup.json"}
+{"s": "Split mission concave polygons into separate regular, convex polygons.", "t": "将任务中的凹多边形分割为独立的规则凸多边形。", "c": "Survey.SettingsGroup.json"}
+{"s": "Latitude of breach return point position", "t": "越界返航点位置的纬度", "c": "BreachReturn.FactMetaData.json"}
+{"s": "Longitude of breach return point position", "t": "越界返航点位置的经度", "c": "BreachReturn.FactMetaData.json"}
+{"s": "Altitude of breach return point position (Rel)", "t": "越界返航点位置的高度（相对）", "c": "BreachReturn.FactMetaData.json"}
+{"s": "Yaw", "t": "偏航", "c": "MavCmdInfoMultiRotor.json"}
+{"s": "Altitude for the bottom layer of the structure scan.", "t": "建筑扫描底层的高度。", "c": "CorridorScan.SettingsGroup.json"}
+{"s": "Corridor width. Specify 0 width for a single pass scan.", "t": "走廊宽度。指定宽度为0以进行单程扫描。", "c": "CorridorScan.SettingsGroup.json"}
+{"s": "Distance between each triggering of the camera. 0 specifies not camera trigger.", "t": "相机每次触发之间的距离。0表示不触发相机。", "c": "CorridorScan.SettingsGroup.json"}
+{"s": "Amount of spacing in between parallel grid lines.", "t": "平行网格线之间的间距。", "c": "CorridorScan.SettingsGroup.json"}
+{"s": "Amount of additional distance to add outside the survey area for vehicle turnaround.", "t": "在测绘区域外为载具掉头增加的额外距离。", "c": "CorridorScan.SettingsGroup.json"}
+{"s": "Amount of additional distance to add outside the survey area for vehicle turn around.", "t": "为载具调头在测绘区域外增加的额外距离。", "c": "TransectStyle.SettingsGroup.json"}
+{"s": "Camera continues taking images in turn arounds.", "t": "相机在调头过程中继续拍摄图像。", "c": "TransectStyle.SettingsGroup.json"}
+{"s": "Stop and Hover at each image point before taking image", "t": "在每个图像点拍摄前停止并悬停", "c": "TransectStyle.SettingsGroup.json"}
+{"s": "Refly the pattern at a 90 degree angle", "t": "以90度角重新飞行该航线", "c": "TransectStyle.SettingsGroup.json"}
+{"s": "Additional waypoints within the transect will be added if the terrain altitude difference grows larger than this tolerance.", "t": "如果地形高度差超过此容差，将在测线内添加额外的航点。", "c": "TransectStyle.SettingsGroup.json"}
+{"s": "The maximum climb rate from one waypoint to another when adjusting for terrain. Set to 0 for no max.", "t": "为适应地形从一个航点到另一个航点的最大爬升率。设为0表示无限制。", "c": "TransectStyle.SettingsGroup.json"}
+{"s": "The maximum descent rate from one waypoint to another when adjusting for terrain. Set to 0 for no max.", "t": "为适应地形从一个航点到另一个航点的最大下降率。设为0表示无限制。", "c": "TransectStyle.SettingsGroup.json"}
+{"s": "Latitude of rally point position", "t": "备降点位置的纬度", "c": "RallyPoint.FactMetaData.json"}
+{"s": "Longitude of rally point position", "t": "备降点位置的经度", "c": "RallyPoint.FactMetaData.json"}
+{"s": "Altitude of rally point position (home relative)", "t": "备降点位置的高度（相对于返航点）", "c": "RallyPoint.FactMetaData.json"}
+{"s": "Camera name.", "t": "相机名称。", "c": "CameraCalc.FactMetaData.json"}
+{"s": "Value specified is distance to surface.", "t": "指定值为到地表的距离。", "c": "CameraCalc.FactMetaData.json"}
+{"s": "Distance vehicle is away from surface.", "t": "载具到地表的距离。", "c": "CameraCalc.FactMetaData.json"}
+{"s": "Image desity at surface.", "t": "地表图像密度。", "c": "CameraCalc.FactMetaData.json"}
+{"s": "Amount of overlap between images in the forward facing direction.", "t": "前进方向上图像之间的重叠量。", "c": "CameraCalc.FactMetaData.json"}
+{"s": "Amount of overlap between images in the side facing direction.", "t": "侧向图像之间的重叠量。", "c": "CameraCalc.FactMetaData.json"}
+{"s": "Home Position", "t": "起始位置", "c": "MavCmdInfoCommon.json"}
+{"s": "Planned home position for mission.", "t": "计划执行任务的起始位置。", "c": "MavCmdInfoCommon.json"}
+{"s": "Basic", "t": "常规", "c": "MavCmdInfoCommon.json"}
+{"s": "Latitude", "t": "纬度", "c": "MavCmdInfoCommon.json"}
+{"s": "Longitude", "t": "经度", "c": "MavCmdInfoCommon.json"}
+{"s": "Waypoint", "t": "航点", "c": "MavCmdInfoCommon.json"}
+{"s": "Travel to a position in 3D space.", "t": "前往三维空间中的某个位置。", "c": "MavCmdInfoCommon.json"}
+{"s": "Hold", "t": "保持", "c": "MavCmdInfoCommon.json"}
+{"s": "Acceptance", "t": "接受", "c": "MavCmdInfoCommon.json"}
+{"s": "Pass Radius", "t": "通过半径", "c": "MavCmdInfoCommon.json"}
+{"s": "Yaw", "t": "偏航", "c": "MavCmdInfoCommon.json"}
+{"s": "Loiter", "t": "盘旋", "c": "MavCmdInfoCommon.json"}
+{"s": "Travel to a position and Loiter around the specified position indefinitely.", "t": "移动到一个位置，在指定的半径周围盘旋。", "c": "MavCmdInfoCommon.json"}
+{"s": "Radius", "t": "半径", "c": "MavCmdInfoCommon.json"}
+{"s": "Loiter (turns)", "t": "盘旋 (旋转)", "c": "MavCmdInfoCommon.json"}
+{"s": "Travel to a position and Loiter around the specified position for a number of turns.", "t": "移动到一个位置，在指定的半径周围盘旋指定圈數。", "c": "MavCmdInfoCommon.json"}
+{"s": "Turns", "t": "转到", "c": "MavCmdInfoCommon.json"}
+{"s": "Leave Loiter", "t": "离开盤旋模式", "c": "MavCmdInfoCommon.json"}
+{"s": "Direction of next waypoint,Any direction", "t": "下一个航点的方向，任意方向", "c": "MavCmdInfoCommon.json"}
+{"s": "Exit loiter from", "t": "退出盘旋", "c": "MavCmdInfoCommon.json"}
+{"s": "Center,Tangent", "t": "中心,切线", "c": "MavCmdInfoCommon.json"}
+{"s": "Loiter (time)", "t": "悬停(时间)", "c": "MavCmdInfoCommon.json"}
+{"s": "Travel to a position and Loiter around the specified position for an amount of time.", "t": "飞往一个位置并在指定位置周围悬停一段时间。", "c": "MavCmdInfoCommon.json"}
+{"s": "Loiter Time", "t": "悬停时间", "c": "MavCmdInfoCommon.json"}
+{"s": "Direction of next waypoint,Current direction", "t": "下一个航点的方向，当前方向", "c": "MavCmdInfoCommon.json"}
+{"s": "Return To Launch", "t": "返回起飞点", "c": "MavCmdInfoCommon.json"}
+{"s": "Send the vehicle back to the launch position.", "t": "将无人机送回起飞位置。", "c": "MavCmdInfoCommon.json"}
+{"s": "Land", "t": "降落", "c": "MavCmdInfoCommon.json"}
+{"s": "Land vehicle at the specified location.", "t": "在指定位置降落无人机。", "c": "MavCmdInfoCommon.json"}
+{"s": "Abort Alt", "t": "中止高度", "c": "MavCmdInfoCommon.json"}
+{"s": "Precision Land", "t": "精准降落", "c": "MavCmdInfoCommon.json"}
+{"s": "Disabled,Opportunistic,Required", "t": "禁用,机会性,必需", "c": "MavCmdInfoCommon.json"}
+{"s": "Takeoff", "t": "起飞", "c": "MavCmdInfoCommon.json"}
+{"s": "Launch from the ground and travel towards the specified takeoff position.", "t": "从地面发射并前往指定的起飞位置。", "c": "MavCmdInfoCommon.json"}
+{"s": "Land local", "t": "降落地点", "c": "MavCmdInfoCommon.json"}
+{"s": "Takeoff local", "t": "本地起飞", "c": "MavCmdInfoCommon.json"}
+{"s": "Nav follow", "t": "跟随导航", "c": "MavCmdInfoCommon.json"}
+{"s": "Change Altitude", "t": "改变高度", "c": "MavCmdInfoCommon.json"}
+{"s": "Continue on the current course and climb/descend to specified altitude. When the altitude is reached continue to the next command.", "t": "沿当前路线继续，然后爬升/下降到指定的高度。 到达高度后，继续执行下一个命令。", "c": "MavCmdInfoCommon.json"}
+{"s": "Flight control", "t": "飞行控制", "c": "MavCmdInfoCommon.json"}
+{"s": "Mode", "t": "模式", "c": "MavCmdInfoCommon.json"}
+{"s": "Climb,Neutral,Descend", "t": "爬升、空档、下降", "c": "MavCmdInfoCommon.json"}
+{"s": "Loiter (altitude)", "t": "盘旋（高度）", "c": "MavCmdInfoCommon.json"}
+{"s": "Loiter at specified position until altitude reached.", "t": "在指定位置盘旋，直到达到高度为止。", "c": "MavCmdInfoCommon.json"}
+{"s": "Follow Me", "t": "跟随模式", "c": "MavCmdInfoCommon.json"}
+{"s": "Vehicle reposition", "t": "无人机重置位置", "c": "MavCmdInfoCommon.json"}
+{"s": "Path planning", "t": "路线规划", "c": "MavCmdInfoCommon.json"}
+{"s": "Control autonomous path planning.", "t": "控制自主规划路径。", "c": "MavCmdInfoCommon.json"}
+{"s": "Advanced", "t": "高级", "c": "MavCmdInfoCommon.json"}
+{"s": "Local planning", "t": "本地规划", "c": "MavCmdInfoCommon.json"}
+{"s": "Disable,Enable,Enable+reset", "t": "禁用，启用，启用+重置", "c": "MavCmdInfoCommon.json"}
+{"s": "Full planning", "t": "全面规划", "c": "MavCmdInfoCommon.json"}
+{"s": "Disable,Enable,Enable+reset,Enable+reset route only", "t": "禁用，启用，启用+重置，仅启用+重置路由", "c": "MavCmdInfoCommon.json"}
+{"s": "Heading goal", "t": "目标航向", "c": "MavCmdInfoCommon.json"}
+{"s": "Spline waypoint", "t": "样条航路点", "c": "MavCmdInfoCommon.json"}
+{"s": "Travel to a position in 3D space using spline path.", "t": "使用样条曲线路径移动到三维空间中的某个位置。", "c": "MavCmdInfoCommon.json"}
+{"s": "Altitude wait", "t": "高度等待", "c": "MavCmdInfoCommon.json"}
+{"s": "VTOL takeoff", "t": "垂直起降", "c": "MavCmdInfoCommon.json"}
+{"s": "Hover straight up to specified altitude, transition to fixed-wing and fly to the specified takeoff location.", "t": "悬停在指定的高度上，过渡到固定翼并飞到指定的起飞位置。", "c": "MavCmdInfoCommon.json"}
+{"s": "Transition Heading", "t": "转换航向", "c": "MavCmdInfoCommon.json"}
+{"s": "Default,Next waypoint,Takeoff,Specified,Any", "t": "默认,下一航点,起飞,指定,任意", "c": "MavCmdInfoCommon.json"}
+{"s": "VTOL land", "t": "垂起着陆", "c": "MavCmdInfoCommon.json"}
+{"s": "Fly to specified location at current altitude, transition to multi-rotor and land.", "t": "飞行到当前高度的指定位置，过渡到多旋翼并着陆。", "c": "MavCmdInfoCommon.json"}
+{"s": "Approach Alt", "t": "进近高度", "c": "MavCmdInfoCommon.json"}
+{"s": "Guided enable", "t": "开启引导", "c": "MavCmdInfoCommon.json"}
+{"s": "Enable/Disabled guided mode.", "t": "启用/禁用引导模式。", "c": "MavCmdInfoCommon.json"}
+{"s": "Enable", "t": "启用", "c": "MavCmdInfoCommon.json"}
+{"s": "On,Off", "t": "开启，关闭", "c": "MavCmdInfoCommon.json"}
+{"s": "Delay until", "t": "延迟至", "c": "MavCmdInfoCommon.json"}
+{"s": "Delay until the specified time is reached.", "t": "延迟直到达到指定时间。", "c": "MavCmdInfoCommon.json"}
+{"s": "Hour (utc)", "t": "小时(utc)", "c": "MavCmdInfoCommon.json"}
+{"s": "Min (utc)", "t": "分（utc）", "c": "MavCmdInfoCommon.json"}
+{"s": "Sec (utc)", "t": "秒（utc）", "c": "MavCmdInfoCommon.json"}
+{"s": "Delay", "t": "延时", "c": "MavCmdInfoCommon.json"}
+{"s": "Delay the mission for the number of seconds.", "t": "延迟任务秒数。", "c": "MavCmdInfoCommon.json"}
+{"s": "Wait for altitude", "t": "等待高度", "c": "MavCmdInfoCommon.json"}
+{"s": "Delay the mission until the specified altitide is reached.", "t": "将任务推迟到达到指定的高度为止。", "c": "MavCmdInfoCommon.json"}
+{"s": "Conditionals", "t": "条件", "c": "MavCmdInfoCommon.json"}
+{"s": "Rate", "t": "速率", "c": "MavCmdInfoCommon.json"}
+{"s": "Wait for distance", "t": "等待距离", "c": "MavCmdInfoCommon.json"}
+{"s": "Delay the mission until within the specified distance of the next waypoint.", "t": "将任务推迟到下一个航点的指定距离以内。", "c": "MavCmdInfoCommon.json"}
+{"s": "Distance", "t": "距离", "c": "MavCmdInfoCommon.json"}
+{"s": "Wait for Yaw", "t": "等待偏航", "c": "MavCmdInfoCommon.json"}
+{"s": "Delay the mission until the specified heading is reached.", "t": "延迟任务直到达到指定航向。", "c": "MavCmdInfoCommon.json"}
+{"s": "Heading", "t": "航向", "c": "MavCmdInfoCommon.json"}
+{"s": "Direction", "t": "方向", "c": "MavCmdInfoCommon.json"}
+{"s": "Clockwise,Shortest,Counter-Clockwise", "t": "顺时针,最短,逆时针", "c": "MavCmdInfoCommon.json"}
+{"s": "Offset", "t": "偏移量", "c": "MavCmdInfoCommon.json"}
+{"s": "Relative,Absolute", "t": "相对，绝对", "c": "MavCmdInfoCommon.json"}
+{"s": "Set mode", "t": "设置模式", "c": "MavCmdInfoCommon.json"}
+{"s": "Set flight mode", "t": "设置飞行模式", "c": "MavCmdInfoCommon.json"}
+{"s": "Set flight mode.", "t": "设置飞行模式。", "c": "MavCmdInfoCommon.json"}
+{"s": "Custom Mode", "t": "自定义模式", "c": "MavCmdInfoCommon.json"}
+{"s": "Sub Mode", "t": "子模式", "c": "MavCmdInfoCommon.json"}
+{"s": "Jump to item", "t": "跳转到项目", "c": "MavCmdInfoCommon.json"}
+{"s": "Mission will continue at the specified item.", "t": "任务将在指定的项目继续。", "c": "MavCmdInfoCommon.json"}
+{"s": "Item #", "t": "项目 #", "c": "MavCmdInfoCommon.json"}
+{"s": "Repeat", "t": "重复", "c": "MavCmdInfoCommon.json"}
+{"s": "Change speed", "t": "更改速度", "c": "MavCmdInfoCommon.json"}
+{"s": "Change speed and/or throttle set points.", "t": "更改速度和/或节点设定。", "c": "MavCmdInfoCommon.json"}
+{"s": "Type", "t": "类型", "c": "MavCmdInfoCommon.json"}
+{"s": "Airspeed,Ground Speed,Ascend Speed,Descend Speed", "t": "空速,地速,爬升速度,下降速度", "c": "MavCmdInfoCommon.json"}
+{"s": "Speed", "t": "速度", "c": "MavCmdInfoCommon.json"}
+{"s": "Throttle", "t": "油门", "c": "MavCmdInfoCommon.json"}
+{"s": "Set launch location", "t": "设置启动位置", "c": "MavCmdInfoCommon.json"}
+{"s": "Changes the launch location either to the current location or a specified location.", "t": "更改起飞位置到当前位置或指定位置。", "c": "MavCmdInfoCommon.json"}
+{"s": "Vehicle position,Specified position", "t": "无人机位置，指定位置", "c": "MavCmdInfoCommon.json"}
+{"s": "Set Parameter", "t": "设置参数", "c": "MavCmdInfoCommon.json"}
+{"s": "Set relay", "t": "设置继电器", "c": "MavCmdInfoCommon.json"}
+{"s": "Set relay to a condition.", "t": "将继电器设置为条件。", "c": "MavCmdInfoCommon.json"}
+{"s": "Relay #", "t": "继电器 #", "c": "MavCmdInfoCommon.json"}
+{"s": "Value", "t": "值", "c": "MavCmdInfoCommon.json"}
+{"s": "Cycle relay", "t": "循环继电器", "c": "MavCmdInfoCommon.json"}
+{"s": "Cycle relay on/off for desired cycles/time.", "t": "循环继电器开/关以达到预期的周期/时间。", "c": "MavCmdInfoCommon.json"}
+{"s": "Cycles", "t": "循环", "c": "MavCmdInfoCommon.json"}
+{"s": "Time", "t": "时间", "c": "MavCmdInfoCommon.json"}
+{"s": "Set servo", "t": "设置舵机", "c": "MavCmdInfoCommon.json"}
+{"s": "Set servo to specified PWM value.", "t": "设置舵机为指定的 PWM 值。", "c": "MavCmdInfoCommon.json"}
+{"s": "Servo", "t": "舵机", "c": "MavCmdInfoCommon.json"}
+{"s": "PWM", "t": "PWM", "c": "MavCmdInfoCommon.json"}
+{"s": "Cycle servo", "t": "循环伺服", "c": "MavCmdInfoCommon.json"}
+{"s": "Set actuator", "t": "设置执行器", "c": "MavCmdInfoCommon.json"}
+{"s": "Set actuator to specified output value (range [-1, 1]).", "t": "将执行器设置为指定的输出值（范围 [-1, 1]）。", "c": "MavCmdInfoCommon.json"}
+{"s": "Actuator 1", "t": "执行器 1", "c": "MavCmdInfoCommon.json"}
+{"s": "Actuator 2", "t": "执行器 2", "c": "MavCmdInfoCommon.json"}
+{"s": "Actuator 3", "t": "执行器 3", "c": "MavCmdInfoCommon.json"}
+{"s": "Actuator 4", "t": "执行器 4", "c": "MavCmdInfoCommon.json"}
+{"s": "Flight termination", "t": "飞行终止", "c": "MavCmdInfoCommon.json"}
+{"s": "Land start", "t": "开始着陆", "c": "MavCmdInfoCommon.json"}
+{"s": "Marker to indicate start of landing sequence.", "t": "指示着陆顺序开始的标记。", "c": "MavCmdInfoCommon.json"}
+{"s": "Rally land", "t": "集合地", "c": "MavCmdInfoCommon.json"}
+{"s": "Go around", "t": "盘旋", "c": "MavCmdInfoCommon.json"}
+{"s": "Reposition", "t": "更改位置", "c": "MavCmdInfoCommon.json"}
+{"s": "Pause/Continue", "t": "暂停/继续", "c": "MavCmdInfoCommon.json"}
+{"s": "Set moving direction", "t": "设置移动方向", "c": "MavCmdInfoCommon.json"}
+{"s": "Set moving direction to forward or reverse.", "t": "将移动方向设置为向前或向后方向。", "c": "MavCmdInfoCommon.json"}
+{"s": "Forward,Reverse", "t": "向前，向后", "c": "MavCmdInfoCommon.json"}
+{"s": "Region of interest (ROI)", "t": "目标兴趣范围 (ROI)", "c": "MavCmdInfoCommon.json"}
+{"s": "Sets the region of interest for cameras.", "t": "设置摄像头目标区域。", "c": "MavCmdInfoCommon.json"}
+{"s": "Camera", "t": "相机", "c": "MavCmdInfoCommon.json"}
+{"s": "ROI to next waypoint", "t": "兴趣区到下一个航点", "c": "MavCmdInfoCommon.json"}
+{"s": "Sets the region of interest to point towards the next waypoint with optional offsets.", "t": "设置兴趣区来用可选补偿指向下一个航点", "c": "MavCmdInfoCommon.json"}
+{"s": "Pitch offset", "t": "俯仰补偿", "c": "MavCmdInfoCommon.json"}
+{"s": "Roll offset", "t": "滚转补偿", "c": "MavCmdInfoCommon.json"}
+{"s": "Yaw offset", "t": "偏航补偿", "c": "MavCmdInfoCommon.json"}
+{"s": "Cancel ROI", "t": "取消 ROI", "c": "MavCmdInfoCommon.json"}
+{"s": "Cancels the region of interest.", "t": "取消感兴趣的区域。", "c": "MavCmdInfoCommon.json"}
+{"s": "Control video", "t": "控制视频", "c": "MavCmdInfoCommon.json"}
+{"s": "Region of interest", "t": "感兴趣区域", "c": "MavCmdInfoCommon.json"}
+{"s": "None,Next waypoint,Mission item,Location,ROI item", "t": "无，下一个航点，任务项目，位置，ROI 项目", "c": "MavCmdInfoCommon.json"}
+{"s": "Mission Index", "t": "任务索引", "c": "MavCmdInfoCommon.json"}
+{"s": "ROI Index", "t": "ROI 索引", "c": "MavCmdInfoCommon.json"}
+{"s": "Camera config", "t": "相机配置", "c": "MavCmdInfoCommon.json"}
+{"s": "Configure onboard camera controller.", "t": "配置板载摄像头控制器。", "c": "MavCmdInfoCommon.json"}
+{"s": "Shutter spd", "t": "快门速度", "c": "MavCmdInfoCommon.json"}
+{"s": "Aperture", "t": "光圈", "c": "MavCmdInfoCommon.json"}
+{"s": "ISO", "t": "感光度", "c": "MavCmdInfoCommon.json"}
+{"s": "Exposure", "t": "曝光", "c": "MavCmdInfoCommon.json"}
+{"s": "Command", "t": "指令", "c": "MavCmdInfoCommon.json"}
+{"s": "Cut off", "t": "关闭", "c": "MavCmdInfoCommon.json"}
+{"s": "Camera control", "t": "相机控制", "c": "MavCmdInfoCommon.json"}
+{"s": "Control onboard camera.", "t": "控制机载摄像头。", "c": "MavCmdInfoCommon.json"}
+{"s": "Session", "t": "会话", "c": "MavCmdInfoCommon.json"}
+{"s": "Zoom", "t": "缩放", "c": "MavCmdInfoCommon.json"}
+{"s": "Step", "t": "步骤", "c": "MavCmdInfoCommon.json"}
+{"s": "Focus lock", "t": "聚焦锁", "c": "MavCmdInfoCommon.json"}
+{"s": "Id", "t": "ID", "c": "MavCmdInfoCommon.json"}
+{"s": "Configure Mount", "t": "配置挂载", "c": "MavCmdInfoCommon.json"}
+{"s": "Configure the vehicle mount (e.g. gimbal).", "t": "配置无人机挂载（例如云台）。", "c": "MavCmdInfoCommon.json"}
+{"s": "Retract,Neutral,Mavlink Targeting,RC Targeting,GPS Point", "t": "收回，中立，Mavlink 定位，RC定位，GPS 点", "c": "MavCmdInfoCommon.json"}
+{"s": "Stabilize Roll", "t": "滚转稳定", "c": "MavCmdInfoCommon.json"}
+{"s": "No,Yes", "t": "否，是", "c": "MavCmdInfoCommon.json"}
+{"s": "Stabilize Pitch", "t": "俯仰稳定", "c": "MavCmdInfoCommon.json"}
+{"s": "Stabilize Yaw", "t": "偏航稳定", "c": "MavCmdInfoCommon.json"}
+{"s": "Control Mount", "t": "控制挂载", "c": "MavCmdInfoCommon.json"}
+{"s": "Control the vehicle mount (e.g. gimbal).", "t": "控制无人机支架（例如云台）。", "c": "MavCmdInfoCommon.json"}
+{"s": "Lat/Pitch", "t": "纬度/俯仰", "c": "MavCmdInfoCommon.json"}
+{"s": "Lon/Roll", "t": "经度/滚转", "c": "MavCmdInfoCommon.json"}
+{"s": "Alt/Yaw", "t": "高度/偏航", "c": "MavCmdInfoCommon.json"}
+{"s": "Gimbal Manager PitchYaw", "t": "云台管理器俯仰偏航", "c": "MavCmdInfoCommon.json"}
+{"s": "Control the gimbal during the mission", "t": "在任务期间控制云台", "c": "MavCmdInfoCommon.json"}
+{"s": "Pitch", "t": "俯仰", "c": "MavCmdInfoCommon.json"}
+{"s": "Pitch rate", "t": "俯仰速率", "c": "MavCmdInfoCommon.json"}
+{"s": "Yaw rate", "t": "偏航速率", "c": "MavCmdInfoCommon.json"}
+{"s": "Follow yaw", "t": "跟随偏航", "c": "MavCmdInfoCommon.json"}
+{"s": "Follow yaw, Lock yaw", "t": "跟随偏航，锁定偏航", "c": "MavCmdInfoCommon.json"}
+{"s": "Gimbal", "t": "云台", "c": "MavCmdInfoCommon.json"}
+{"s": "Primary,first gimbal,second gimbal", "t": "主云台，第一云台，第二云台", "c": "MavCmdInfoCommon.json"}
+{"s": "Camera trigger distance", "t": "相机定距触发的间距", "c": "MavCmdInfoCommon.json"}
+{"s": "Set camera trigger distance.", "t": "设置相机触发距离。", "c": "MavCmdInfoCommon.json"}
+{"s": "Shutter", "t": "快门", "c": "MavCmdInfoCommon.json"}
+{"s": "Trigger", "t": "触发源", "c": "MavCmdInfoCommon.json"}
+{"s": "No Trigger,Once Immediately", "t": "无触发，立即", "c": "MavCmdInfoCommon.json"}
+{"s": "Enable geofence", "t": "启用地理围栏", "c": "MavCmdInfoCommon.json"}
+{"s": "Enable/Disable geofence.", "t": "启用/禁用地理围栏。", "c": "MavCmdInfoCommon.json"}
+{"s": "Safety", "t": "安全", "c": "MavCmdInfoCommon.json"}
+{"s": "Disable,Disable floor only,Enable", "t": "禁用，仅禁用地面，启用", "c": "MavCmdInfoCommon.json"}
+{"s": "Trigger parachute", "t": "触发降落伞", "c": "MavCmdInfoCommon.json"}
+{"s": "Enable/Disable auto-release or Release a parachute", "t": "启用/禁用自动释放或释放降落伞", "c": "MavCmdInfoCommon.json"}
+{"s": "Disable,Enable,Release", "t": "禁用，启用，发布", "c": "MavCmdInfoCommon.json"}
+{"s": "Motor test", "t": "电机测试", "c": "MavCmdInfoCommon.json"}
+{"s": "Inverted flight", "t": "倒飞", "c": "MavCmdInfoCommon.json"}
+{"s": "Change to/from inverted flight.", "t": "更改到/从反向飞行。", "c": "MavCmdInfoCommon.json"}
+{"s": "Inverted", "t": "反转", "c": "MavCmdInfoCommon.json"}
+{"s": "Normal,Inverted", "t": "正常，反转", "c": "MavCmdInfoCommon.json"}
+{"s": "Gripper Mechanism", "t": "抓取机构", "c": "MavCmdInfoCommon.json"}
+{"s": "Control a gripper mechanism.", "t": "控制抓取机构。", "c": "MavCmdInfoCommon.json"}
+{"s": "Gripper id", "t": "夹持器 id", "c": "MavCmdInfoCommon.json"}
+{"s": "Action", "t": "执行", "c": "MavCmdInfoCommon.json"}
+{"s": "Release,Grab", "t": "发布，抓取", "c": "MavCmdInfoCommon.json"}
+{"s": "AutoTune Enable", "t": "自动调试启用", "c": "MavCmdInfoCommon.json"}
+{"s": "AutoTune Enable.", "t": "自动调试已启用", "c": "MavCmdInfoCommon.json"}
+{"s": "Enable,Disable", "t": "启用，禁用", "c": "MavCmdInfoCommon.json"}
+{"s": "Guided limits", "t": "指导限制", "c": "MavCmdInfoCommon.json"}
+{"s": "Set limits for external control", "t": "设置外部控制限制", "c": "MavCmdInfoCommon.json"}
+{"s": "Timeout", "t": "超时", "c": "MavCmdInfoCommon.json"}
+{"s": "Min Alt", "t": "最小高度", "c": "MavCmdInfoCommon.json"}
+{"s": "Max Alt", "t": "最大高度", "c": "MavCmdInfoCommon.json"}
+{"s": "H Limit", "t": "H 限制", "c": "MavCmdInfoCommon.json"}
+{"s": "Calibration", "t": "校准", "c": "MavCmdInfoCommon.json"}
+{"s": "Set sensor offsets", "t": "设置传感器偏移", "c": "MavCmdInfoCommon.json"}
+{"s": "UAVCAN configure", "t": "UAVCAN 配置", "c": "MavCmdInfoCommon.json"}
+{"s": "Store parameters", "t": "存储参数", "c": "MavCmdInfoCommon.json"}
+{"s": "Reboot/Shutdown vehicle", "t": "重启/关闭车辆", "c": "MavCmdInfoCommon.json"}
+{"s": "Override goto", "t": "覆写 goto", "c": "MavCmdInfoCommon.json"}
+{"s": "Mission start", "t": "任务开始", "c": "MavCmdInfoCommon.json"}
+{"s": "Arm/Disarm", "t": "上锁/解锁", "c": "MavCmdInfoCommon.json"}
+{"s": "Get launch position", "t": "获取启动位置", "c": "MavCmdInfoCommon.json"}
+{"s": "Bind Spektrum receiver", "t": "绑定频谱接收机", "c": "MavCmdInfoCommon.json"}
+{"s": "Get message interval", "t": "获取消息间隔", "c": "MavCmdInfoCommon.json"}
+{"s": "Set message interval", "t": "设置消息间隔", "c": "MavCmdInfoCommon.json"}
+{"s": "Get capabilities", "t": "获取能力", "c": "MavCmdInfoCommon.json"}
+{"s": "Set camera modes", "t": "设置相机模式", "c": "MavCmdInfoCommon.json"}
+{"s": "Set camera photo, video modes.", "t": "设置相机照片，视频模式。", "c": "MavCmdInfoCommon.json"}
+{"s": "Take photos,Record video,Survey photo mode", "t": "拍照,录像,航测模式", "c": "MavCmdInfoCommon.json"}
+{"s": "Start image capture", "t": "开始抓取图像", "c": "MavCmdInfoCommon.json"}
+{"s": "Start taking one or more photos.", "t": "开始拍摄一张或多张照片。", "c": "MavCmdInfoCommon.json"}
+{"s": "Interval", "t": "间隔", "c": "MavCmdInfoCommon.json"}
+{"s": "Photo count", "t": "拍摄张数", "c": "MavCmdInfoCommon.json"}
+{"s": "Stop image capture", "t": "停止抓取图像", "c": "MavCmdInfoCommon.json"}
+{"s": "Stop taking photos.", "t": "停止拍照。", "c": "MavCmdInfoCommon.json"}
+{"s": "Trigger control", "t": "触发器控制", "c": "MavCmdInfoCommon.json"}
+{"s": "Start video capture", "t": "开始录制视频", "c": "MavCmdInfoCommon.json"}
+{"s": "Start video capture.", "t": "开始录制视频。", "c": "MavCmdInfoCommon.json"}
+{"s": "Status Frequency", "t": "状态频率", "c": "MavCmdInfoCommon.json"}
+{"s": "Stop video capture", "t": "停止视频捕获。", "c": "MavCmdInfoCommon.json"}
+{"s": "Stop video capture.", "t": "停止视频捕获。", "c": "MavCmdInfoCommon.json"}
+{"s": "Control high latency link", "t": "控制高延迟链路", "c": "MavCmdInfoCommon.json"}
+{"s": "Create panorama", "t": "创建全景", "c": "MavCmdInfoCommon.json"}
+{"s": "VTOL Transition", "t": "垂直起降转换", "c": "MavCmdInfoCommon.json"}
+{"s": "Perform flight mode transition.", "t": "执行飞行模式转换。", "c": "MavCmdInfoCommon.json"}
+{"s": "VTOL", "t": "垂直起降", "c": "MavCmdInfoCommon.json"}
+{"s": "Multi Rotor,Fixed Wing", "t": "多旋翼，固定翼", "c": "MavCmdInfoCommon.json"}
+{"s": "Condition Gate", "t": "条件门", "c": "MavCmdInfoCommon.json"}
+{"s": "Delay mission state machine until gate has been reached.", "t": "延迟任务状态机直到到达门。", "c": "MavCmdInfoCommon.json"}
+{"s": "Ignore Alt", "t": "忽略高度", "c": "MavCmdInfoCommon.json"}
+{"s": "False,True", "t": "否,是", "c": "MavCmdInfoCommon.json"}
+{"s": "Payload prepare deploy", "t": "有效载荷准备部署", "c": "MavCmdInfoCommon.json"}
+{"s": "Payload control deploy", "t": "载荷控制部署", "c": "MavCmdInfoCommon.json"}
+{"s": "Connected", "t": "已连接", "c": "GPSRTKFact.json"}
+{"s": "Current Survey-In Accuracy", "t": "当前自主测定精度", "c": "GPSRTKFact.json"}
+{"s": "Current Survey-In Latitude", "t": "当前自主测定纬度", "c": "GPSRTKFact.json"}
+{"s": "Current Survey-In Longitude", "t": "当前自主测定经度", "c": "GPSRTKFact.json"}
+{"s": "Current Survey-In Altitude", "t": "当前自主测定高度", "c": "GPSRTKFact.json"}
+{"s": "Current Survey-In Duration", "t": "当前自主测定持续时间", "c": "GPSRTKFact.json"}
+{"s": "Survey-In Valid", "t": "自主测定有效", "c": "GPSRTKFact.json"}
+{"s": "Survey-In Active", "t": "自主测定激活", "c": "GPSRTKFact.json"}
+{"s": "Number of Satellites", "t": "卫星数", "c": "GPSRTKFact.json"}
+{"s": "Angle from ground station to vehicle", "t": "地面站到载具的角度", "c": "APMFollowComponent.FactMetaData.json"}
+{"s": "Horizontal distance from ground station to vehicle", "t": "地面站到载具的水平距离", "c": "APMFollowComponent.FactMetaData.json"}
+{"s": "Vertical distance from Launch (home) position to vehicle", "t": "从起飞（Home）位置到载具的垂直距离", "c": "APMFollowComponent.FactMetaData.json"}
+{"s": "Scale the RC range", "t": "缩放遥控器范围", "c": "RCToParamDialog.FactMetaData.json"}
+{"s": "Parameter value when RC output is 0", "t": "遥控器输出为0时的参数值", "c": "RCToParamDialog.FactMetaData.json"}
+{"s": "Minimum parameter value", "t": "最小参数值", "c": "RCToParamDialog.FactMetaData.json"}
+{"s": "Maximum parameter value", "t": "最大参数值", "c": "RCToParamDialog.FactMetaData.json"}
+{"s": "Radius for geofence circle.", "t": "地理围栏圆的半径", "c": "QGCMapCircle.Facts.json"}
+{"s": "Latitude of item position", "t": "项目位置的纬度", "c": "EditPositionDialog.FactMetaData.json"}
+{"s": "Longitude of item position", "t": "项目位置的经度", "c": "EditPositionDialog.FactMetaData.json"}
+{"s": "Easting of item position", "t": "项目位置的东向坐标", "c": "EditPositionDialog.FactMetaData.json"}
+{"s": "Northing of item position", "t": "项目位置的北向坐标", "c": "EditPositionDialog.FactMetaData.json"}
+{"s": "UTM zone", "t": "UTM 分区", "c": "EditPositionDialog.FactMetaData.json"}
+{"s": "Hemisphere for position", "t": "位置所在的半球", "c": "EditPositionDialog.FactMetaData.json"}
+{"s": "North,South", "t": "北,南", "c": "EditPositionDialog.FactMetaData.json"}
+{"s": "MGRS coordinate", "t": "MGRS 坐标", "c": "EditPositionDialog.FactMetaData.json"}
+{"s": "Roll Setpoint", "t": "横滚设定值", "c": "SetpointFact.json"}
+{"s": "Pitch Setpoint", "t": "俯仰设定值", "c": "SetpointFact.json"}
+{"s": "Yaw Setpoint", "t": "偏航设定值", "c": "SetpointFact.json"}
+{"s": "Roll Rate Setpoint", "t": "横滚角速率设定值", "c": "SetpointFact.json"}
+{"s": "Pitch Rate Setpoint", "t": "俯仰角速率设定值", "c": "SetpointFact.json"}
+{"s": "Yaw Rate Setpoint", "t": "偏航角速率设定值", "c": "SetpointFact.json"}
+{"s": "Latitude", "t": "纬度", "c": "GPSFact.json"}
+{"s": "Longitude", "t": "经度", "c": "GPSFact.json"}
+{"s": "MGRS Position", "t": "MGRS 位置", "c": "GPSFact.json"}
+{"s": "HDOP", "t": "水平精度因子", "c": "GPSFact.json"}
+{"s": "VDOP", "t": "垂直精度因子", "c": "GPSFact.json"}
+{"s": "Course Over Ground", "t": "对地航向", "c": "GPSFact.json"}
+{"s": "Yaw", "t": "偏航角", "c": "GPSFact.json"}
+{"s": "GPS Lock", "t": "GPS 锁定", "c": "GPSFact.json"}
+{"s": "None,None,2D Lock,3D Lock,3D DGPS Lock,3D RTK GPS Lock (float),3D RTK GPS Lock (fixed),Static (fixed)", "t": "无,无,2D锁定,3D锁定,3D DGPS锁定,3D RTK GPS 锁定（浮动）,3D RTK GPS锁定（固定）,静态（固定）", "c": "GPSFact.json"}
+{"s": "Sat Count", "t": "卫星数", "c": "GPSFact.json"}
+{"s": "Blocks Pending", "t": "待加载区块", "c": "TerrainFactGroup.json"}
+{"s": "Blocks Loaded", "t": "已加载区块", "c": "TerrainFactGroup.json"}
+{"s": "Time", "t": "时间", "c": "ClockFact.json"}
+{"s": "UTC Time", "t": "UTC 时间", "c": "ClockFact.json"}
+{"s": "Date", "t": "日期", "c": "ClockFact.json"}
+{"s": "Health", "t": "健康状况", "c": "EFIFact.json"}
+{"s": "Ecu Index", "t": "ECU 索引", "c": "EFIFact.json"}
+{"s": "Rpm", "t": "转速", "c": "EFIFact.json"}
+{"s": "Fuel Consumed", "t": "燃油消耗量", "c": "EFIFact.json"}
+{"s": "Fuel Flow", "t": "燃油流量", "c": "EFIFact.json"}
+{"s": "Engine Load", "t": "发动机负载", "c": "EFIFact.json"}
+{"s": "Throttle Position", "t": "油门位置", "c": "EFIFact.json"}
+{"s": "Spark dwell time", "t": "点火持续时间", "c": "EFIFact.json"}
+{"s": "BarometricPressure", "t": "大气压力", "c": "EFIFact.json"}
+{"s": "Intake mainfold pressure", "t": "进气歧管压力", "c": "EFIFact.json"}
+{"s": "Intake mainfold temperature", "t": "进气歧管温度", "c": "EFIFact.json"}
+{"s": "Cylinder head temperature", "t": "气缸头温度", "c": "EFIFact.json"}
+{"s": "Ignition Timing", "t": "点火正时", "c": "EFIFact.json"}
+{"s": "Injection Time", "t": "喷油时间", "c": "EFIFact.json"}
+{"s": "Exhaust gas Temperature", "t": "排气温度", "c": "EFIFact.json"}
+{"s": "Throttle Out", "t": "油门输出", "c": "EFIFact.json"}
+{"s": "Pt Compensation", "t": "Pt补偿", "c": "EFIFact.json"}
+{"s": "Vibe xAxis", "t": "振动 X轴", "c": "VibrationFact.json"}
+{"s": "Vibe yAxis", "t": "振动 Y轴", "c": "VibrationFact.json"}
+{"s": "Vibe zAxis", "t": "振动 Z轴", "c": "VibrationFact.json"}
+{"s": "Clip Count (1)", "t": "削波计数 (1)", "c": "VibrationFact.json"}
+{"s": "Clip Count (2)", "t": "削波计数 (2)", "c": "VibrationFact.json"}
+{"s": "Clip Count (3)", "t": "削波计数 (3)", "c": "VibrationFact.json"}
+{"s": "Status", "t": "状态", "c": "GeneratorFact.json"}
+{"s": "Generator Speed", "t": "发电机转速", "c": "GeneratorFact.json"}
+{"s": "Battery Current", "t": "电池电流", "c": "GeneratorFact.json"}
+{"s": "Load Current", "t": "负载电流", "c": "GeneratorFact.json"}
+{"s": "Power Generated", "t": "发电功率", "c": "GeneratorFact.json"}
+{"s": "Bus Voltage", "t": "总线电压", "c": "GeneratorFact.json"}
+{"s": "Rectifier Temperature", "t": "整流器温度", "c": "GeneratorFact.json"}
+{"s": "Battery Current Setpoint", "t": "电池电流设定值", "c": "GeneratorFact.json"}
+{"s": "Generator Temperature", "t": "发电机温度", "c": "GeneratorFact.json"}
+{"s": "runtime", "t": "运行时间", "c": "GeneratorFact.json"}
+{"s": "Time until Maintenance", "t": "距下次维护时间", "c": "GeneratorFact.json"}
+{"s": "Camera Tilt", "t": "相机俯仰", "c": "SubmarineFact.json"}
+{"s": "Tether Turns", "t": "系缆圈数", "c": "SubmarineFact.json"}
+{"s": "Lights 1 level", "t": "灯光1亮度", "c": "SubmarineFact.json"}
+{"s": "Lights 2 level", "t": "灯光2亮度", "c": "SubmarineFact.json"}
+{"s": "Pilot Gain", "t": "操纵增益", "c": "SubmarineFact.json"}
+{"s": "Input Hold", "t": "输入保持", "c": "SubmarineFact.json"}
+{"s": "Disabled,Enabled", "t": "禁用,启用", "c": "SubmarineFact.json"}
+{"s": "Rangefinder", "t": "测距仪", "c": "SubmarineFact.json"}
+{"s": "RFTarget", "t": "射频目标", "c": "SubmarineFact.json"}
+{"s": "Roll/Pitch Toggle", "t": "横滚/俯仰切换", "c": "SubmarineFact.json"}
+{"s": "Disabled,Enabled,Unavailable", "t": "禁用,启用,不可用", "c": "SubmarineFact.json"}
+{"s": "Roll", "t": "横滚", "c": "VehicleFact.json"}
+{"s": "Pitch", "t": "俯仰", "c": "VehicleFact.json"}
+{"s": "Heading", "t": "航向", "c": "VehicleFact.json"}
+{"s": "Roll Rate", "t": "横滚速率", "c": "VehicleFact.json"}
+{"s": "Pitch Rate", "t": "俯仰速率", "c": "VehicleFact.json"}
+{"s": "Yaw Rate", "t": "偏航速率", "c": "VehicleFact.json"}
+{"s": "Ground Speed", "t": "地速", "c": "VehicleFact.json"}
+{"s": "Air Speed", "t": "空速", "c": "VehicleFact.json"}
+{"s": "Climb Rate", "t": "爬升率", "c": "VehicleFact.json"}
+{"s": "Alt (Rel)", "t": "相对高度", "c": "VehicleFact.json"}
+{"s": "Alt (AMSL)", "t": "海拔高度", "c": "VehicleFact.json"}
+{"s": "Alt (Above Terrain)", "t": "离地高度", "c": "VehicleFact.json"}
+{"s": "Flight Distance", "t": "飞行距离", "c": "VehicleFact.json"}
+{"s": "Distance to Home", "t": "距返航点距离", "c": "VehicleFact.json"}
+{"s": "Time to Home", "t": "返航所需时间", "c": "VehicleFact.json"}
+{"s": "Heading to Home", "t": "返航点航向", "c": "VehicleFact.json"}
+{"s": "Distance to GCS", "t": "距地面站距离", "c": "VehicleFact.json"}
+{"s": "Mission Item Index", "t": "任务项索引", "c": "VehicleFact.json"}
+{"s": "Next WP Heading", "t": "下一航点航向", "c": "VehicleFact.json"}
+{"s": "Next WP distance", "t": "距下一航点距离", "c": "VehicleFact.json"}
+{"s": "Flight Time", "t": "飞行时间", "c": "VehicleFact.json"}
+{"s": "Hobbs Meter", "t": "发动机计时器", "c": "VehicleFact.json"}
+{"s": "Throttle %", "t": "油门百分比", "c": "VehicleFact.json"}
+{"s": "Imu temperature", "t": "IMU温度", "c": "VehicleFact.json"}
+{"s": "Good Attitude Esimate", "t": "姿态估计良好", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Good Horiz Vel Estimate", "t": "水平速度估计良好", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Good Vert Vel Estimate", "t": "垂直速度估计良好", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Good Horiz Pos Rel Estimate", "t": "水平相对位置估计良好", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Good Horiz Pos Abs Estimate", "t": "水平绝对位置估计良好", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Good Vert Pos Abs Estimate", "t": "垂直绝对位置估计良好", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Good Vert Pos AGL Estimate", "t": "离地高度估计良好", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Good Const Pos Mode Estimate", "t": "定点模式估计良好", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Good Pred Horiz Pos Rel Estimate", "t": "水平相对位置预测良好", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Good Pred Horiz Pos Abs Estimate", "t": "水平绝对位置预测良好", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Gps Glitch", "t": "GPS干扰", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Accel Error", "t": "加速度计误差", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Vel Ratio", "t": "速度比率", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Horiz Pos Ratio", "t": "水平位置比率", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Vert Pos Ratio", "t": "垂直位置比率", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Mag Ratio", "t": "磁力计比率", "c": "EstimatorStatusFactGroup.json"}
+{"s": "HAGL Ratio", "t": "离地高度比率", "c": "EstimatorStatusFactGroup.json"}
+{"s": "TAS Ratio", "t": "真空速比率", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Horiz Pos Accuracy", "t": "水平位置精度", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Vert Pos Accuracy", "t": "垂直位置精度", "c": "EstimatorStatusFactGroup.json"}
+{"s": "Battery Id", "t": "电池 ID", "c": "BatteryFact.json"}
+{"s": "Battery Function", "t": "电池功能", "c": "BatteryFact.json"}
+{"s": "n/a,All Flight Systems,Propulsion,Avionics,Payload", "t": "不适用,所有飞行系统,推进系统,航电设备,任务载荷", "c": "BatteryFact.json"}
+{"s": "Battery Type", "t": "电池类型", "c": "BatteryFact.json"}
+{"s": "n/a,LIPO,LIFE,LION,NIMH", "t": "不适用,锂聚合物电池,磷酸铁锂电池,锂离子电池,镍氢电池", "c": "BatteryFact.json"}
+{"s": "Voltage", "t": "电压", "c": "BatteryFact.json"}
+{"s": "Percent", "t": "百分比", "c": "BatteryFact.json"}
+{"s": "Consumed", "t": "已消耗", "c": "BatteryFact.json"}
+{"s": "Current", "t": "电流", "c": "BatteryFact.json"}
+{"s": "Temperature", "t": "温度", "c": "BatteryFact.json"}
+{"s": "Watts", "t": "功率", "c": "BatteryFact.json"}
+{"s": "Time Remaining", "t": "剩余时间", "c": "BatteryFact.json"}
+{"s": "Charge State", "t": "充电状态", "c": "BatteryFact.json"}
+{"s": "n/a,Ok,Low,Critical,Emergency,Failed,Unhealthy,Charging", "t": "不适用,正常,低电量,严重,紧急,故障,异常,充电中", "c": "BatteryFact.json"}
+{"s": "Wind Direction", "t": "风向", "c": "WindFact.json"}
+{"s": "Wind Spd", "t": "风速", "c": "WindFact.json"}
+{"s": "Wind Spd (vert)", "t": "风速 (垂直)", "c": "WindFact.json"}
+{"s": "Index Of The First ESC In This Message", "t": "此消息中第一个电调的索引", "c": "EscStatusFactGroup.json"}
+{"s": "Rotation Per Minute", "t": "每分钟转数", "c": "EscStatusFactGroup.json"}
+{"s": "Current", "t": "电流", "c": "EscStatusFactGroup.json"}
+{"s": "Voltage", "t": "电压", "c": "EscStatusFactGroup.json"}
+{"s": "Temperature (1)", "t": "温度 (1)", "c": "TemperatureFact.json"}
+{"s": "Temperature (2)", "t": "温度 (2)", "c": "TemperatureFact.json"}
+{"s": "Temperature (3)", "t": "温度 (3)", "c": "TemperatureFact.json"}
+{"s": "Temperature", "t": "温度", "c": "HygrometerFact.json"}
+{"s": "Humidity %", "t": "湿度 %", "c": "HygrometerFact.json"}
+{"s": "ID", "t": "ID", "c": "HygrometerFact.json"}
+{"s": "Forward", "t": "前", "c": "DistanceSensorFact.json"}
+{"s": "Forward/Right", "t": "前/右", "c": "DistanceSensorFact.json"}
+{"s": "Right", "t": "右", "c": "DistanceSensorFact.json"}
+{"s": "Rear/Right", "t": "后/右", "c": "DistanceSensorFact.json"}
+{"s": "Rear", "t": "后", "c": "DistanceSensorFact.json"}
+{"s": "Rear/Left", "t": "后/左", "c": "DistanceSensorFact.json"}
+{"s": "Left", "t": "左", "c": "DistanceSensorFact.json"}
+{"s": "Forward/Left", "t": "前/左", "c": "DistanceSensorFact.json"}
+{"s": "Up", "t": "上", "c": "DistanceSensorFact.json"}
+{"s": "Down", "t": "下", "c": "DistanceSensorFact.json"}
+{"s": "Minimum distance sensor can detect", "t": "传感器可检测的最小距离", "c": "DistanceSensorFact.json"}
+{"s": "Maximum distance sensor can detect", "t": "传感器可检测的最大距离", "c": "DistanceSensorFact.json"}
+{"s": "X", "t": "X", "c": "LocalPositionFact.json"}
+{"s": "Y", "t": "Y", "c": "LocalPositionFact.json"}
+{"s": "Z", "t": "Z", "c": "LocalPositionFact.json"}
+{"s": "VX", "t": "VX", "c": "LocalPositionFact.json"}
+{"s": "Vy", "t": "Vy", "c": "LocalPositionFact.json"}
+{"s": "Vz", "t": "Vz", "c": "LocalPositionFact.json"}
+{"s": "RPM 1", "t": "RPM 1", "c": "RPMFact.json"}
+{"s": "RPM 2", "t": "RPM 2", "c": "RPMFact.json"}
+{"s": "RPM 3", "t": "RPM 3", "c": "RPMFact.json"}
+{"s": "RPM 4", "t": "RPM 4", "c": "RPMFact.json"}
+{"s": "Controlled By Vehicle,0 hz,1 hz,2 hz,3 hz,4 hz,5 hz,6 hz,7 hz,8 hz,9 hz,10 hz,50 hz,100 hz", "t": "由无人机控制,0 赫兹,1 赫兹,2 赫兹,3 赫兹,4 赫兹,5 赫兹,6 赫兹,7 赫兹,8 赫兹,9 赫兹,10 赫兹,50 赫兹,100 赫兹", "c": "APMMavlinkStreamRate.SettingsGroup.json"}
+{"s": "Operator ID", "t": "操作员ID", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Operator ID. Maximum 20 characters.", "t": "操作员ID。最多20个字符。", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Operator ID is valid", "t": "操作员ID有效", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Operator ID has been checked using checksum.", "t": "操作员ID已通过校验和检查。", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Operator ID type", "t": "操作员ID类型", "c": "RemoteID.SettingsGroup.json"}
+{"s": "CAA", "t": "CAA", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Send Operator ID", "t": "发送操作员ID", "c": "RemoteID.SettingsGroup.json"}
+{"s": "When enabled, sends operator ID message", "t": "启用时，发送操作员ID消息", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Flight Purpose", "t": "飞行目的", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Optional plain text for operator to specify operations data (Free Text). Maximum 23 characters.", "t": "操作员可选的用于指定操作数据的纯文本（自由文本）。最多23个字符。", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Emergency Text", "t": "紧急文本", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Optional plain text for operator to specify operations data (Emergency Text). Maximum 23 characters.", "t": "供操作员指定应急操作数据的可选纯文本（应急文本）。最多23个字符。", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Extended Status", "t": "扩展状态", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Optional plain text for operator to specify operations data (Extended Text). Maximum 23 characters.", "t": "供操作员指定扩展操作数据的可选纯文本（扩展文本）。最多23个字符。", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Self ID type", "t": "自识别类型", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Flight Purpose,Emergency,Extended Status", "t": "飞行目的,应急,扩展状态", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Send Self ID", "t": "发送自识别", "c": "RemoteID.SettingsGroup.json"}
+{"s": "When enabled, sends self ID message", "t": "启用时，发送自识别消息", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Basic ID", "t": "基本识别", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Basic ID Type", "t": "基本识别类型", "c": "RemoteID.SettingsGroup.json"}
+{"s": "None,SerialNumber (ANSI/CTA-2063),CAA,UTM (RFC4122),Specific", "t": "无,序列号 (ANSI/CTA-2063),CAA,UTM (RFC4122),特定", "c": "RemoteID.SettingsGroup.json"}
+{"s": "UA type", "t": "无人机类型", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Undefined,Airplane/FixedWing,Helicopter/Multirrotor,Gyroplane,VTOL,Ornithopter,Glider,Kite,Free Ballon,Captive Ballon,Airship,Parachute,Rocket,Tethered powered aircraft,Ground Obstacle,Other", "t": "未定义,固定翼飞机,直升机/多旋翼,旋翼机,垂直起降飞机,扑翼机,滑翔机,风筝,自由气球,系留气球,飞艇,降落伞,火箭,系留动力飞行器,地面障碍物,其他", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Send Basic ID", "t": "发送基本识别", "c": "RemoteID.SettingsGroup.json"}
+{"s": "When enabled, sends basic ID message", "t": "启用时，发送基本识别消息", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Region of operation", "t": "运行区域", "c": "RemoteID.SettingsGroup.json"}
+{"s": "The region of operation the mission will take place in", "t": "任务将执行的运行区域", "c": "RemoteID.SettingsGroup.json"}
+{"s": "FAA,EU", "t": "FAA,EU", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Location Type", "t": "位置类型", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Operator location Type", "t": "操作员位置类型", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Takeoff(Not Supported),Live GNNS, Fixed (not for FAA)", "t": "起飞(不支持),实时GNSS, 固定位置(不适用于FAA)", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Latitude Fixed", "t": "固定纬度", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Fixed latitude to send on SYSTEM message", "t": "在SYSTEM消息中发送的固定纬度", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Longitude Fixed", "t": "固定经度", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Fixed Longitude to send on SYSTEM message", "t": "在SYSTEM消息中发送的固定经度", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Altitude Fixed", "t": "固定高度", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Fixed Altitude to send on SYSTEM message", "t": "在SYSTEM消息中发送的固定高度", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Classification Type", "t": "分类类型", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Classification Type of UAS", "t": "无人航空器系统分类类型", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Undeclared,EU", "t": "未声明,欧盟", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Category", "t": "类别", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Category of the UAS in the EU region", "t": "欧盟地区无人航空器系统类别", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Undeclared,Open,Specific,Certified", "t": "未声明,开放,特定,认证", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Class", "t": "等级", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Class of the UAS in the EU region", "t": "欧盟地区无人航空器系统等级", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Undeclared,Class 0,Class 1,Class 2,Class 3,Class 4,Class 5,Class 6", "t": "未声明,等级0,等级1,等级2,等级3,等级4,等级5,等级6", "c": "RemoteID.SettingsGroup.json"}
+{"s": "Currently selected map provider for flight maps", "t": "飞行地图当前选定的地图提供商", "c": "FlightMap.SettingsGroup.json"}
+{"s": "Currently selected map type for flight maps", "t": "飞行地图当前选定的地图类型", "c": "FlightMap.SettingsGroup.json"}
+{"s": "Currently selected elevation map provider", "t": "当前选定的高程地图提供商", "c": "FlightMap.SettingsGroup.json"}
+{"s": "Survey in accuracy (U-blox only)", "t": "测量精度（仅限U-blox）", "c": "RTK.SettingsGroup.json"}
+{"s": "The minimum accuracy value that Survey-In must achieve before it can complete.", "t": "自主测定必须达到的最小精度值才能完成。", "c": "RTK.SettingsGroup.json"}
+{"s": "Min observation time", "t": "最小观测时间", "c": "RTK.SettingsGroup.json"}
+{"s": "Defines the minimum amount of observation time for the position calculation.", "t": "定义位置计算所需的最小观测时间。", "c": "RTK.SettingsGroup.json"}
+{"s": "Use specified base position", "t": "使用指定基准站位置", "c": "RTK.SettingsGroup.json"}
+{"s": "Specify the values for the RTK base position without having to do a survey in.", "t": "无需进行测绘，直接指定RTK基准站位置的值。", "c": "RTK.SettingsGroup.json"}
+{"s": "Base Position Latitude", "t": "基准站纬度", "c": "RTK.SettingsGroup.json"}
+{"s": "Defines the latitude of the fixed RTK base position.", "t": "定义固定RTK基准站的纬度。", "c": "RTK.SettingsGroup.json"}
+{"s": "Base Position Longitude", "t": "基准站经度", "c": "RTK.SettingsGroup.json"}
+{"s": "Defines the longitude of the fixed RTK base position.", "t": "定义固定RTK基准站的经度。", "c": "RTK.SettingsGroup.json"}
+{"s": "Base Position Alt (WGS84)", "t": "基准站高度 (WGS84)", "c": "RTK.SettingsGroup.json"}
+{"s": "Defines the altitude of the fixed RTK base position.", "t": "定义固定RTK基准站的高度。", "c": "RTK.SettingsGroup.json"}
+{"s": "Base Position Accuracy", "t": "基准站位置精度", "c": "RTK.SettingsGroup.json"}
+{"s": "Defines the accuracy of the fixed RTK base position.", "t": "定义固定RTK基准站位置的精度。", "c": "RTK.SettingsGroup.json"}
+{"s": "Minimum zoom level for downloads.", "t": "下载的最小缩放级别。", "c": "OfflineMaps.SettingsGroup.json"}
+{"s": "Maximum zoom level for downloads.", "t": "下载的最大缩放级别。", "c": "OfflineMaps.SettingsGroup.json"}
+{"s": "Maximum number of tiles for download.", "t": "下载图块的最大数量。", "c": "OfflineMaps.SettingsGroup.json"}
+{"s": "Save telemetry Log after each flight", "t": "每次飞行后保存遥测日志", "c": "Mavlink.SettingsGroup.json"}
+{"s": "If this option is enabled a telemetry will be saved after each flight completes.", "t": "启用此选项后，每次飞行结束后将保存遥测日志。", "c": "Mavlink.SettingsGroup.json"}
+{"s": "Save telemetry log even if vehicle was not armed", "t": "即使载具未解锁也保存遥测日志", "c": "Mavlink.SettingsGroup.json"}
+{"s": "If this option is enabled a telemtry log will be saved even if vehicle was never armed.", "t": "启用此选项后，即使载具从未解锁，也将保存遥测日志。", "c": "Mavlink.SettingsGroup.json"}
+{"s": "Request start of MAVLink telemetry streams (ArduPilot only)", "t": "请求启动MAVLink遥测流 (仅限ArduPilot)", "c": "Mavlink.SettingsGroup.json"}
+{"s": "Save CSV Telementry Logs", "t": "保存CSV遥测日志", "c": "Mavlink.SettingsGroup.json"}
+{"s": "If this option is enabled, all Facts will be written to a CSV file with a 1 Hertz frequency.", "t": "启用此选项后，所有数据将以1赫兹的频率写入CSV文件。", "c": "Mavlink.SettingsGroup.json"}
+{"s": "Enable mavlink forwarding", "t": "启用MAVLink转发", "c": "Mavlink.SettingsGroup.json"}
+{"s": "Host name", "t": "主机名", "c": "Mavlink.SettingsGroup.json"}
+{"s": "Host name to forward mavlink to. i.e: localhost:14445", "t": "转发MAVLink的目标主机名。例如：localhost:14445", "c": "Mavlink.SettingsGroup.json"}
+{"s": "Ardupilot Support Host name", "t": "ArduPilot支持主机名", "c": "Mavlink.SettingsGroup.json"}
+{"s": "Ardupilot Support server to forward mavlink to. i.e: support.ardupilot.org:xxxx", "t": "转发MAVLink的ArduPilot支持服务器。例如：support.ardupilot.org:xxxx", "c": "Mavlink.SettingsGroup.json"}
+{"s": "MAVLink 2.0 signing key", "t": "MAVLink 2.0签名密钥", "c": "Mavlink.SettingsGroup.json"}
+{"s": "Send GCS Heartbeat", "t": "发送地面站心跳", "c": "Mavlink.SettingsGroup.json"}
+{"s": "GCS MAVLink System ID", "t": "地面站MAVLink系统ID", "c": "Mavlink.SettingsGroup.json"}
+{"s": "Name of JSON custom actions file for Fly View", "t": "飞行视图自定义操作JSON文件名", "c": "MavlinkActions.SettingsGroup.json"}
+{"s": "Name of JSON custom actions file for Joysticks", "t": "摇杆自定义操作JSON文件名", "c": "MavlinkActions.SettingsGroup.json"}
+{"s": "Max disk cache", "t": "最大磁盘缓存", "c": "Maps.SettingsGroup.json"}
+{"s": "Max memory cache", "t": "最大内存缓存", "c": "Maps.SettingsGroup.json"}
+{"s": "Default firmware type for flashing", "t": "默认刷写固件类型", "c": "FirmwareUpgrade.SettingsGroup.json"}
+{"s": "ChibiOS,NuttX", "t": "ChibiOS,NuttX", "c": "FirmwareUpgrade.SettingsGroup.json"}
+{"s": "Multi-Rotor,Helicopter,Plane,Rover,Sub", "t": "多机器人,直升机,固定翼,旋翼,水下装置", "c": "FirmwareUpgrade.SettingsGroup.json"}
+{"s": "Minimum altitude for guided actions altitude slider.", "t": "引导模式高度滑块的最小高度。", "c": "FlyView.SettingsGroup.json"}
+{"s": "Maximum altitude for guided actions altitude slider.", "t": "引导模式高度滑块的最大高度。", "c": "FlyView.SettingsGroup.json"}
+{"s": "Show/Hide Log Replay status bar", "t": "显示/隐藏日志回放状态栏", "c": "FlyView.SettingsGroup.json"}
+{"s": "Show additional heading indicators on Compass", "t": "在罗盘上显示附加航向指示器", "c": "FlyView.SettingsGroup.json"}
+{"s": "Lock Compass Nose-Up", "t": "锁定罗盘机头朝上", "c": "FlyView.SettingsGroup.json"}
+{"s": "Keep map centered on vehicle", "t": "保持地图以载具为中心", "c": "FlyView.SettingsGroup.json"}
+{"s": "Show controls for camera triggering using MAV_CMD_DO_DIGICAM_CONTROL.", "t": "显示使用 MAV_CMD_DO_DIGICAM_CONTROL 指令的相机触发控件。", "c": "FlyView.SettingsGroup.json"}
+{"s": "Show obstacle distance overlay on map and video.", "t": "在地图和视频上显示障碍物距离叠加层。", "c": "FlyView.SettingsGroup.json"}
+{"s": "Maximum distance allowed for Go To Location.", "t": "前往指定位置允许的最大距离。", "c": "FlyView.SettingsGroup.json"}
+{"s": "Loiter radius for orbiting the Go To Location during forward flight. This only applies if the firmware supports a radius in MAV_CMD_DO_REPOSITION commands.", "t": "前飞时环绕前往指定位置的悬停半径。仅当固件支持 MAV_CMD_DO_REPOSITION 指令中的半径参数时适用。", "c": "FlyView.SettingsGroup.json"}
+{"s": "Require slide confirmation for Go To Location when the vehicle is already in Guided mode.", "t": "当载具已处于引导模式时，前往指定位置需要滑动确认。", "c": "FlyView.SettingsGroup.json"}
+{"s": "Send updated GCS' home position to autopilot in case of change of the home position", "t": "若返航点位置发生变化，将更新后的地面站返航点位置发送给飞控。", "c": "FlyView.SettingsGroup.json"}
+{"s": "Qml file for instrument panel", "t": "仪表板的 Qml 文件", "c": "FlyView.SettingsGroup.json"}
+{"s": "Integrated Compass & Attitude,Horizontal Compass & Attitude,Large Vertical", "t": "集成罗盘与姿态,水平罗盘与姿态,大型垂直", "c": "FlyView.SettingsGroup.json"}
+{"s": "When requesting vehicle control, allow other GCS to override control automatically, or require this GCS to accept the request first.", "t": "当请求载具控制权时，允许其他地面站自动接管控制，或要求本地地面站先接受请求。", "c": "FlyView.SettingsGroup.json"}
+{"s": "Timeout in seconds before a request to a GCS to allow takeover is assumed to be rejected. This is used to display the timeout graphically on requestor and GCS in control.", "t": "在假定向地面站发出的允许接管请求被拒绝之前的超时秒数。用于在请求方和控制方地面站上图形化显示超时。", "c": "FlyView.SettingsGroup.json"}
+{"s": "Comma separated list of hidden flight modes", "t": "隐藏飞行模式的逗号分隔列表", "c": "FlightMode.SettingsGroup.json"}
+{"s": "Comma separated list of hidden flight modes for MultiRotor", "t": "多旋翼隐藏飞行模式的逗号分隔列表", "c": "FlightMode.SettingsGroup.json"}
+{"s": "Comma separated list of hidden flight modes for FixedWing", "t": "固定翼隐藏飞行模式的逗号分隔列表", "c": "FlightMode.SettingsGroup.json"}
+{"s": "Comma separated list of hidden flight modes for VTOL", "t": "垂直起降飞行器隐藏飞行模式的逗号分隔列表", "c": "FlightMode.SettingsGroup.json"}
+{"s": "Comma separated list of hidden flight modes for RoverBoat", "t": "地面车辆/船只隐藏飞行模式的逗号分隔列表", "c": "FlightMode.SettingsGroup.json"}
+{"s": "Comma separated list of hidden flight modes for Sub", "t": "潜水器隐藏飞行模式的逗号分隔列表", "c": "FlightMode.SettingsGroup.json"}
+{"s": "Comma separated list of hidden flight modes for Airship", "t": "飞艇隐藏飞行模式的逗号分隔列表", "c": "FlightMode.SettingsGroup.json"}
+{"s": "Automatically open a connection over UDP", "t": "通过 UDP 自动打开连接", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "If this option is enabled GroundControl will automatically connect to a vehicle which is detected on a UDP communication link.", "t": "如果启用此选项，地面站将自动连接到在 UDP 通信链路上检测到的载具。", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "Automatically connect to a Pixhawk board", "t": "自动连接 Pixhawk 飞控板", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "If this option is enabled GroundControl will automatically connect to a Pixhawk board which is connected via USB.", "t": "启用此选项后，地面站将自动连接通过 USB 连接的 Pixhawk 飞控板。", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "Automatically connect to a SiK Radio", "t": "自动连接 SiK 数传电台", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "If this option is enabled GroundControl will automatically connect to a vehicle which is detected on a SiK Radio communication link.", "t": "启用此选项后，地面站将自动连接在 SiK 数传通信链路上检测到的载具。", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "Automatically connect to an RTK GPS", "t": "自动连接 RTK GPS", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "If this option is enabled GroundControl will automatically connect to an RTK GPS which is connected via USB.", "t": "启用此选项后，地面站将自动连接通过 USB 连接的 RTK GPS。", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "Automatically connect to a LibrePilot", "t": "自动连接 LibrePilot", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "If this option is enabled GroundControl will automatically connect to a LibrePilot board which is connected via USB.", "t": "启用此选项后，地面站将自动连接通过 USB 连接的 LibrePilot 飞控板。", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "NMEA GPS device for GCS position", "t": "用于地面站位置的 NMEA GPS 设备", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "NMEA GPS Baudrate", "t": "NMEA GPS 波特率", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "Automatically open a connection with Zero-Conf", "t": "通过零配置 (Zero-Conf) 自动打开连接", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "If this option is enabled GroundControl will automatically connect to a vehicle which is detected over Zero-Conf.", "t": "启用此选项后，地面站将自动连接通过零配置（Zero-Conf）检测到的载具。", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "UDP port for autoconnect", "t": "自动连接的 UDP 端口", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "UDP target host IP for autoconnect", "t": "自动连接的 UDP 目标主机 IP", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "UDP target host port for autoconnect", "t": "自动连接的 UDP 目标主机端口", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "Udp port to receive NMEA streams", "t": "接收 NMEA 数据流的 UDP 端口", "c": "AutoConnect.SettingsGroup.json"}
+{"s": "Display the presets tab at start", "t": "启动时显示预设标签页", "c": "PlanView.SettingsGroup.json"}
+{"s": "Show/Hide the mission item status display", "t": "显示/隐藏任务项状态显示", "c": "PlanView.SettingsGroup.json"}
+{"s": "Allow missions to not require a takeoff item", "t": "允许任务不包含起飞项", "c": "PlanView.SettingsGroup.json"}
+{"s": "Allow configuring multiple landing sequences if the firmware supports it. The first one will be used for the mission, but in the event of an RTL, the one that is closest will be used instead.", "t": "如果固件支持，允许配置多个降落序列。第一个将用于任务，但在发生返航时，将使用最近的一个。", "c": "PlanView.SettingsGroup.json"}
+{"s": "Use MAV_CMD_CONDITION_GATE for pattern generation", "t": "使用 MAV_CMD_CONDITION_GATE 指令生成航线模式", "c": "PlanView.SettingsGroup.json"}
+{"s": "Show gimbal yaw visual only when set explicitly for the waypoint", "t": "仅当为航点明确设置云台偏航角时才显示其视觉指示", "c": "PlanView.SettingsGroup.json"}
+{"s": "Amount of distance required for vehicle to complete a transition", "t": "载具完成模式切换所需距离", "c": "PlanView.SettingsGroup.json"}
+{"s": "Connect to ADSB SBS server", "t": "连接到 ADSB SBS 服务器", "c": "ADSBVehicleManager.SettingsGroup.json"}
+{"s": "Connect to ADSB SBS-1 server using specified address/port", "t": "使用指定的地址/端口连接到 ADSB SBS-1 服务器", "c": "ADSBVehicleManager.SettingsGroup.json"}
+{"s": "Host address", "t": "主机地址", "c": "ADSBVehicleManager.SettingsGroup.json"}
+{"s": "Server port", "t": "服务器端口", "c": "ADSBVehicleManager.SettingsGroup.json"}
+{"s": "Video source", "t": "视频源", "c": "Video.SettingsGroup.json"}
+{"s": "Source for video. UDP, TCP, RTSP and UVC Cameras may be supported depending on Vehicle and ground station version.", "t": "视频源。根据载具和地面站版本，可能支持 UDP、TCP、RTSP 和 UVC 摄像头。", "c": "Video.SettingsGroup.json"}
+{"s": "Video UDP Url", "t": "视频 UDP 地址", "c": "Video.SettingsGroup.json"}
+{"s": "UDP url address and port to bind to for video stream. Example: 0.0.0.0:5600", "t": "用于绑定视频流的 UDP 地址和端口。例如：0.0.0.0:5600", "c": "Video.SettingsGroup.json"}
+{"s": "Video RTSP Url", "t": "视频 RTSP 地址", "c": "Video.SettingsGroup.json"}
+{"s": "RTSP url address and port to bind to for video stream. Example: rtsp://192.168.42.1:554/live", "t": "用于绑定视频流的 RTSP 地址和端口。例如：rtsp://192.168.42.1:554/live", "c": "Video.SettingsGroup.json"}
+{"s": "Video TCP Url", "t": "视频 TCP 地址", "c": "Video.SettingsGroup.json"}
+{"s": "TCP url address and port to bind to for video stream. Example: 192.168.143.200:3001", "t": "用于绑定视频流的 TCP 地址和端口。例如：192.168.143.200:3001", "c": "Video.SettingsGroup.json"}
+{"s": "Video save directory", "t": "视频保存目录", "c": "Video.SettingsGroup.json"}
+{"s": "Directory to save videos to.", "t": "用于保存视频的目录。", "c": "Video.SettingsGroup.json"}
+{"s": "Video Aspect Ratio", "t": "视频宽高比", "c": "Video.SettingsGroup.json"}
+{"s": "Video Aspect Ratio (width / height). Use 0.0 to ignore it.", "t": "视频宽高比（宽度 / 高度）。使用 0.0 表示忽略此设置。", "c": "Video.SettingsGroup.json"}
+{"s": "Video Grid Lines", "t": "视频网格线", "c": "Video.SettingsGroup.json"}
+{"s": "Displays a grid overlaid over the video view.", "t": "在视频画面上叠加显示网格。", "c": "Video.SettingsGroup.json"}
+{"s": "Video Display Fit", "t": "视频显示适配", "c": "Video.SettingsGroup.json"}
+{"s": "Handle Video Aspect Ratio.", "t": "处理视频宽高比。", "c": "Video.SettingsGroup.json"}
+{"s": "Fit Width,Fit Height,Fill,No Crop", "t": "适应宽度,适应高度,填充,不裁剪", "c": "Video.SettingsGroup.json"}
+{"s": "Show Video Record Control", "t": "显示视频录制控制", "c": "Video.SettingsGroup.json"}
+{"s": "Show recording control in the UI.", "t": "在用户界面中显示录制控制。", "c": "Video.SettingsGroup.json"}
+{"s": "Video Recording Format", "t": "视频录制格式", "c": "Video.SettingsGroup.json"}
+{"s": "Video recording file format.", "t": "视频录制文件格式。", "c": "Video.SettingsGroup.json"}
+{"s": "mkv,mov,mp4", "t": "mkv,mov,mp4", "c": "Video.SettingsGroup.json"}
+{"s": "Max Video Storage Usage", "t": "最大视频存储用量", "c": "Video.SettingsGroup.json"}
+{"s": "Maximum amount of disk space used by video recording.", "t": "视频录制占用的最大磁盘空间。", "c": "Video.SettingsGroup.json"}
+{"s": "Enable/Disable Limits on Storage Usage", "t": "启用/禁用存储用量限制", "c": "Video.SettingsGroup.json"}
+{"s": "When enabled, old video files will be auto-deleted when the total size of QGC-recorded video exceeds the maximum video storage usage.", "t": "启用后，当QGC录制的视频总大小超过最大视频存储用量时，旧的视频文件将被自动删除。", "c": "Video.SettingsGroup.json"}
+{"s": "RTSP Video Timeout", "t": "RTSP视频超时", "c": "Video.SettingsGroup.json"}
+{"s": "How long to wait before assuming RTSP link is gone.", "t": "在判定RTSP连接断开前等待多长时间。", "c": "Video.SettingsGroup.json"}
+{"s": "Video Stream Enabled", "t": "视频流已启用", "c": "Video.SettingsGroup.json"}
+{"s": "Start/Stop Video Stream.", "t": "启动/停止视频流。", "c": "Video.SettingsGroup.json"}
+{"s": "Video Stream Disnabled When Armed", "t": "解锁时禁用视频流", "c": "Video.SettingsGroup.json"}
+{"s": "Disable Video Stream when disarmed.", "t": "未解锁时禁用视频流。", "c": "Video.SettingsGroup.json"}
+{"s": "Tweaks video for lower latency", "t": "调整视频以降低延迟", "c": "Video.SettingsGroup.json"}
+{"s": "If this option is enabled, the rtpjitterbuffer is removed and the video sink is set to assynchronous mode, reducing the latency by about 200 ms.", "t": "启用该选项后，将移除 RTP 抖动缓冲 (RTP Jitter Buffer) 并将视频接收端 (Video Sink) 设为异步模式，可降低约 200 毫秒的延迟。", "c": "Video.SettingsGroup.json"}
+{"s": "Force specific category of video decode", "t": "强制指定视频解码类别", "c": "Video.SettingsGroup.json"}
+{"s": "Force the change of prioritization between video decode methods, allowing the user to force some video hardware decode plugins if necessary.", "t": "强制更改视频解码方法之间的优先级，允许用户在必要时强制使用某些视频硬件解码插件。", "c": "Video.SettingsGroup.json"}
+{"s": "Default,Force software decoder,Force NVIDIA decoder,Force VA-API decoder,Force DirectX3D 11 decoder,Force VideoToolbox decoder,Force Intel decoder,Force Vulkan decoder", "t": "默认,强制软件解码器,强制 NVIDIA 解码器,强制 VA-API 解码器,强制 DirectX3D 11 解码器,强制 VideoToolbox 解码器,强制 Intel 解码器,强制 Vulkan 解码器", "c": "Video.SettingsGroup.json"}
+{"s": "Enable the 3D viewer", "t": "启用 3D 视图", "c": "Viewer3D.SettingsGroup.json"}
+{"s": "Path to the OSM file for the 3D viewer.", "t": "3D 视图所用 OSM 文件的路径。", "c": "Viewer3D.SettingsGroup.json"}
+{"s": "Average Height for each level of the buildings", "t": "建筑物每层的平均高度", "c": "Viewer3D.SettingsGroup.json"}
+{"s": "Altitude bias for vehicles in the 3D View", "t": "3D 视图中载具的高度偏移", "c": "Viewer3D.SettingsGroup.json"}
+{"s": "Enable on Screen Camera Control", "t": "启用屏幕相机控制", "c": "GimbalController.SettingsGroup.json"}
+{"s": "Type of on-screen control", "t": "屏幕控制类型", "c": "GimbalController.SettingsGroup.json"}
+{"s": "Click to point, click and drag", "t": "点击指向，点击并拖拽", "c": "GimbalController.SettingsGroup.json"}
+{"s": "Vertical camera field of view", "t": "相机垂直视场角", "c": "GimbalController.SettingsGroup.json"}
+{"s": "Horizontal camera field of view", "t": "相机水平视场角", "c": "GimbalController.SettingsGroup.json"}
+{"s": "Maximum gimbal speed on click and drag (deg/sec)", "t": "点击并拖拽时的最大云台速度 (度/秒)", "c": "GimbalController.SettingsGroup.json"}
+{"s": "Show gimbal Azimuth indicator over vehicle icon in map", "t": "在地图载具图标上显示云台方位角指示器", "c": "GimbalController.SettingsGroup.json"}
+{"s": "Show Azimuth instead of local yaw on top toolbar gimbal indicator", "t": "在顶部工具栏云台指示器中显示方位角而非本地偏航角", "c": "GimbalController.SettingsGroup.json"}
+{"s": "Show Azimuth Acquire/release buttons in the gimbal buttons panel", "t": "在云台按钮面板中显示方位角获取/释放按钮", "c": "GimbalController.SettingsGroup.json"}
+{"s": "Rate used for joystick button control (deg/sec)", "t": "用于摇杆按钮控制的速率 (度/秒)", "c": "GimbalController.SettingsGroup.json"}
+{"s": "When a joystick button is set to gimbal left/right/up/down, it will send this rate when pressed, and it will stop moving when button is released", "t": "当摇杆按钮被设置为云台左/右/上/下时，按下时将发送此速率，松开按钮时停止移动。", "c": "GimbalController.SettingsGroup.json"}
+{"s": "Select values to display in indicator", "t": "选择在指示器中显示的值", "c": "BatteryIndicator.SettingsGroup.json"}
+{"s": "Percentage,Voltage,Percentage and Voltage", "t": "百分比,电压,百分比和电压", "c": "BatteryIndicator.SettingsGroup.json"}
+{"s": "Battery level threshold 1", "t": "电量阈值 1", "c": "BatteryIndicator.SettingsGroup.json"}
+{"s": "Battery level threshold 2", "t": "电量阈值 2", "c": "BatteryIndicator.SettingsGroup.json"}
+{"s": "User-selected brand image", "t": "用户选择的品牌图像", "c": "BrandImage.SettingsGroup.json"}
+{"s": "Location in file system of user-selected brand image (indoor)", "t": "用户选择的品牌图像（室内/暗色模式）在文件系统中的位置", "c": "BrandImage.SettingsGroup.json"}
+{"s": "Location in file system of user-selected brand image (outdoor)", "t": "用户选择的品牌图像（室外/亮色模式）在文件系统中的位置", "c": "BrandImage.SettingsGroup.json"}
+{"s": "Offline editing firmware class", "t": "离线编辑固件类型", "c": "App.SettingsGroup.json"}
+{"s": "ArduPilot,PX4 Pro,Mavlink Generic", "t": "ArduPilot,PX4 Pro,Mavlink 通用", "c": "App.SettingsGroup.json"}
+{"s": "Offline editing vehicle class", "t": "离线编辑载具类型", "c": "App.SettingsGroup.json"}
+{"s": "Fixed Wing,Multi-Rotor,VTOL,Rover,Sub,Mavlink Generic", "t": "固定翼,多旋翼,垂直起降,无人车,潜水器,Mavlink 通用", "c": "App.SettingsGroup.json"}
+{"s": "Offline editing cruise speed", "t": "离线编辑巡航速度", "c": "App.SettingsGroup.json"}
+{"s": "This value defines the default speed for calculating mission statistics for vehicles which do not support hover or VTOL vehicles in fixed wing mode. It does not modify the flight speed for a specific flight plan.", "t": "此值定义了用于计算不支持悬停的载具或垂直起降载具在固定翼模式下任务统计的默认速度。它不会修改特定飞行计划的飞行速度。", "c": "App.SettingsGroup.json"}
+{"s": "Offline editing hover speed", "t": "离线编辑悬停速度", "c": "App.SettingsGroup.json"}
+{"s": "This value defines the default speed for calculating mission statistics for multi-rotor vehicles or VTOL vehicle in multi-rotor mode. It does not modify the flight speed for a specific flight plan.", "t": "此值定义了用于计算多旋翼载具或垂直起降载具在多旋翼模式下任务统计的默认速度。它不会修改特定飞行计划的飞行速度。", "c": "App.SettingsGroup.json"}
+{"s": "Offline editing ascent speed", "t": "离线编辑爬升速度", "c": "App.SettingsGroup.json"}
+{"s": "This value defines the ascent speed for multi-rotor vehicles for use in calculating mission duration.", "t": "此值定义了用于计算多旋翼载具任务持续时间的爬升速度。", "c": "App.SettingsGroup.json"}
+{"s": "Offline editing descent speed", "t": "离线编辑下降速度", "c": "App.SettingsGroup.json"}
+{"s": "This value defines the cruising speed for multi-rotor vehicles for use in calculating mission duration.", "t": "此值定义了用于计算多旋翼载具任务持续时间的巡航速度。", "c": "App.SettingsGroup.json"}
+{"s": "Announce battery remaining percent", "t": "播报剩余电量百分比", "c": "App.SettingsGroup.json"}
+{"s": "Announce the remaining battery percent when it falls below the specified percentage.", "t": "当剩余电量低于指定百分比时播报。", "c": "App.SettingsGroup.json"}
+{"s": "Default value for altitude", "t": "高度默认值", "c": "App.SettingsGroup.json"}
+{"s": "This value specifies the default altitude for new items added to a mission.", "t": "此值指定了添加到任务中的新项目的高度默认值。", "c": "App.SettingsGroup.json"}
+{"s": "Mute audio output", "t": "静音音频输出", "c": "App.SettingsGroup.json"}
+{"s": "If this option is enabled all audio output will be muted.", "t": "如果启用此选项，所有音频输出将被静音。", "c": "App.SettingsGroup.json"}
+{"s": "Show virtual joystick", "t": "显示虚拟摇杆", "c": "App.SettingsGroup.json"}
+{"s": "If this option is enabled the virtual joystick will be shown on the Fly view.", "t": "如果启用此选项，虚拟摇杆将显示在飞行视图上。", "c": "App.SettingsGroup.json"}
+{"s": "Auto-Center Throttle", "t": "油门自动回中", "c": "App.SettingsGroup.json"}
+{"s": "If enabled the throttle stick will snap back to center when released.", "t": "如果启用，松开油门摇杆时它将自动弹回中心位置。", "c": "App.SettingsGroup.json"}
+{"s": "Left Handed Mode", "t": "左手模式", "c": "App.SettingsGroup.json"}
+{"s": "If this option is enabled the virtual joystick layout will be reversed", "t": "如果启用此选项，虚拟摇杆的布局将被反向。", "c": "App.SettingsGroup.json"}
+{"s": "Video streaming debug", "t": "视频流调试", "c": "App.SettingsGroup.json"}
+{"s": "Sets the environment variable GST_DEBUG for all pipeline elements on boot.", "t": "在启动时为所有流水线元素设置环境变量 GST_DEBUG。", "c": "App.SettingsGroup.json"}
+{"s": "Disabled,Error,Warning,FixMe,Info,Debug,Log,Trace", "t": "禁用,错误,警告,修复,信息,调试,日志,跟踪", "c": "App.SettingsGroup.json"}
+{"s": "Use preflight checklist", "t": "使用飞行前检查单", "c": "App.SettingsGroup.json"}
+{"s": "If this option is enabled the preflight checklist will be used.", "t": "如果启用此选项，将使用飞行前检查单。", "c": "App.SettingsGroup.json"}
+{"s": "Preflight checklist must pass before arming", "t": "解锁前必须通过飞行前检查单", "c": "App.SettingsGroup.json"}
+{"s": "If this option is enabled the preflight checklist must pass before arming.", "t": "如果启用此选项，解锁前必须通过飞行前检查单。", "c": "App.SettingsGroup.json"}
+{"s": "Enable Multi-Vehicle Panel", "t": "启用多载具面板", "c": "App.SettingsGroup.json"}
+{"s": "Enable Multi-Vehicle Panel when multiple vehicles are connected.", "t": "当连接多个载具时，启用多载具面板。", "c": "App.SettingsGroup.json"}
+{"s": "Application font size", "t": "应用程序字体大小", "c": "App.SettingsGroup.json"}
+{"s": "The point size for the default font used.", "t": "所用默认字体的点大小。", "c": "App.SettingsGroup.json"}
+{"s": "Application color scheme", "t": "应用程序配色方案", "c": "App.SettingsGroup.json"}
+{"s": "The color scheme for the user interface.", "t": "用户界面配色方案", "c": "App.SettingsGroup.json"}
+{"s": "Indoor,Outdoor", "t": "室内,室外", "c": "App.SettingsGroup.json"}
+{"s": "Application save directory", "t": "应用程序保存目录", "c": "App.SettingsGroup.json"}
+{"s": "Directory to which all data files are saved/loaded from", "t": "所有数据文件保存/加载的目录", "c": "App.SettingsGroup.json"}
+{"s": "Save to SD card", "t": "保存到SD卡", "c": "App.SettingsGroup.json"}
+{"s": "Application data is saved to the sd card", "t": "应用程序数据保存到SD卡", "c": "App.SettingsGroup.json"}
+{"s": "Access token to Mapbox maps", "t": "Mapbox地图访问令牌", "c": "App.SettingsGroup.json"}
+{"s": "Your personal access token for Mapbox maps", "t": "您的Mapbox地图个人访问令牌", "c": "App.SettingsGroup.json"}
+{"s": "Account name for Mapbox maps", "t": "Mapbox地图账户名", "c": "App.SettingsGroup.json"}
+{"s": "Your personal account name for Mapbox maps", "t": "您的Mapbox地图个人账户名", "c": "App.SettingsGroup.json"}
+{"s": "Map style ID", "t": "地图样式ID", "c": "App.SettingsGroup.json"}
+{"s": "Map design style ID for Mapbox maps", "t": "Mapbox地图的设计样式ID", "c": "App.SettingsGroup.json"}
+{"s": "Access token to Esri maps", "t": "Esri地图访问令牌", "c": "App.SettingsGroup.json"}
+{"s": "Your personal access token for Esri maps", "t": "您的Esri地图个人访问令牌", "c": "App.SettingsGroup.json"}
+{"s": "Custom Map URL", "t": "自定义地图URL", "c": "App.SettingsGroup.json"}
+{"s": "URL for X Y Z map with {x} {y} {z} or {zoom} substitutions. Eg: https://basemaps.linz.govt.nz/v1/tiles/aerial/EPSG:3857/{z}/{x}/{y}.png?api=d01ev80nqcjxddfvc6amyvkk1ka", "t": "XYZ地图的URL，其中{x}、{y}、{z}或{zoom}为占位符。例如：https://basemaps.linz.govt.nz/v1/tiles/aerial/EPSG:3857/{z}/{x}/{y}.png?api=d01ev80nqcjxddfvc6amyvkk1ka", "c": "App.SettingsGroup.json"}
+{"s": "VWorld Token", "t": "VWorld令牌", "c": "App.SettingsGroup.json"}
+{"s": "Your personal access token for VWorld maps", "t": "您的VWorld地图个人访问令牌", "c": "App.SettingsGroup.json"}
+{"s": "Stream GCS' coordinates to Autopilot", "t": "向飞控流式传输地面站坐标", "c": "App.SettingsGroup.json"}
+{"s": "Never,Always,When in Follow Me Flight Mode", "t": "从不,总是,处于“跟随我”飞行模式时", "c": "App.SettingsGroup.json"}
+{"s": "Language", "t": "语言", "c": "App.SettingsGroup.json"}
+{"s": "Disable all data persistence", "t": "禁用所有数据持久化", "c": "App.SettingsGroup.json"}
+{"s": "If this option is set, nothing will be saved to disk.", "t": "若设置此选项，将不会保存任何内容到磁盘。", "c": "App.SettingsGroup.json"}
+{"s": "Comma separated list of first run prompt ids which have already been shown.", "t": "已显示过的首次运行提示ID的逗号分隔列表。", "c": "App.SettingsGroup.json"}
+{"s": "AirLink User Name", "t": "AirLink 用户名", "c": "App.SettingsGroup.json"}
+{"s": "AirLink Password", "t": "AirLink 密码", "c": "App.SettingsGroup.json"}

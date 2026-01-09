@@ -293,6 +293,12 @@ endif()
 file(GLOB TS_SOURCES "${CMAKE_SOURCE_DIR}/translations/qgc_*.ts")
 set_source_files_properties(${TS_SOURCES} PROPERTIES OUTPUT_LOCATION "${CMAKE_BINARY_DIR}/i18n")
 
+# 添加 USV 自定义翻译文件 (如果存在)
+if(USV_TRANSLATIONS)
+    list(APPEND TS_SOURCES ${USV_TRANSLATIONS})
+    message(STATUS "QGC: Including USV translations in build")
+endif()
+
 qt_add_translations(${CMAKE_PROJECT_NAME}
     TS_FILES ${TS_SOURCES}
     RESOURCE_PREFIX "/"

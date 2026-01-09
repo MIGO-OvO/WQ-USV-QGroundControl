@@ -17,6 +17,10 @@
 
 #include <QtCore/QApplicationStatic>
 #include <QtCore/QLoggingCategory>
+#include <QtCore/QCoreApplication>
+#include <QtCore/QLocale>
+#include <QtCore/QTranslator>
+#include <QtCore/QDir>
 #include <QtQml/QQmlApplicationEngine>
 #include <QtCore/QFile>
 
@@ -31,6 +35,7 @@ Q_APPLICATION_STATIC(USVPlugin, _usvPluginInstance);
 USVPlugin::USVPlugin(QObject *parent)
     : QGCCorePlugin(parent)
     , _usvOptions(new USVOptions(this, this))
+    , _usvTranslator(new QTranslator(this))
 {
     qCDebug(USVPluginLog) << "USVPlugin created";
 
@@ -54,7 +59,40 @@ QGCCorePlugin *USVPlugin::instance()
 void USVPlugin::init()
 {
     qCInfo(USVPluginLog) << "USV Custom Plugin initialized - 无人船专用模式";
+
+    // 加载 USV 专用翻译文件 (覆盖默认翻译中的航空术语)
+    _loadUSVTranslations();
+
     QGCCorePlugin::init();
+}
+
+void USVPlugin::_loadUSVTranslations()
+{
+    QLocale locale = QLocale::system();
+
+    // 尝试加载 USV 专用翻译文件
+    // 翻译文件命名格式: usv_zh_CN.qm
+    // Qt 会自动尝试: usv_zh_CN.qm, usv_zh.qm, usv_.qm
+
+    // 首先尝试完整 locale 名称
+    QString fullPath = QStringLiteral(":/i18n/usv_%1.qm").arg(locale.name());
+    qCDebug(USVPluginLog) << "Trying to load USV translation from:" << fullPath;
+    qCDebug(USVPluginLog) << "File exists:" << QFile::exists(fullPath);
+
+    if (_usvTranslator->load(locale, QStringLiteral("usv_"), QString(), QStringLiteral(":/i18n"))) {
+        QCoreApplication::installTranslator(_usvTranslator);
+        qCInfo(USVPluginLog) << "USV translations loaded for locale:" << locale.name();
+    } else {
+        qCDebug(USVPluginLog) << "No USV translations found for locale:" << locale.name();
+
+        // 列出 :/i18n 目录下的所有文件用于调试
+        QDir i18nDir(":/i18n");
+        if (i18nDir.exists()) {
+            qCDebug(USVPluginLog) << "Available translation files in :/i18n:" << i18nDir.entryList();
+        } else {
+            qCDebug(USVPluginLog) << ":/i18n directory does not exist";
+        }
+    }
 }
 
 void USVPlugin::cleanup()
@@ -66,6 +104,11 @@ void USVPlugin::cleanup()
     delete _interceptor;
     _interceptor = nullptr;
 
+    // 移除 USV 翻译
+    if (_usvTranslator) {
+        QCoreApplication::removeTranslator(_usvTranslator);
+    }
+
     QGCCorePlugin::cleanup();
 }
 
@@ -76,14 +119,13 @@ QGCOptions *USVPlugin::options()
 
 QString USVPlugin::brandImageIndoor() const
 {
-    // 可以替换为你的无人船品牌 Logo
-    // 如果没有自定义图片，返回空字符串使用默认
-    return QStringLiteral("/custom/img/usv-logo-white.svg");
+    // 无人船品牌 Logo (深色背景用白色版本)
+    return QStringLiteral("/custom/img/usv-logo-white.png");
 }
 
 QString USVPlugin::brandImageOutdoor() const
 {
-    return QStringLiteral("/custom/img/usv-logo-black.svg");
+    return QStringLiteral("/custom/img/usv-logo-black.png");
 }
 
 bool USVPlugin::overrideSettingsGroupVisibility(const QString &name)
@@ -263,27 +305,30 @@ USVQmlOverrideInterceptor::USVQmlOverrideInterceptor()
 QUrl USVQmlOverrideInterceptor::intercept(const QUrl &url,
                                            QQmlAbstractUrlInterceptor::DataType type)
 {
-    // 仅拦截 QML 文件
-    if (type != QQmlAbstractUrlInterceptor::QmlFile &&
-        type != QQmlAbstractUrlInterceptor::UrlString) {
-        return url;
-    }
+    // 仅拦截 QML 文件和 URL 字符串（包括资源文件路径）
+    switch (type) {
+    case QQmlAbstractUrlInterceptor::QmlFile:
+    case QQmlAbstractUrlInterceptor::UrlString:
+        if (url.scheme() == QStringLiteral("qrc")) {
+            const QString origPath = url.path();
 
-    if (url.scheme() != QStringLiteral("qrc")) {
-        return url;
-    }
+            // 检查是否有 USV 定制版本
+            // 例如: /res/QGCLogoFull.svg -> :/USV/res/QGCLogoFull.svg
+            const QString overrideRes = QStringLiteral(":/USV%1").arg(origPath);
 
-    const QString origPath = url.path();
-
-    // 检查是否有 USV 定制版本
-    const QString overridePath = QStringLiteral(":/USV%1").arg(origPath);
-
-    if (QFile::exists(overridePath)) {
-        QUrl result;
-        result.setScheme(QStringLiteral("qrc"));
-        result.setPath(QStringLiteral("/USV") + origPath);
-        qCDebug(USVPluginLog) << "QML override:" << origPath << "->" << result.path();
-        return result;
+            if (QFile::exists(overrideRes)) {
+                // 构建新的 qrc URL
+                const QString relPath = overrideRes.mid(2);  // 移除 ":/"
+                QUrl result;
+                result.setScheme(QStringLiteral("qrc"));
+                result.setPath('/' + relPath);
+                qCDebug(USVPluginLog) << "Resource override:" << origPath << "->" << result.path();
+                return result;
+            }
+        }
+        break;
+    default:
+        break;
     }
 
     return url;
