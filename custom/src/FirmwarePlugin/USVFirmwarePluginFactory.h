@@ -30,10 +30,9 @@ public:
     /// 同时支持 ArduPilot 和 PX4
     QList<QGCMAVLink::FirmwareClass_t> supportedFirmwareClasses() const override;
 
-    /// @brief 获取指定固件类型支持的载具类型列表
+    /// @brief 获取支持的载具类型列表
     /// 仅支持 Rover/Boat 类型
-    QList<QGCMAVLink::VehicleClass_t> supportedVehicleClasses(
-        QGCMAVLink::FirmwareClass_t firmwareClass) const override;
+    QList<QGCMAVLink::VehicleClass_t> supportedVehicleClasses() const override;
 
     /// @brief 创建固件插件实例
     /// 根据固件类型返回对应的 USV 插件

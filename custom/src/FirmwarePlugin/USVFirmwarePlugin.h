@@ -9,10 +9,11 @@
 
 #pragma once
 
-#include <QtCore/QLoggingCategory>
-
+#include "QGCMAVLink.h"
 #include "FirmwarePlugin/APM/ArduRoverFirmwarePlugin.h"
 #include "FirmwarePlugin/PX4/PX4FirmwarePlugin.h"
+
+#include <QtCore/QLoggingCategory>
 
 Q_DECLARE_LOGGING_CATEGORY(USVFirmwarePluginLog)
 
@@ -42,20 +43,10 @@ public:
     QList<MAV_CMD> supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass) const override;
     QStringList flightModes(Vehicle *vehicle) const override;
 
-    bool supportsNegativeThrust(Vehicle *vehicle) const override { Q_UNUSED(vehicle); return true; }
-    bool supportsThrottleModeCenterZero() const override { return true; }
-    bool supportsRadio() const override { return true; }
-    bool supportsMotorInterference() const override { return false; }
-
     QString vehicleImageOpaque(const Vehicle *vehicle) const override;
     QString vehicleImageOutline(const Vehicle *vehicle) const override;
     QString brandImageIndoor(const Vehicle *vehicle) const override;
     QString brandImageOutdoor(const Vehicle *vehicle) const override;
-
-    QString pauseFlightMode() const override { return QStringLiteral("Hold"); }
-    QString missionFlightMode() const override { return QStringLiteral("Auto"); }
-    QString rtlFlightMode() const override { return QStringLiteral("RTL"); }
-    QString takeControlFlightMode() const override { return QStringLiteral("Manual"); }
 };
 
 /*===========================================================================*/
@@ -75,18 +66,8 @@ public:
     QList<MAV_CMD> supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass) const override;
     QStringList flightModes(Vehicle *vehicle) const override;
 
-    bool supportsNegativeThrust(Vehicle *vehicle) const override { Q_UNUSED(vehicle); return true; }
-    bool supportsThrottleModeCenterZero() const override { return true; }
-    bool supportsMotorInterference() const override { return false; }
-
     QString vehicleImageOpaque(const Vehicle *vehicle) const override;
     QString vehicleImageOutline(const Vehicle *vehicle) const override;
     QString brandImageIndoor(const Vehicle *vehicle) const override;
     QString brandImageOutdoor(const Vehicle *vehicle) const override;
-
-    // PX4 Rover 模式名称
-    QString pauseFlightMode() const override { return QStringLiteral("Hold"); }
-    QString missionFlightMode() const override { return QStringLiteral("Mission"); }
-    QString rtlFlightMode() const override { return QStringLiteral("Return"); }
-    QString takeControlFlightMode() const override { return QStringLiteral("Manual"); }
 };

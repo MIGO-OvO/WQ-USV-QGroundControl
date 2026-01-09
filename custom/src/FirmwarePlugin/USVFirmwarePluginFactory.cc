@@ -34,11 +34,8 @@ QList<QGCMAVLink::FirmwareClass_t> USVFirmwarePluginFactory::supportedFirmwareCl
     });
 }
 
-QList<QGCMAVLink::VehicleClass_t> USVFirmwarePluginFactory::supportedVehicleClasses(
-    QGCMAVLink::FirmwareClass_t firmwareClass) const
+QList<QGCMAVLink::VehicleClass_t> USVFirmwarePluginFactory::supportedVehicleClasses() const
 {
-    Q_UNUSED(firmwareClass);
-
     // 仅支持 Rover/Boat 类型
     // 这是 USV 定制构建的核心限制
     return QList<QGCMAVLink::VehicleClass_t>({

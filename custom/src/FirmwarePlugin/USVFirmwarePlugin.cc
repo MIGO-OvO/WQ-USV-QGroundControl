@@ -11,7 +11,7 @@
 
 #include <QtCore/QLoggingCategory>
 
-QGC_LOGGING_CATEGORY(USVFirmwarePluginLog, "USV.FirmwarePlugin")
+Q_LOGGING_CATEGORY(USVFirmwarePluginLog, "USV.FirmwarePlugin")
 
 /*===========================================================================*/
 // USVMissionCommands - 通用任务命令
@@ -19,50 +19,8 @@ QGC_LOGGING_CATEGORY(USVFirmwarePluginLog, "USV.FirmwarePlugin")
 
 QList<MAV_CMD> USVMissionCommands::supportedCommands()
 {
-    // 无人船适用的任务命令列表 (ArduPilot 和 PX4 通用)
-    QList<MAV_CMD> commands;
-
-    // ========== 导航命令 ==========
-    commands << MAV_CMD_NAV_WAYPOINT;           // 航点导航
-    commands << MAV_CMD_NAV_RETURN_TO_LAUNCH;   // 返回起点
-    commands << MAV_CMD_NAV_LOITER_UNLIM;       // 无限期定点等待
-    commands << MAV_CMD_NAV_LOITER_TIME;        // 定时定点等待
-    commands << MAV_CMD_NAV_LOITER_TURNS;       // 绕圈等待 (可用于水面绕点)
-    commands << MAV_CMD_NAV_SPLINE_WAYPOINT;    // 样条曲线航点 (平滑航线)
-    commands << MAV_CMD_NAV_DELAY;              // 延时
-
-    // ========== DO 命令 (执行动作) ==========
-    commands << MAV_CMD_DO_SET_SPEED;           // 设置速度
-    commands << MAV_CMD_DO_CHANGE_SPEED;        // 改变速度
-    commands << MAV_CMD_DO_SET_HOME;            // 设置 Home 点
-    commands << MAV_CMD_DO_SET_SERVO;           // 控制舵机
-    commands << MAV_CMD_DO_REPEAT_SERVO;        // 重复舵机动作
-    commands << MAV_CMD_DO_SET_RELAY;           // 控制继电器
-    commands << MAV_CMD_DO_REPEAT_RELAY;        // 重复继电器动作
-    commands << MAV_CMD_DO_SET_ROI_LOCATION;    // 设置 ROI 位置 (如果有云台)
-    commands << MAV_CMD_DO_SET_ROI_NONE;        // 清除 ROI
-    commands << MAV_CMD_DO_DIGICAM_CONTROL;     // 相机控制
-    commands << MAV_CMD_DO_SET_CAM_TRIGG_DIST;  // 设置相机触发距离
-    commands << MAV_CMD_DO_JUMP;                // 跳转到指定航点
-    commands << MAV_CMD_DO_GRIPPER;             // 夹爪控制 (如果有)
-
-    // ========== 条件命令 ==========
-    commands << MAV_CMD_CONDITION_DELAY;        // 延时条件
-    commands << MAV_CMD_CONDITION_DISTANCE;     // 距离条件
-    commands << MAV_CMD_CONDITION_YAW;          // 航向条件
-
-    // ========== 排除的命令 (不适用于无人船) ==========
-    // MAV_CMD_NAV_TAKEOFF              - 起飞
-    // MAV_CMD_NAV_LAND                 - 降落
-    // MAV_CMD_NAV_VTOL_TAKEOFF         - VTOL 起飞
-    // MAV_CMD_NAV_VTOL_LAND            - VTOL 降落
-    // MAV_CMD_DO_VTOL_TRANSITION       - VTOL 过渡
-    // MAV_CMD_NAV_ALTITUDE_WAIT        - 高度等待
-    // MAV_CMD_DO_CHANGE_ALTITUDE       - 改变高度
-    // MAV_CMD_CONDITION_ALTITUDE       - 高度条件
-
-    qCDebug(USVFirmwarePluginLog) << "USV supported mission commands count:" << commands.count();
-    return commands;
+    // 使用基类默认的命令列表
+    return QList<MAV_CMD>();
 }
 
 /*===========================================================================*/
@@ -82,29 +40,14 @@ USVArduPilotFirmwarePlugin::~USVArduPilotFirmwarePlugin()
 QList<MAV_CMD> USVArduPilotFirmwarePlugin::supportedMissionCommands(
     QGCMAVLink::VehicleClass_t vehicleClass) const
 {
-    Q_UNUSED(vehicleClass);
-    return USVMissionCommands::supportedCommands();
+    // 使用基类的命令列表
+    return ArduRoverFirmwarePlugin::supportedMissionCommands(vehicleClass);
 }
 
 QStringList USVArduPilotFirmwarePlugin::flightModes(Vehicle *vehicle) const
 {
-    Q_UNUSED(vehicle);
-
-    // ArduRover/ArduBoat 适用的飞行模式
-    QStringList modes;
-
-    modes << QStringLiteral("Manual");      // 手动模式
-    modes << QStringLiteral("Acro");        // 特技模式 (直接控制)
-    modes << QStringLiteral("Steering");    // 转向模式
-    modes << QStringLiteral("Hold");        // 保持模式 (定点)
-    modes << QStringLiteral("Loiter");      // 悬停模式 (GPS 定点)
-    modes << QStringLiteral("Auto");        // 自动模式 (执行任务)
-    modes << QStringLiteral("RTL");         // 返航模式
-    modes << QStringLiteral("SmartRTL");    // 智能返航
-    modes << QStringLiteral("Guided");      // 引导模式
-    modes << QStringLiteral("Simple");      // 简单模式
-
-    return modes;
+    // 使用基类的飞行模式列表
+    return ArduRoverFirmwarePlugin::flightModes(vehicle);
 }
 
 QString USVArduPilotFirmwarePlugin::vehicleImageOpaque(const Vehicle *vehicle) const
@@ -149,27 +92,14 @@ USVPX4FirmwarePlugin::~USVPX4FirmwarePlugin()
 QList<MAV_CMD> USVPX4FirmwarePlugin::supportedMissionCommands(
     QGCMAVLink::VehicleClass_t vehicleClass) const
 {
-    Q_UNUSED(vehicleClass);
-    return USVMissionCommands::supportedCommands();
+    // 使用基类的命令列表
+    return PX4FirmwarePlugin::supportedMissionCommands(vehicleClass);
 }
 
 QStringList USVPX4FirmwarePlugin::flightModes(Vehicle *vehicle) const
 {
-    Q_UNUSED(vehicle);
-
-    // PX4 Rover 适用的飞行模式
-    QStringList modes;
-
-    modes << QStringLiteral("Manual");      // 手动模式
-    modes << QStringLiteral("Acro");        // 特技模式
-    modes << QStringLiteral("Stabilized");  // 稳定模式
-    modes << QStringLiteral("Position");    // 位置模式
-    modes << QStringLiteral("Hold");        // 保持模式
-    modes << QStringLiteral("Mission");     // 任务模式
-    modes << QStringLiteral("Return");      // 返航模式
-    modes << QStringLiteral("Offboard");    // 外部控制模式
-
-    return modes;
+    // 使用基类的飞行模式列表
+    return PX4FirmwarePlugin::flightModes(vehicle);
 }
 
 QString USVPX4FirmwarePlugin::vehicleImageOpaque(const Vehicle *vehicle) const

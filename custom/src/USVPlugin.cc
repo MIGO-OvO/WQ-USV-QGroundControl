@@ -8,7 +8,6 @@
 #include "USVPlugin.h"
 #include "USVOptions.h"
 
-#include "QGCLoggingCategory.h"
 #include "QGCPalette.h"
 #include "QGCMAVLink.h"
 #include "AppSettings.h"
@@ -17,10 +16,11 @@
 #include "Vehicle.h"
 
 #include <QtCore/QApplicationStatic>
+#include <QtCore/QLoggingCategory>
 #include <QtQml/QQmlApplicationEngine>
 #include <QtCore/QFile>
 
-QGC_LOGGING_CATEGORY(USVPluginLog, "USV.Plugin")
+Q_LOGGING_CATEGORY(USVPluginLog, "USV.Plugin")
 
 Q_APPLICATION_STATIC(USVPlugin, _usvPluginInstance);
 
@@ -34,8 +34,8 @@ USVPlugin::USVPlugin(QObject *parent)
 {
     qCDebug(USVPluginLog) << "USVPlugin created";
 
-    // 默认隐藏高级 UI
-    _showAdvancedUI = false;
+    // 默认显示高级 UI（包含分析视图）
+    _showAdvancedUI = true;
 
     connect(this, &QGCCorePlugin::showAdvancedUIChanged,
             this, &USVPlugin::_advancedChanged);
@@ -247,7 +247,6 @@ QStringList USVPlugin::complexMissionItemNames(Vehicle *vehicle,
 
 void USVPlugin::_advancedChanged(bool advanced)
 {
-    Q_UNUSED(advanced);
     // 高级模式变化时，通知固件升级设置可见性变化
     emit _usvOptions->showFirmwareUpgradeChanged(advanced);
 }

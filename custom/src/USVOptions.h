@@ -135,6 +135,9 @@ public:
     /// @brief 显示任务状态
     bool showMissionStatus() const override { return true; }
 
+signals:
+    void showFirmwareUpgradeChanged(bool show);
+
 private:
     USVPlugin *_plugin = nullptr;
     USVFlyViewOptions *_flyViewOptions = nullptr;

@@ -50,8 +50,8 @@ qt_add_qml_module(USVModule
     VERSION 1.0
     RESOURCE_PREFIX /qml
     QML_FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/res/USVChecklist.qml
-        ${CMAKE_CURRENT_SOURCE_DIR}/res/USVFlyViewCustomLayer.qml
+        res/USVChecklist.qml
+        res/USVFlyViewCustomLayer.qml
     NO_PLUGIN
 )
 
