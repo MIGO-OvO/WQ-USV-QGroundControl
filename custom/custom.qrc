@@ -10,16 +10,28 @@
         <file alias="img/usv-logo-black.png">res/img/usv-logo-black.png</file>
     </qresource>
 
-    <!-- 工具栏 Logo 替换 -->
-    <!-- 注意: QGC 工具栏使用 /res/QGCLogoFull.svg，需要保持相同的别名 -->
-    <qresource prefix="/USV/res">
-        <file alias="QGCLogoFull.svg">res/img/usv-logo-white.png</file>
-    </qresource>
-
     <!-- QML 资源覆盖 - 使用与 URL 拦截器匹配的路径 -->
     <!-- 拦截器检查 :/USV + 原始路径 -->
     <qresource prefix="/USV/qml/QGroundControl/FlyView">
         <file alias="FlyViewCustomLayer.qml">res/USVFlyViewCustomLayer.qml</file>
+    </qresource>
+
+    <!-- 工具栏按钮覆盖 - 支持主题切换的 Logo -->
+    <!-- QGCToolBarButton 位于 /qml/QGroundControl/Controls/ -->
+    <qresource prefix="/USV/qml/QGroundControl/Controls">
+        <file alias="QGCToolBarButton.qml">res/USVToolBarButton.qml</file>
+    </qresource>
+
+    <!-- 视图选择下拉菜单覆盖 - 中文化按钮文字 -->
+    <!-- SelectViewDropdown 位于 /qml/QGroundControl/Toolbar/ -->
+    <qresource prefix="/USV/qml/QGroundControl/Toolbar">
+        <file alias="SelectViewDropdown.qml">res/USVSelectViewDropdown.qml</file>
+    </qresource>
+
+    <!-- 综合仪表盘覆盖 - 替换默认的 IntegratedCompassAttitude -->
+    <!-- 整合罗盘、航行状态、姿态监测和遥测数据 -->
+    <qresource prefix="/USV/qml/QGroundControl/FlightMap/Widgets">
+        <file alias="IntegratedCompassAttitude.qml">res/USVInstrumentPanel.qml</file>
     </qresource>
 
     <!-- USV 专用 QML 模块文件 -->
