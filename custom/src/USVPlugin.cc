@@ -13,6 +13,8 @@
 #include "AppSettings.h"
 #include "BrandImageSettings.h"
 #include "FirmwareUpgradeSettings.h"
+#include "MavlinkActionsSettings.h"
+#include "SettingsManager.h"
 #include "Vehicle.h"
 
 #include <QtCore/QApplicationStatic>
@@ -63,6 +65,9 @@ void USVPlugin::init()
     // 加载 USV 专用翻译文件 (覆盖默认翻译中的航空术语)
     _loadUSVTranslations();
 
+    // 设置默认的 MAVLink Actions 文件（水质采样）
+    _setupDefaultMavlinkActions();
+
     QGCCorePlugin::init();
 }
 
@@ -92,6 +97,34 @@ void USVPlugin::_loadUSVTranslations()
         } else {
             qCDebug(USVPluginLog) << ":/i18n directory does not exist";
         }
+    }
+}
+
+void USVPlugin::_setupDefaultMavlinkActions()
+{
+    // 内置的 USV Actions 资源路径
+    const QString usvActionsPath = QStringLiteral(":/usv/actions/usv_actions.json");
+
+    // 检查资源文件是否存在
+    if (!QFile::exists(usvActionsPath)) {
+        qCWarning(USVPluginLog) << "Built-in USV actions file not found:" << usvActionsPath;
+        return;
+    }
+
+    auto* mavlinkActionsSettings = SettingsManager::instance()->mavlinkActionsSettings();
+
+    // 如果用户未配置 flyViewActionsFile，设置为内置资源路径
+    Fact* flyViewFact = mavlinkActionsSettings->flyViewActionsFile();
+    if (flyViewFact->rawValue().toString().isEmpty()) {
+        flyViewFact->setRawValue(usvActionsPath);
+        qCInfo(USVPluginLog) << "Set flyViewActionsFile to:" << usvActionsPath;
+    }
+
+    // 如果用户未配置 joystickActionsFile，设置为内置资源路径
+    Fact* joystickFact = mavlinkActionsSettings->joystickActionsFile();
+    if (joystickFact->rawValue().toString().isEmpty()) {
+        joystickFact->setRawValue(usvActionsPath);
+        qCInfo(USVPluginLog) << "Set joystickActionsFile to:" << usvActionsPath;
     }
 }
 
@@ -209,6 +242,25 @@ void USVPlugin::adjustSettingMetaData(const QString &settingsGroup,
             return;
         }
     }
+
+    // ========== MavlinkActions 设置 ==========
+    if (settingsGroup == MavlinkActionsSettings::name) {
+        const QString &name = metaData.name();
+
+        // 设置默认的 FlyView Actions 文件为内置水质采样配置
+        if (name == QStringLiteral("flyViewActionsFile")) {
+            metaData.setRawDefaultValue(QStringLiteral(":/usv/actions/usv_actions.json"));
+            qCDebug(USVPluginLog) << "Set flyViewActionsFile default to built-in USV actions";
+            return;
+        }
+
+        // 设置默认的 Joystick Actions 文件
+        if (name == QStringLiteral("joystickActionsFile")) {
+            metaData.setRawDefaultValue(QStringLiteral(":/usv/actions/usv_actions.json"));
+            qCDebug(USVPluginLog) << "Set joystickActionsFile default to built-in USV actions";
+            return;
+        }
+    }
 }
 
 void USVPlugin::paletteOverride(const QString &colorName,
@@ -300,6 +352,18 @@ void USVPlugin::_advancedChanged(bool advanced)
 USVQmlOverrideInterceptor::USVQmlOverrideInterceptor()
     : QQmlAbstractUrlInterceptor()
 {
+    qCInfo(USVPluginLog) << "USVQmlOverrideInterceptor created";
+
+    // 启动时检查关键覆盖资源是否存在
+    QStringList checkPaths = {
+        QStringLiteral(":/USV/qml/QGroundControl/FlyView/FlyViewCustomLayer.qml"),
+        QStringLiteral(":/USV/qml/QGroundControl/FlightMap/Widgets/IntegratedCompassAttitude.qml"),
+    };
+
+    for (const QString &path : checkPaths) {
+        bool exists = QFile::exists(path);
+        qCInfo(USVPluginLog) << "Override resource check:" << path << "exists:" << exists;
+    }
 }
 
 QUrl USVQmlOverrideInterceptor::intercept(const QUrl &url,
@@ -313,7 +377,8 @@ QUrl USVQmlOverrideInterceptor::intercept(const QUrl &url,
             const QString origPath = url.path();
 
             // 检查是否有 USV 定制版本
-            // 例如: /res/QGCLogoFull.svg -> :/USV/res/QGCLogoFull.svg
+            // 例如: /qml/QGroundControl/FlyView/FlyViewCustomLayer.qml
+            //    -> :/USV/qml/QGroundControl/FlyView/FlyViewCustomLayer.qml
             const QString overrideRes = QStringLiteral(":/USV%1").arg(origPath);
 
             if (QFile::exists(overrideRes)) {
@@ -322,8 +387,14 @@ QUrl USVQmlOverrideInterceptor::intercept(const QUrl &url,
                 QUrl result;
                 result.setScheme(QStringLiteral("qrc"));
                 result.setPath('/' + relPath);
-                qCDebug(USVPluginLog) << "Resource override:" << origPath << "->" << result.path();
+                qCInfo(USVPluginLog) << "Resource override:" << origPath << "->" << result.path();
                 return result;
+            }
+
+            // 调试：记录关键 QML 文件的加载（仅记录 FlyView 和 FlightMap 相关）
+            if (origPath.contains(QStringLiteral("FlyView")) ||
+                origPath.contains(QStringLiteral("FlightMap"))) {
+                qCDebug(USVPluginLog) << "QML loading (no override):" << origPath;
             }
         }
         break;

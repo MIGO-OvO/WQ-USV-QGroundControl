@@ -59,10 +59,18 @@ void MavlinkActionManager::_loadActionsFile()
         return;
     }
 
-    // Custom actions are always loaded from the custom actions save path
-    const QString savePath = SettingsManager::instance()->appSettings()->mavlinkActionsSavePath();
-    const QDir saveDir = QDir(savePath);
-    const QString fullPath = saveDir.absoluteFilePath(actionFileName);
+    QString fullPath;
+
+    // Support both Qt resource paths (:/...) and user directory paths
+    if (actionFileName.startsWith(QStringLiteral(":/"))) {
+        // Direct resource path
+        fullPath = actionFileName;
+    } else {
+        // Custom actions loaded from the custom actions save path
+        const QString savePath = SettingsManager::instance()->appSettings()->mavlinkActionsSavePath();
+        const QDir saveDir = QDir(savePath);
+        fullPath = saveDir.absoluteFilePath(actionFileName);
+    }
 
     // It's ok for the file to not exist
     const QFileInfo fileInfo = QFileInfo(fullPath);

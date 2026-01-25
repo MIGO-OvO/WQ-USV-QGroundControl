@@ -90,6 +90,9 @@ private:
     /// @brief 加载 USV 专用翻译文件
     void _loadUSVTranslations();
 
+    /// @brief 设置默认的 MAVLink Actions 文件
+    void _setupDefaultMavlinkActions();
+
     USVOptions *_usvOptions = nullptr;
     QQmlApplicationEngine *_qmlEngine = nullptr;
     class USVQmlOverrideInterceptor *_interceptor = nullptr;

@@ -9,22 +9,12 @@
 
 #pragma once
 
-#include "QGCMAVLink.h"
 #include "FirmwarePlugin/APM/ArduRoverFirmwarePlugin.h"
 #include "FirmwarePlugin/PX4/PX4FirmwarePlugin.h"
 
 #include <QtCore/QLoggingCategory>
 
 Q_DECLARE_LOGGING_CATEGORY(USVFirmwarePluginLog)
-
-/// @brief 无人船通用任务命令过滤
-/// 提供静态方法，供 ArduPilot 和 PX4 插件共用
-class USVMissionCommands
-{
-public:
-    /// @brief 获取无人船适用的任务命令列表
-    static QList<MAV_CMD> supportedCommands();
-};
 
 /*===========================================================================*/
 
@@ -39,9 +29,6 @@ public:
     ~USVArduPilotFirmwarePlugin();
 
     // ========== FirmwarePlugin 覆盖 ==========
-
-    QList<MAV_CMD> supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass) const override;
-    QStringList flightModes(Vehicle *vehicle) const override;
 
     QString vehicleImageOpaque(const Vehicle *vehicle) const override;
     QString vehicleImageOutline(const Vehicle *vehicle) const override;
@@ -62,9 +49,6 @@ public:
     ~USVPX4FirmwarePlugin();
 
     // ========== FirmwarePlugin 覆盖 ==========
-
-    QList<MAV_CMD> supportedMissionCommands(QGCMAVLink::VehicleClass_t vehicleClass) const override;
-    QStringList flightModes(Vehicle *vehicle) const override;
 
     QString vehicleImageOpaque(const Vehicle *vehicle) const override;
     QString vehicleImageOutline(const Vehicle *vehicle) const override;

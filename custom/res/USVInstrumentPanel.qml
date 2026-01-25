@@ -35,9 +35,9 @@ Item {
     property real   _toolsMargin:           ScreenTools.defaultFontPixelWidth * 0.75
     property real   _compassSize:           Math.min(ScreenTools.defaultFontPixelHeight * 7, mainWindow.width * 0.12)
 
-    // 姿态数据
-    property real   roll:                   vehicle ? vehicle.roll.rawValue : 0
-    property real   pitch:                  vehicle ? vehicle.pitch.rawValue : 0
+    // 姿态数据 - 添加空值检查
+    property real   roll:                   vehicle && vehicle.roll ? vehicle.roll.rawValue : 0
+    property real   pitch:                  vehicle && vehicle.pitch ? vehicle.pitch.rawValue : 0
 
     // 姿态警告阈值
     property real   rollWarningThreshold:   15.0
@@ -66,79 +66,7 @@ Item {
         id:         mainLayout
         spacing:    _toolsMargin * 2
 
-        // ========== 左侧：罗盘 + 姿态指示条 ==========
-        Item {
-            id:                 compassContainer
-            Layout.alignment:   Qt.AlignVCenter
-            implicitWidth:      compassWidget.width + attitudeColumn.width + _toolsMargin
-            implicitHeight:     compassWidget.height + pitchRow.height + _toolsMargin
-
-            // 横滚指示条 (左侧垂直)
-            Column {
-                id:             attitudeColumn
-                anchors.right:  compassWidget.left
-                anchors.rightMargin: _toolsMargin / 2
-                anchors.verticalCenter: compassWidget.verticalCenter
-                spacing:        2
-
-                Repeater {
-                    model: 20
-                    Rectangle {
-                        width:  4
-                        height: (_compassSize - 20) / 20
-                        radius: 1
-                        color:  {
-                            var normalizedRoll = (roll + 45) / 90
-                            var segmentPos = index / 19
-                            var diff = Math.abs(normalizedRoll - segmentPos)
-                            if (diff < 0.1) {
-                                return isRollCritical ? qgcPal.colorRed :
-                                       (isRollWarning ? qgcPal.colorOrange : qgcPal.colorGreen)
-                            }
-                            return qgcPal.windowShade
-                        }
-                    }
-                }
-            }
-
-            // 罗盘
-            QGCCompassWidget {
-                id:         compassWidget
-                size:       _compassSize
-                vehicle:    control.vehicle
-                anchors.right: parent.right
-            }
-
-            // 俯仰指示条 (底部水平)
-            Row {
-                id:                     pitchRow
-                anchors.top:            compassWidget.bottom
-                anchors.topMargin:      _toolsMargin / 2
-                anchors.horizontalCenter: compassWidget.horizontalCenter
-                spacing:                2
-
-                Repeater {
-                    model: 20
-                    Rectangle {
-                        width:  (_compassSize - 20) / 20
-                        height: 4
-                        radius: 1
-                        color:  {
-                            var normalizedPitch = (pitch + 30) / 60
-                            var segmentPos = index / 19
-                            var diff = Math.abs(normalizedPitch - segmentPos)
-                            if (diff < 0.1) {
-                                return isPitchCritical ? qgcPal.colorRed :
-                                       (isPitchWarning ? qgcPal.colorOrange : qgcPal.colorGreen)
-                            }
-                            return qgcPal.windowShade
-                        }
-                    }
-                }
-            }
-        }
-
-        // ========== 右侧：数据面板 ==========
+        // ========== 左侧：数据面板 ==========
         ColumnLayout {
             id:                 dataPanel
             Layout.alignment:   Qt.AlignVCenter
@@ -161,26 +89,26 @@ Item {
 
                     QGCLabel { text: qsTr("航速:"); opacity: 0.7; font.pointSize: ScreenTools.smallFontPointSize }
                     QGCLabel {
-                        text: vehicle ? vehicle.groundSpeed.rawValue.toFixed(1) + " m/s" : "---"
+                        text: vehicle && vehicle.groundSpeed ? vehicle.groundSpeed.rawValue.toFixed(1) + " m/s" : "---"
                         font.bold: true
                         font.pointSize: ScreenTools.smallFontPointSize
                     }
                     QGCLabel { text: qsTr("航向:"); opacity: 0.7; font.pointSize: ScreenTools.smallFontPointSize }
                     QGCLabel {
-                        text: vehicle ? vehicle.heading.rawValue.toFixed(0) + "°" : "---"
+                        text: vehicle && vehicle.heading ? vehicle.heading.rawValue.toFixed(0) + "°" : "---"
                         font.bold: true
                         font.pointSize: ScreenTools.smallFontPointSize
                     }
 
                     QGCLabel { text: qsTr("油门:"); opacity: 0.7; font.pointSize: ScreenTools.smallFontPointSize }
                     QGCLabel {
-                        text: vehicle ? (vehicle.throttlePct * 100).toFixed(0) + "%" : "---"
+                        text: vehicle && vehicle.throttlePct !== undefined ? (vehicle.throttlePct * 100).toFixed(0) + "%" : "---"
                         font.bold: true
                         font.pointSize: ScreenTools.smallFontPointSize
                     }
                     QGCLabel { text: qsTr("距Home:"); opacity: 0.7; font.pointSize: ScreenTools.smallFontPointSize }
                     QGCLabel {
-                        text: vehicle ? vehicle.distanceToHome.rawValue.toFixed(0) + "m" : "---"
+                        text: vehicle && vehicle.distanceToHome ? vehicle.distanceToHome.rawValue.toFixed(0) + "m" : "---"
                         font.bold: true
                         font.pointSize: ScreenTools.smallFontPointSize
                     }
@@ -285,8 +213,82 @@ Item {
 
             // -------- 遥测数据条 --------
             HorizontalFactValueGrid {
-                id:                 factValueGrid
-                Layout.fillWidth:   true
+                id:                     factValueGrid
+                Layout.fillWidth:       true
+                settingsGroup:          factValueGrid.telemetryBarSettingsGroup
+                specificVehicleForCard: null  // null = 跟踪当前活动载具
+            }
+        }
+
+        // ========== 右侧：罗盘 + 姿态指示条 ==========
+        Item {
+            id:                 compassContainer
+            Layout.alignment:   Qt.AlignVCenter
+            implicitWidth:      compassWidget.width + attitudeColumn.width + _toolsMargin
+            implicitHeight:     compassWidget.height + pitchRow.height + _toolsMargin
+
+            // 罗盘
+            QGCCompassWidget {
+                id:         compassWidget
+                size:       _compassSize
+                vehicle:    control.vehicle
+                anchors.left: parent.left
+            }
+
+            // 横滚指示条 (右侧垂直)
+            Column {
+                id:             attitudeColumn
+                anchors.left:   compassWidget.right
+                anchors.leftMargin: _toolsMargin / 2
+                anchors.verticalCenter: compassWidget.verticalCenter
+                spacing:        2
+
+                Repeater {
+                    model: 20
+                    Rectangle {
+                        width:  4
+                        height: (_compassSize - 20) / 20
+                        radius: 1
+                        color:  {
+                            var normalizedRoll = (roll + 45) / 90
+                            var segmentPos = index / 19
+                            var diff = Math.abs(normalizedRoll - segmentPos)
+                            if (diff < 0.1) {
+                                return isRollCritical ? qgcPal.colorRed :
+                                       (isRollWarning ? qgcPal.colorOrange : qgcPal.colorGreen)
+                            }
+                            return qgcPal.windowShade
+                        }
+                    }
+                }
+            }
+
+            // 俯仰指示条 (底部水平)
+            Row {
+                id:                     pitchRow
+                anchors.top:            compassWidget.bottom
+                anchors.topMargin:      _toolsMargin / 2
+                anchors.horizontalCenter: compassWidget.horizontalCenter
+                spacing:                2
+
+                Repeater {
+                    model: 20
+                    Rectangle {
+                        width:  (_compassSize - 20) / 20
+                        height: 4
+                        radius: 1
+                        color:  {
+                            var normalizedPitch = (pitch + 30) / 60
+                            var segmentPos = index / 19
+                            var diff = Math.abs(normalizedPitch - segmentPos)
+                            if (diff < 0.1) {
+                                return isPitchCritical ? qgcPal.colorRed :
+                                       (isPitchWarning ? qgcPal.colorOrange : qgcPal.colorGreen)
+                            }
+                            return qgcPal.windowShade
+                        }
+                    }
+                }
             }
         }
     }

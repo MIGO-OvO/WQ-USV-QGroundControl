@@ -2,8 +2,9 @@
  *
  * USV Fly View Custom Layer - 无人船飞行视图自定义层
  *
- * 注意：航行状态和姿态监测已整合到 USVInstrumentPanel.qml
- * 此文件仅保留警告横幅和模式指示器
+ * 包含：
+ * - 左下角：USV 综合仪表盘（罗盘 + 航行状态 + 姿态监测）
+ * - 顶部：姿态危险警告横幅
  *
  ****************************************************************************/
 
@@ -24,7 +25,7 @@ Item {
     property var totalToolInsets:   _toolInsets
     property var mapControl
 
-    // 传递父级边距
+    // 更新边距以适应左下角的仪表盘
     QGCToolInsets {
         id:                     _toolInsets
         leftEdgeTopInset:       parentToolInsets.leftEdgeTopInset
@@ -32,19 +33,19 @@ Item {
         leftEdgeBottomInset:    parentToolInsets.leftEdgeBottomInset
         rightEdgeTopInset:      parentToolInsets.rightEdgeTopInset
         rightEdgeCenterInset:   parentToolInsets.rightEdgeCenterInset
-        rightEdgeBottomInset:   parentToolInsets.rightEdgeBottomInset
+        rightEdgeBottomInset:   Math.max(parentToolInsets.rightEdgeBottomInset, instrumentPanel.height + _toolsMargin * 2)
         topEdgeLeftInset:       parentToolInsets.topEdgeLeftInset
         topEdgeCenterInset:     parentToolInsets.topEdgeCenterInset
         topEdgeRightInset:      parentToolInsets.topEdgeRightInset
         bottomEdgeLeftInset:    parentToolInsets.bottomEdgeLeftInset
         bottomEdgeCenterInset:  parentToolInsets.bottomEdgeCenterInset
-        bottomEdgeRightInset:   parentToolInsets.bottomEdgeRightInset
+        bottomEdgeRightInset:   Math.max(parentToolInsets.bottomEdgeRightInset, instrumentPanel.width + _toolsMargin * 2)
     }
 
     // ========== USV 自定义属性 ==========
     property var  activeVehicle:    QGroundControl.multiVehicleManager.activeVehicle
-    property real roll:             activeVehicle ? activeVehicle.roll.rawValue  : 0
-    property real pitch:            activeVehicle ? activeVehicle.pitch.rawValue : 0
+    property real roll:             activeVehicle && activeVehicle.roll ? activeVehicle.roll.rawValue : 0
+    property real pitch:            activeVehicle && activeVehicle.pitch ? activeVehicle.pitch.rawValue : 0
     property real _toolsMargin:     ScreenTools.defaultFontPixelWidth * 0.75
 
     // 姿态警告阈值
@@ -55,7 +56,7 @@ Item {
 
     QGCPalette { id: qgcPal; colorGroupEnabled: true }
 
-    // ========== 姿态危险警告横幅 ==========
+    // ========== 姿态危险警告横幅 (顶部居中) ==========
     Rectangle {
         id:                         warningBanner
         anchors.horizontalCenter:   parent.horizontalCenter
@@ -67,6 +68,7 @@ Item {
         radius:                     ScreenTools.defaultFontPixelWidth / 2
         visible:                    isAttitudeCritical
         opacity:                    0.95
+        z:                          1000
 
         SequentialAnimation on opacity {
             running:    warningBanner.visible
@@ -85,38 +87,13 @@ Item {
         }
     }
 
-    // ========== 模式指示器 (左下角) ==========
-    Rectangle {
-        id:                     modeIndicator
+    // ========== 右下角：USV 综合仪表盘 ==========
+    IntegratedCompassAttitude {
+        id:                     instrumentPanel
         anchors.bottom:         parent.bottom
-        anchors.left:           parent.left
-        anchors.bottomMargin:   parentToolInsets.bottomEdgeLeftInset + _toolsMargin
-        anchors.leftMargin:     _toolsMargin
-        width:                  modeRow.width + ScreenTools.defaultFontPixelWidth * 2
-        height:                 modeRow.height + ScreenTools.defaultFontPixelHeight / 2
-        color:                  activeVehicle && activeVehicle.armed ? qgcPal.colorGreen : qgcPal.window
-        radius:                 ScreenTools.defaultFontPixelWidth / 2
-        opacity:                0.9
-
-        Row {
-            id:                 modeRow
-            anchors.centerIn:   parent
-            spacing:            ScreenTools.defaultFontPixelWidth / 2
-
-            QGCLabel {
-                text:           activeVehicle ?
-                                (activeVehicle.armed ? "🚤" : "🔒") : "🚤"
-                font.pointSize: ScreenTools.mediumFontPointSize
-            }
-
-            QGCLabel {
-                anchors.verticalCenter: parent.verticalCenter
-                text:           activeVehicle ?
-                                (activeVehicle.armed ? qsTr("已解锁") : qsTr("已锁定")) + " - " + activeVehicle.flightMode :
-                                qsTr("USV 未连接")
-                color:          activeVehicle && activeVehicle.armed ? "white" : qgcPal.text
-                font.bold:      true
-            }
-        }
+        anchors.right:          parent.right
+        anchors.bottomMargin:   parentToolInsets.bottomEdgeRightInset + _toolsMargin
+        anchors.rightMargin:    _toolsMargin
+        vehicle:                activeVehicle
     }
 }

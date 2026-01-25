@@ -31,7 +31,8 @@ protected:
     bool showMultiVehicleList() const override { return true; }
 
     /// @brief 显示仪表盘
-    bool showInstrumentPanel() const override { return true; }
+    /// 禁用原版仪表盘，使用 USVFlyViewCustomLayer 中的自定义仪表盘
+    bool showInstrumentPanel() const override { return false; }
 
     /// @brief 显示地图比例尺
     bool showMapScale() const override { return true; }

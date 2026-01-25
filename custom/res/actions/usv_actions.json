@@ -1,0 +1,16 @@
+{
+    "version": 1,
+    "fileType": "MavlinkActions",
+    "actions": [
+        {
+            "label": "水质采样",
+            "description": "触发伴飞计算机执行水质采样程序",
+            "mavCmd": 31010,
+            "compId": 1,
+            "param1": 1.0,
+            "param2": 0.0,
+            "param3": 0.0,
+            "param4": 0.0
+        }
+    ]
+}
