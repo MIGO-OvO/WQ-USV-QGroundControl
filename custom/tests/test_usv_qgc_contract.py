@@ -4,6 +4,33 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+WORKSPACE_ROOT = REPO_ROOT.parent
+OLD_STATUS_THREE_TEXT = "载荷故障，" + "请检查采样模块"
+
+PAYLOAD_NAMED_VALUE_FIELDS = {
+    "USV_VOLT": ("voltage", "voltage"),
+    "USV_ABS": ("absorbance", "absorbance"),
+    "PUMP_X": ("pump_x", "pumpX"),
+    "PUMP_Y": ("pump_y", "pumpY"),
+    "PUMP_Z": ("pump_z", "pumpZ"),
+    "PUMP_A": ("pump_a", "pumpA"),
+    "USV_STAT": ("status", "status"),
+    "USV_PKT": ("pkt_count", "packetCount"),
+    "USV_STEP": ("automation_step", "stepCurrent"),
+    "USV_STOT": ("automation_total", "stepTotal"),
+    "USV_SCNT": ("sample_count", "sampleCount"),
+    "USV_PERR": ("pid_error", "pidError"),
+    "USV_PMOD": ("pid_mode", "pidMode"),
+    "USV_BSET": ("baseline_set", "baselineSet"),
+    "USV_REF": ("reference_voltage", "referenceVoltage"),
+    "USV_BASE": ("baseline_voltage", "baselineVoltage"),
+    "USV_VLD": ("spectrometer_valid", "spectrometerValid"),
+    "USV_JTMP": ("jetson_temp", "jetsonTemp"),
+    "USV_ETMP": ("detector_temp", "detectorTemp"),
+    "USV_JCPU": ("jetson_cpu", "jetsonCpu"),
+    "USV_JMEM": ("jetson_memory", "jetsonMemory"),
+    "USV_EHEAP": ("detector_heap", "detectorHeap"),
+}
 
 
 class USVQGCContractTests(unittest.TestCase):
@@ -45,8 +72,42 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("启动信号采集", payload_panel)
         self.assertIn("设基线", payload_panel)
         self.assertIn("开始点采样", payload_panel)
+        self.assertIn("任务前准备", payload_panel)
+        self.assertIn("飞控连接", payload_panel)
+        self.assertIn("载荷链路", payload_panel)
+        self.assertIn("有效信号", payload_panel)
+        self.assertIn("_readyForPointSample", payload_panel)
+        self.assertIn("!!vehicle && _linkOk && spectrometerValid && baselineSet && _canStartPointSample", payload_panel)
+        self.assertNotIn('_canStartPointSample ? qsTr("可执行")', payload_panel)
+        self.assertNotIn("任务已上传", payload_panel)
         self.assertNotIn("vehicle.sendCommand(_payloadCompId, cmdId, true", payload_panel)
-        self.assertNotIn("载荷故障，请检查采样模块", payload_panel)
+        self.assertNotIn(OLD_STATUS_THREE_TEXT, payload_panel)
+        self.assertNotIn(OLD_STATUS_THREE_TEXT, action_bar)
+
+    def test_status_three_is_task_failure_not_hardware_fault(self):
+        layout = (REPO_ROOT / "custom" / "res" / "USVFlyViewLayout.js").read_text(encoding="utf-8")
+        payload_panel = (REPO_ROOT / "custom" / "res" / "USVPayloadPanel.qml").read_text(encoding="utf-8")
+        fly_layer = (REPO_ROOT / "custom" / "res" / "USVFlyViewCustomLayer.qml").read_text(encoding="utf-8")
+        summary_strip = (REPO_ROOT / "custom" / "res" / "USVPayloadSummaryStrip.qml").read_text(encoding="utf-8")
+        data_tokens = (REPO_ROOT / "custom" / "res" / "USVSamplingDataTokens.js").read_text(encoding="utf-8")
+        data_view = (REPO_ROOT / "custom" / "res" / "USVSamplingDataView.qml").read_text(encoding="utf-8")
+        metadata = json.loads((REPO_ROOT / "custom" / "res" / "USVPayloadFactGroup.json").read_text(encoding="utf-8"))
+        status_fact = next(entry for entry in metadata["QGC.MetaData.Facts"] if entry["name"] == "status")
+
+        self.assertIn('case StatusFault: return "任务失败"', layout)
+        self.assertIn("USVLayout.statusText(payloadStatus)", payload_panel)
+        self.assertIn("采样任务失败，请检查流程前置条件", fly_layer)
+        self.assertIn("USVLayout.statusText(payloadStatus)", summary_strip)
+        self.assertIn("USVLayout.statusText(payloadStatus)", data_view)
+        self.assertNotIn("function statusText(st)", payload_panel)
+        self.assertNotIn("function statusText(st)", summary_strip)
+        self.assertNotIn("function statusText(status)", data_tokens)
+        self.assertNotIn("SDTokens.statusText", data_view)
+        self.assertIn("任务失败", status_fact["enumStrings"].split(",")[3])
+        self.assertNotIn(OLD_STATUS_THREE_TEXT, fly_layer)
+        self.assertNotIn("故障", status_fact["enumStrings"].split(",")[3])
+        self.assertNotIn('return qsTr("故障")', payload_panel)
+        self.assertNotIn('return qsTr("故障")', summary_strip)
 
     def test_layout_declares_surveying_status_and_absorbance_gate(self):
         layout = (REPO_ROOT / "custom" / "res" / "USVFlyViewLayout.js").read_text(encoding="utf-8")
@@ -54,10 +115,35 @@ class USVQGCContractTests(unittest.TestCase):
         data_view = (REPO_ROOT / "custom" / "res" / "USVSamplingDataView.qml").read_text(encoding="utf-8")
 
         self.assertIn("StatusSurveying = 14", layout)
-        self.assertIn("StatusSurveying = 14", tokens)
         self.assertIn("shouldSampleAbsorbance", layout)
         self.assertIn("baselineSet", data_view)
         self.assertIn("shouldSampleAbsorbance", data_view)
+        self.assertNotIn("SDTokens.Status", data_view)
+
+    def test_payload_named_value_fields_match_across_ros_firmware_and_qgc(self):
+        bridge = (WORKSPACE_ROOT / "src" / "usv_ros" / "scripts" / "usv_mavlink_router_bridge.py").read_text(encoding="utf-8")
+        firmware_cache = (WORKSPACE_ROOT / "ardupilot-usv" / "Rover" / "GCS_MAVLink_Rover.cpp").read_text(encoding="utf-8")
+        firmware_forward = (WORKSPACE_ROOT / "ardupilot-usv" / "Rover" / "sensors.cpp").read_text(encoding="utf-8")
+        rover_header = (WORKSPACE_ROOT / "ardupilot-usv" / "Rover" / "Rover.h").read_text(encoding="utf-8")
+        qgc_source = (REPO_ROOT / "custom" / "src" / "USVPayloadFactGroup.cc").read_text(encoding="utf-8")
+        metadata = json.loads((REPO_ROOT / "custom" / "res" / "USVPayloadFactGroup.json").read_text(encoding="utf-8"))
+        fact_names = {entry["name"] for entry in metadata["QGC.MetaData.Facts"]}
+
+        for mav_name, (firmware_member, qgc_fact) in PAYLOAD_NAMED_VALUE_FIELDS.items():
+            with self.subTest(mav_name=mav_name):
+                self.assertIn(mav_name, bridge)
+                self.assertIn(mav_name, firmware_cache)
+                self.assertIn(mav_name, firmware_forward)
+                self.assertIn(firmware_member, rover_header)
+                self.assertIn(mav_name, qgc_source)
+                self.assertIn(qgc_fact, fact_names)
+
+    def test_custom_readme_scopes_px4_support_to_ui_layer(self):
+        readme = (REPO_ROOT / "custom" / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("PX4 | 1.14+ | ⚠️ UI 兼容", readme)
+        self.assertIn("完整 USV 采样 mission 闭环当前以 ArduRover 定制固件为准", readme)
+        self.assertNotIn("| PX4 | 1.14+ | ✅ 完全支持 |", readme)
 
     def test_sampling_data_view_avoids_qtcharts_heap_sensitive_series_mutation(self):
         data_view = (REPO_ROOT / "custom" / "res" / "USVSamplingDataView.qml").read_text(encoding="utf-8")
@@ -195,7 +281,7 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("en: vehicle && _linkOk && spectrometerValid && baselineSet && _canStartPointSample", payload_panel)
         self.assertNotIn("spectrometerValid && baselineSet && payloadStatus === _stIdle", payload_panel)
 
-    def test_rover_command_metadata_contains_set_baseline_and_correct_sample_semantics(self):
+    def test_rover_plan_metadata_keeps_manual_actions_out(self):
         metadata = json.loads((REPO_ROOT / "src" / "MissionManager" / "MavCmdInfoRover.json").read_text(encoding="utf-8"))
         actions = json.loads((REPO_ROOT / "custom" / "res" / "actions" / "usv_actions.json").read_text(encoding="utf-8"))
         payload_panel = (REPO_ROOT / "custom" / "res" / "USVPayloadPanel.qml").read_text(encoding="utf-8")
@@ -203,15 +289,11 @@ class USVQGCContractTests(unittest.TestCase):
         action_cmds = {entry["mavCmd"] for entry in actions["actions"]}
 
         self.assertIn(42702, commands)
-        self.assertNotIn(31010, commands)
+        for manual_cmd in range(31010, 31020):
+            self.assertNotIn(manual_cmd, commands)
+            self.assertIn(manual_cmd, action_cmds)
         self.assertNotIn(42702, action_cmds)
         self.assertNotIn("42702", payload_panel)
-        self.assertIn(31017, commands)
-        self.assertIn(31018, commands)
-        self.assertIn(31019, commands)
-        self.assertIn("baseline", commands[31017]["rawName"].lower())
-        self.assertIn("spectro", commands[31018]["rawName"].lower())
-        self.assertIn("spectro", commands[31019]["rawName"].lower())
         sample = commands[42702]
         self.assertEqual(sample["rawName"], "MAV_CMD_NAV_SCRIPT_TIME")
         self.assertEqual(sample["friendlyName"], "定点采样任务项")
@@ -225,6 +307,24 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertEqual(sample["param2"]["max"], 255)
         self.assertIn("Plan only", sample["description"])
         self.assertIn("USV_SMPL", sample["description"])
+        self.assertIn("USV_DONE", sample["description"])
+        self.assertIn("param1 固定为 1", sample["description"])
+        self.assertIn("不要作为载荷面板手动命令发送", sample["description"])
+
+    def test_action_bar_does_not_bypass_payload_panel_gates(self):
+        action_bar = (REPO_ROOT / "custom" / "res" / "USVActionBar.qml").read_text(encoding="utf-8")
+
+        self.assertIn('vehicle.getFact("usvPayload.linkActive")', action_bar)
+        self.assertIn('vehicle.getFact("usvPayload.baselineSet")', action_bar)
+        self.assertIn('vehicle.getFact("usvPayload.spectrometerValid")', action_bar)
+        self.assertIn("payloadStatus === USVLayout.StatusNavigating", action_bar)
+        self.assertIn("payloadStatus === USVLayout.StatusHolding", action_bar)
+        self.assertIn("payloadStatus === USVLayout.StatusWaitingStable", action_bar)
+        self.assertIn("payloadStatus === USVLayout.StatusResumingAuto", action_bar)
+        self.assertIn("en: vehicle && _linkOk && spectrometerValid && payloadStatus !== USVLayout.StatusFault", action_bar)
+        self.assertIn("en: vehicle && _linkOk && spectrometerValid && baselineSet && _canStartPointSample", action_bar)
+        self.assertIn("en: vehicle && _linkOk && spectrometerValid && baselineSet && payloadStatus !== USVLayout.StatusFault && payloadStatus !== USVLayout.StatusSurveying", action_bar)
+        self.assertIn('cmd: _cmdSpectroStop, param1: 0, en: vehicle && _linkOk', action_bar)
 
 
 if __name__ == "__main__":

@@ -23,9 +23,23 @@ Rectangle {
     readonly property int _payloadCompId: 191
 
     property real _m: ScreenTools.defaultFontPixelWidth
+    property bool _hasPayloadGroup: vehicle && vehicle.factGroupNames.indexOf("usvPayload") >= 0
+    property var _linkActiveFact: _hasPayloadGroup ? vehicle.getFact("usvPayload.linkActive") : null
+    property var _baselineSetFact: _hasPayloadGroup ? vehicle.getFact("usvPayload.baselineSet") : null
+    property var _spectrometerValidFact: _hasPayloadGroup ? vehicle.getFact("usvPayload.spectrometerValid") : null
+    property bool _linkOk: _linkActiveFact ? _linkActiveFact.value === 1 : !_hasPayloadGroup
+    property bool baselineSet: _baselineSetFact ? Number(_baselineSetFact.value) >= 1 : false
+    property bool spectrometerValid: _spectrometerValidFact ? Number(_spectrometerValidFact.value) >= 1 : false
+    property bool _canStartPointSample: payloadStatus === USVLayout.StatusIdle
+                                        || payloadStatus === USVLayout.StatusSamplingDone
+                                        || payloadStatus === USVLayout.StatusHoldNoMission
     property bool _isWorking: payloadStatus === USVLayout.StatusSampling
                               || payloadStatus === USVLayout.StatusDetecting
                               || payloadStatus === USVLayout.StatusCalibrating
+                              || payloadStatus === USVLayout.StatusNavigating
+                              || payloadStatus === USVLayout.StatusHolding
+                              || payloadStatus === USVLayout.StatusWaitingStable
+                              || payloadStatus === USVLayout.StatusResumingAuto
                               || payloadStatus === USVLayout.StatusSurveying
 
     width: actionRow.implicitWidth + _m * 3
@@ -54,13 +68,13 @@ Rectangle {
 
         Repeater {
             model: [
-                { text: qsTr("启动信号"), cmd: _cmdSpectroStart, param1: 0, en: vehicle && payloadStatus !== USVLayout.StatusFault, warn: false },
-                { text: qsTr("设基线"), cmd: _cmdSetBaseline, param1: 0, en: vehicle && payloadStatus !== USVLayout.StatusFault, warn: false },
-                { text: qsTr("点采样"), cmd: _cmdStart, param1: 0, en: vehicle && payloadStatus === USVLayout.StatusIdle, warn: false },
-                { text: qsTr("走航"), cmd: _cmdStartSurvey, param1: 5, en: vehicle && payloadStatus !== USVLayout.StatusFault && payloadStatus !== USVLayout.StatusSurveying, warn: false },
+                { text: qsTr("启动信号"), cmd: _cmdSpectroStart, param1: 0, en: vehicle && _linkOk && payloadStatus !== USVLayout.StatusFault, warn: false },
+                { text: qsTr("设基线"), cmd: _cmdSetBaseline, param1: 0, en: vehicle && _linkOk && spectrometerValid && payloadStatus !== USVLayout.StatusFault, warn: false },
+                { text: qsTr("点采样"), cmd: _cmdStart, param1: 0, en: vehicle && _linkOk && spectrometerValid && baselineSet && _canStartPointSample, warn: false },
+                { text: qsTr("走航"), cmd: _cmdStartSurvey, param1: 5, en: vehicle && _linkOk && spectrometerValid && baselineSet && payloadStatus !== USVLayout.StatusFault && payloadStatus !== USVLayout.StatusSurveying, warn: false },
                 { text: qsTr("停止检测"), cmd: _cmdStop, param1: 0, en: vehicle && _isWorking, warn: true },
                 { text: qsTr("停止走航"), cmd: _cmdStopSurvey, param1: 0, en: vehicle && payloadStatus === USVLayout.StatusSurveying, warn: true },
-                { text: qsTr("停信号"), cmd: _cmdSpectroStop, param1: 0, en: vehicle && payloadStatus !== USVLayout.StatusFault, warn: true }
+                { text: qsTr("停信号"), cmd: _cmdSpectroStop, param1: 0, en: vehicle && _linkOk, warn: true }
             ]
 
             delegate: Rectangle {

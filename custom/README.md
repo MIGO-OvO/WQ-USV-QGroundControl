@@ -7,7 +7,7 @@
 ### 主要特性
 
 - 🚤 **载具类型锁定**：仅支持 Rover/Boat 类型载具
-- 🔧 **双固件支持**：同时兼容 ArduPilot (ArduRover) 和 PX4
+- 🔧 **双固件入口**：兼容 ArduPilot (ArduRover) 和 PX4 Rover/Boat UI
 - ✂️ **功能精简**：隐藏不适用于无人船的功能（起飞、降落、高度控制等）
 - 📋 **专用检查清单**：无人船预航检查清单（含载荷状态自动检测）
 - 🎨 **可选品牌定制**：支持自定义 Logo 和主题颜色
@@ -19,10 +19,10 @@
 
 | 固件 | 版本 | 状态 |
 |------|------|------|
-| ArduPilot (ArduRover) | 4.x+ | ✅ 完全支持 |
-| PX4 | 1.14+ | ✅ 完全支持 |
+| ArduPilot (ArduRover) | 4.x+ | ✅ 完整 USV 采样闭环 |
+| PX4 | 1.14+ | ⚠️ UI 兼容，基础 Rover/Boat 规划与遥测 |
 
-用户可以在设置中选择使用 ArduPilot 或 PX4 固件进行离线任务规划。
+用户可以在设置中选择使用 ArduPilot 或 PX4 固件进行离线任务规划。完整 USV 采样 mission 闭环当前以 ArduRover 定制固件为准；PX4 仅支持基础 Rover/Boat UI 和部分手动/遥测能力，除非实现等价的 mission trigger / done / payload forwarding 机制。
 
 ## 构建方法
 

@@ -42,6 +42,27 @@ var Tokens = {
     }
 }
 
+function statusText(status) {
+    switch (status) {
+    case StatusIdle: return "空闲"
+    case StatusSampling: return "采样中"
+    case StatusDetecting: return "检测中"
+    case StatusFault: return "任务失败"
+    case StatusCalibrating: return "校准中"
+    case StatusNavigating: return "航行中"
+    case StatusWaypointReached: return "到达航点"
+    case StatusHolding: return "保持"
+    case StatusWaitingStable: return "稳定等待"
+    case StatusSamplingDone: return "采样完成"
+    case StatusResumingAuto: return "恢复航行"
+    case StatusPaused: return "已暂停"
+    case StatusAborted: return "已中止"
+    case StatusHoldNoMission: return "无任务保持"
+    case StatusSurveying: return "走航检测"
+    default: return "未知"
+    }
+}
+
 function payloadState(hasVehicle, payloadStatus, linkOk, expanded) {
     const isWorking = payloadStatus === StatusSampling
             || payloadStatus === StatusDetecting
