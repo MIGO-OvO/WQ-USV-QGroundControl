@@ -81,6 +81,7 @@ Rectangle {
                               || payloadStatus === _stWaitingStable || payloadStatus === _stResumingAuto
                               || payloadStatus === _stSurveying
     property bool _canStartPointSample: payloadStatus === _stIdle || payloadStatus === _stSamplingDone || payloadStatus === _stHoldNoMission
+    property bool _readyForPointSample: !!vehicle && _linkOk && spectrometerValid && baselineSet && _canStartPointSample
     property bool _linkOk: _linkActiveFact ? _linkActiveFact.value === 1 : !_hasPayloadGroup
     property var _panelState: USVLayout.payloadState(!!vehicle, payloadStatus, _linkOk, _expanded)
     property string _lastCommandMessage: ""
@@ -88,28 +89,6 @@ Rectangle {
     property int _pendingCommand: 0
     property bool _hasPendingCommand: _pendingCommand > 0
     readonly property int _commandTimeoutMs: 5000
-
-    function statusText(st) {
-        if (st === _stSurveying) {
-            return qsTr("走航检测")
-        }
-        switch (st) {
-        case _stIdle: return qsTr("空闲")
-        case _stSampling: return qsTr("采样中")
-        case _stDetecting: return qsTr("检测中")
-        case _stFault: return qsTr("任务失败")
-        case _stCalibrating: return qsTr("校准中")
-        case _stNavigating: return qsTr("航行中")
-        case _stHolding: return qsTr("保持")
-        case _stWaitingStable: return qsTr("稳定等待")
-        case _stSamplingDone: return qsTr("采样完成")
-        case _stResumingAuto: return qsTr("恢复航行")
-        case _stPaused: return qsTr("已暂停")
-        case _stAborted: return qsTr("已中止")
-        case _stHoldNoMission: return qsTr("无任务")
-        default: return qsTr("未知")
-        }
-    }
 
     function statusColor(st) {
         if (st === _stSurveying) {
@@ -242,8 +221,8 @@ Rectangle {
 
                 QGCLabel {
                     text: !vehicle ? qsTr("未连接载具")
-                         : (payloadStatus === _stFault ? statusText(payloadStatus)
-                         : (_linkOk ? statusText(payloadStatus) : qsTr("载荷离线")))
+                         : (payloadStatus === _stFault ? USVLayout.statusText(payloadStatus)
+                         : (_linkOk ? USVLayout.statusText(payloadStatus) : qsTr("载荷离线")))
                     color: !vehicle ? qgcPal.text :
                            (payloadStatus === _stFault ? qgcPal.colorRed
                            : (_linkOk ? statusColor(payloadStatus) : qgcPal.colorOrange))
@@ -449,6 +428,34 @@ Rectangle {
                             font.bold: true
                             font.pointSize: ScreenTools.smallFontPointSize
                         }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    radius: _m * 0.55
+                    color: Qt.rgba(qgcPal.windowShade.r, qgcPal.windowShade.g, qgcPal.windowShade.b, 0.16)
+                    visible: !!vehicle
+                    height: prepGrid.implicitHeight + _m * 1.1
+
+                    GridLayout {
+                        id: prepGrid
+                        anchors.fill: parent
+                        anchors.margins: _m * 0.55
+                        columns: 2
+                        columnSpacing: _m
+                        rowSpacing: _m * 0.3
+
+                        QGCLabel { text: qsTr("任务前准备"); font.bold: true; font.pointSize: ScreenTools.smallFontPointSize }
+                        QGCLabel { text: _readyForPointSample ? qsTr("可执行") : qsTr("等待状态"); color: _readyForPointSample ? qgcPal.colorGreen : qgcPal.colorOrange; font.bold: true; font.pointSize: ScreenTools.smallFontPointSize }
+                        QGCLabel { text: qsTr("飞控连接"); opacity: 0.55; font.pointSize: ScreenTools.smallFontPointSize }
+                        QGCLabel { text: vehicle ? qsTr("已连接") : qsTr("未连接"); color: vehicle ? qgcPal.colorGreen : qgcPal.colorOrange; font.bold: true; font.pointSize: ScreenTools.smallFontPointSize }
+                        QGCLabel { text: qsTr("载荷链路"); opacity: 0.55; font.pointSize: ScreenTools.smallFontPointSize }
+                        QGCLabel { text: _linkOk ? qsTr("在线") : qsTr("离线"); color: _linkOk ? qgcPal.colorGreen : qgcPal.colorOrange; font.bold: true; font.pointSize: ScreenTools.smallFontPointSize }
+                        QGCLabel { text: qsTr("有效信号"); opacity: 0.55; font.pointSize: ScreenTools.smallFontPointSize }
+                        QGCLabel { text: spectrometerValid ? qsTr("有效") : qsTr("无有效信号"); color: spectrometerValid ? qgcPal.colorGreen : qgcPal.colorOrange; font.bold: true; font.pointSize: ScreenTools.smallFontPointSize }
+                        QGCLabel { text: qsTr("Baseline"); opacity: 0.55; font.pointSize: ScreenTools.smallFontPointSize }
+                        QGCLabel { text: baselineSet ? qsTr("已设置") : qsTr("未设基线"); color: baselineSet ? qgcPal.colorGreen : qgcPal.colorOrange; font.bold: true; font.pointSize: ScreenTools.smallFontPointSize }
                     }
                 }
 

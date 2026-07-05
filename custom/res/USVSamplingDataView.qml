@@ -41,14 +41,14 @@ Rectangle {
     property real _h: ScreenTools.defaultFontPixelHeight
 
     property bool _linkOk: _linkActiveFact ? Number(_linkActiveFact.value) === 1 : false
-    property int payloadStatus: _statusFact ? Number(_statusFact.value) : SDTokens.StatusIdle
+    property int payloadStatus: _statusFact ? Number(_statusFact.value) : USVLayout.StatusIdle
     property bool baselineSet: _baselineSetFact ? Number(_baselineSetFact.value) >= 1 : false
     // 只有在活跃工作状态时才向曲线追加数据点，避免非采样时持续累积导致内存增长和 heap 904
-    property bool _shouldChart: payloadStatus === SDTokens.StatusSampling
-                                || payloadStatus === SDTokens.StatusDetecting
-                                || payloadStatus === SDTokens.StatusCalibrating
-                                || payloadStatus === SDTokens.StatusWaitingStable
-                                || payloadStatus === SDTokens.StatusSurveying
+    property bool _shouldChart: payloadStatus === USVLayout.StatusSampling
+                                || payloadStatus === USVLayout.StatusDetecting
+                                || payloadStatus === USVLayout.StatusCalibrating
+                                || payloadStatus === USVLayout.StatusWaitingStable
+                                || payloadStatus === USVLayout.StatusSurveying
     property bool _shouldSampleAbsorbance: USVLayout.shouldSampleAbsorbance(payloadStatus, baselineSet)
 
     property bool _chartPaused: false
@@ -149,22 +149,22 @@ Rectangle {
 
     function _statusColor(statusValue) {
         switch (statusValue) {
-        case SDTokens.StatusSampling:
-        case SDTokens.StatusSamplingDone:
+        case USVLayout.StatusSampling:
+        case USVLayout.StatusSamplingDone:
             return qgcPal.colorGreen
-        case SDTokens.StatusDetecting:
-        case SDTokens.StatusNavigating:
-        case SDTokens.StatusResumingAuto:
-        case SDTokens.StatusSurveying:
+        case USVLayout.StatusDetecting:
+        case USVLayout.StatusNavigating:
+        case USVLayout.StatusResumingAuto:
+        case USVLayout.StatusSurveying:
             return qgcPal.brandingBlue
-        case SDTokens.StatusFault:
-        case SDTokens.StatusAborted:
+        case USVLayout.StatusFault:
+        case USVLayout.StatusAborted:
             return qgcPal.colorRed
-        case SDTokens.StatusCalibrating:
-        case SDTokens.StatusHolding:
-        case SDTokens.StatusWaitingStable:
-        case SDTokens.StatusWaypointReached:
-        case SDTokens.StatusPaused:
+        case USVLayout.StatusCalibrating:
+        case USVLayout.StatusHolding:
+        case USVLayout.StatusWaitingStable:
+        case USVLayout.StatusWaypointReached:
+        case USVLayout.StatusPaused:
             return qgcPal.colorOrange
         default:
             return qgcPal.text
@@ -297,7 +297,7 @@ Rectangle {
     }
 
     onPayloadStatusChanged: {
-        if (payloadStatus === SDTokens.StatusSampling || payloadStatus === SDTokens.StatusSurveying) {
+        if (payloadStatus === USVLayout.StatusSampling || payloadStatus === USVLayout.StatusSurveying) {
             _samplingStartedMs = Date.now()
             _elapsedSeconds = 0
         } else {
@@ -689,7 +689,7 @@ Rectangle {
 
                         QGCLabel { text: qsTr("状态"); opacity: SDTokens.Tokens.opacity.subtle }
                         QGCLabel {
-                            text: SDTokens.statusText(payloadStatus)
+                            text: USVLayout.statusText(payloadStatus)
                             color: root._statusColor(payloadStatus)
                             font.bold: true
                         }
@@ -984,7 +984,7 @@ Rectangle {
                 return
             }
 
-            if ((root.payloadStatus === SDTokens.StatusSampling || root.payloadStatus === SDTokens.StatusSurveying) && root._samplingStartedMs > 0) {
+            if ((root.payloadStatus === USVLayout.StatusSampling || root.payloadStatus === USVLayout.StatusSurveying) && root._samplingStartedMs > 0) {
                 root._elapsedSeconds = Math.floor((Date.now() - root._samplingStartedMs) / 1000)
             } else {
                 root._elapsedSeconds = 0

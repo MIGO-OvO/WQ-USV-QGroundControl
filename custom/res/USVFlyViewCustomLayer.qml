@@ -107,7 +107,7 @@ Item {
             id: warningLabel
             anchors.centerIn: parent
             text: _capsuleStatus === 3
-                  ? qsTr("载荷故障，请检查采样模块")
+                  ? qsTr("采样任务失败，请检查流程前置条件")
                   : qsTr("姿态异常  R:%1°  P:%2°").arg(Number(roll).toFixed(1)).arg(Number(pitch).toFixed(1))
             color: "white"
             font.bold: true

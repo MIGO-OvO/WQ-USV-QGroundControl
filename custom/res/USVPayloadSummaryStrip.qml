@@ -37,20 +37,6 @@ Rectangle {
                               || payloadStatus === USVLayout.StatusCalibrating
                               || payloadStatus === USVLayout.StatusSurveying
 
-    function statusText(st) {
-        if (st === USVLayout.StatusSurveying) return qsTr("走航检测")
-        if (st === USVLayout.StatusFault) return qsTr("故障")
-        if (!_linkOk) return qsTr("离线")
-        switch(st) {
-            case USVLayout.StatusIdle:        return qsTr("空闲")
-            case USVLayout.StatusSampling:    return qsTr("采样中")
-            case USVLayout.StatusDetecting:   return qsTr("检测中")
-            case USVLayout.StatusFault:       return qsTr("故障")
-            case USVLayout.StatusCalibrating: return qsTr("校准中")
-            default:                          return qsTr("未知")
-        }
-    }
-
     function statusColor(st) {
         if (st === USVLayout.StatusSurveying) return qgcPal.brandingBlue
         if (st === USVLayout.StatusFault) return qgcPal.colorRed
@@ -96,7 +82,7 @@ Rectangle {
             }
 
             QGCLabel {
-                text: statusText(payloadStatus)
+                text: _linkOk ? USVLayout.statusText(payloadStatus) : qsTr("离线")
                 color: statusColor(payloadStatus)
                 font.pointSize: ScreenTools.smallFontPointSize
                 font.bold: true
