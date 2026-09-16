@@ -27,6 +27,11 @@ on:
       - 'CMakePresets.json'
   workflow_dispatch:
     inputs:
+      smoke_run_id:
+        description: 'Optional: retry smoke only using this existing Android build run ID'
+        required: false
+        default: ''
+        type: string
       build_type:
         description: 'Build type'
         required: false
@@ -48,7 +53,14 @@ permissions:
   actions: read
 
 jobs:
+  retry-smoke:
+    if: inputs.smoke_run_id != ''
+    uses: ./.github/workflows/android-smoke.yml
+    with:
+      build_run_id: ${{ inputs.smoke_run_id }}
+
   build:
+    if: inputs.smoke_run_id == ''
     name: Android (${{ matrix.host }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120

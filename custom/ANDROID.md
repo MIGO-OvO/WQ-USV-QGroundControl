@@ -142,3 +142,5 @@ Windows host path 用 msvc2022_64、macOS 用 macos。要显式测试签名，�
 已存在 x86_64 artifact 时，可手动运行 **Android APK Smoke**，输入原 Android build run ID，
 仅重跑 emulator，避免重复编译。测试使用所选分支的 smoke 脚本和指定运行的 APK；验收记录
 必须同时记下两者，不能把旧 APK 的启动结果归到新代码。
+新 workflow 尚未合入默认分支时，也可从已有 **Android** workflow 的手动入口填写
+`smoke_run_id`，此时仅调用同一 smoke workflow，不重新编译。

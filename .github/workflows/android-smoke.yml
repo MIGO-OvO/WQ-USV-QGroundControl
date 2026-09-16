@@ -2,6 +2,11 @@ name: Android APK Smoke
 
 # Retry emulator diagnostics against an existing x86_64 artifact without rebuilding Qt/QGC.
 on:
+  workflow_call:
+    inputs:
+      build_run_id:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       build_run_id:
