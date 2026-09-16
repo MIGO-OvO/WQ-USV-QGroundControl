@@ -88,6 +88,8 @@ android {
     }
 
     defaultConfig {
+        // Keep the Java/JNI namespace stable; the custom APK has its own install identity.
+        applicationId = project.findProperty('qgcApplicationId') ?: androidPackageName
         resConfig "en"
         minSdkVersion qtMinSdkVersion
         targetSdkVersion qtTargetSdkVersion

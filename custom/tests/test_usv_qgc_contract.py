@@ -1,5 +1,6 @@
 import json
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
@@ -121,6 +122,12 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertNotIn("SDTokens.Status", data_view)
 
     def test_payload_named_value_fields_match_across_ros_firmware_and_qgc(self):
+        required = [WORKSPACE_ROOT / "src/usv_ros/scripts/usv_mavlink_router_bridge.py",
+                    WORKSPACE_ROOT / "ardupilot-usv/Rover/GCS_MAVLink_Rover.cpp",
+                    WORKSPACE_ROOT / "ardupilot-usv/Rover/sensors.cpp",
+                    WORKSPACE_ROOT / "ardupilot-usv/Rover/Rover.h"]
+        if not all(path.exists() for path in required):
+            self.skipTest("Cross-repository verification requires the complete usv_ws checkout")
         bridge = (WORKSPACE_ROOT / "src" / "usv_ros" / "scripts" / "usv_mavlink_router_bridge.py").read_text(encoding="utf-8")
         firmware_cache = (WORKSPACE_ROOT / "ardupilot-usv" / "Rover" / "GCS_MAVLink_Rover.cpp").read_text(encoding="utf-8")
         firmware_forward = (WORKSPACE_ROOT / "ardupilot-usv" / "Rover" / "sensors.cpp").read_text(encoding="utf-8")
@@ -325,6 +332,39 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("en: vehicle && _linkOk && spectrometerValid && baselineSet && _canStartPointSample", action_bar)
         self.assertIn("en: vehicle && _linkOk && spectrometerValid && baselineSet && payloadStatus !== USVLayout.StatusFault && payloadStatus !== USVLayout.StatusSurveying", action_bar)
         self.assertIn('cmd: _cmdSpectroStop, param1: 0, en: vehicle && _linkOk', action_bar)
+
+    def test_all_local_payload_fields_and_resources(self):
+        source = (REPO_ROOT / "custom/src/USVPayloadFactGroup.cc").read_text(encoding="utf-8")
+        metadata = json.loads((REPO_ROOT / "custom/res/USVPayloadFactGroup.json").read_text(encoding="utf-8"))
+        names = [fact["name"] for fact in metadata["QGC.MetaData.Facts"]]
+        self.assertEqual(len(names), len(set(names)))
+        for mav_name, (_, fact_name) in PAYLOAD_NAMED_VALUE_FIELDS.items():
+            self.assertIn(mav_name, source)
+            self.assertIn(fact_name, names)
+        for entry in ET.parse(REPO_ROOT / "custom/custom.qrc").iter("file"):
+            self.assertTrue((REPO_ROOT / "custom" / entry.text).is_file(), entry.text)
+        for path in (REPO_ROOT / "custom").rglob("*.json"):
+            json.loads(path.read_text(encoding="utf-8"))
+
+    def test_companion_command_targets(self):
+        actions = json.loads((REPO_ROOT / "custom/res/actions/usv_actions.json").read_text(encoding="utf-8"))
+        for action in actions["actions"]:
+            self.assertEqual(action["compId"], 191)
+        for name in ("USVPayloadPanel.qml", "USVActionBar.qml", "USVFlyViewCustomLayer.qml"):
+            self.assertIn("_payloadCompId: 191", (REPO_ROOT / "custom/res" / name).read_text(encoding="utf-8"))
+
+    def test_android_custom_build_contract(self):
+        workflow = (REPO_ROOT / ".github/workflows/android.yml").read_text(encoding="utf-8")
+        for required in ("'custom/**'", "unittest discover", "-DQT_ANDROID_SIGN_APK=ON",
+                         "keytool -genkeypair", "apksigner", "actions/upload-artifact@", "if: always()"):
+            self.assertIn(required, workflow)
+        self.assertNotIn("uses: ./.github/actions/custom-build", workflow)
+        cmake = (REPO_ROOT / "custom/CMakeLists.txt").read_text(encoding="utf-8")
+        self.assertIn("target_link_libraries(USVModule PRIVATE Qt6::Core Qt6::Qml Qt6::Quick)", cmake)
+        self.assertIn("USVModule", cmake)
+        manifest = ET.parse(REPO_ROOT / "android/AndroidManifest.xml")
+        activity = manifest.find("application/activity")
+        self.assertEqual(activity.attrib["{http://schemas.android.com/apk/res/android}screenOrientation"], "sensorLandscape")
 
 
 if __name__ == "__main__":

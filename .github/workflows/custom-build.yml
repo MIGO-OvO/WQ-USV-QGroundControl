@@ -4,12 +4,22 @@ on:
   push:
     branches: [master]
     paths:
-      - 'custom-example/**'
+      - 'custom/**'
+      - 'src/**'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - '.github/build-config.json'
+      - '.github/actions/**'
       - '.github/workflows/custom-build.yml'
   pull_request:
     branches: [master]
     paths:
-      - 'custom-example/**'
+      - 'custom/**'
+      - 'src/**'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - '.github/build-config.json'
+      - '.github/actions/**'
       - '.github/workflows/custom-build.yml'
   workflow_dispatch:
 
@@ -43,8 +53,8 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
-      - name: Enable custom build
-        uses: ./.github/actions/custom-build
+      - name: USV contracts
+        run: python3 -m unittest discover -s custom/tests -p 'test_*.py' -v
 
       - name: Get build config
         id: config
@@ -90,4 +100,4 @@ jobs:
 
       - name: Verify Custom AppImage
         working-directory: ${{ runner.temp }}/build
-        run: xvfb-run -a ./Custom-QGroundControl-x86_64.AppImage --simple-boot-test
+        run: xvfb-run -a ./QGroundControl-x86_64.AppImage --simple-boot-test

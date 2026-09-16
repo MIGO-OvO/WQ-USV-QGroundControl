@@ -13,6 +13,11 @@
 
 message(STATUS "QGC USV: Custom overrides loaded")
 
+# This file is loaded before project(), so ANDROID may not be set yet.
+if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "Android")
+    set(QGC_ANDROID_PACKAGE_NAME "org.wqusv.qgroundcontrol" CACHE STRING "Android package identifier" FORCE)
+endif()
+
 if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(QGC_VIEWER3D OFF CACHE BOOL "Disable 3D Viewer for Windows Debug USV builds" FORCE)
     message(STATUS "QGC USV: Viewer3D disabled for Windows Debug build to avoid MSVC C1060 on generated Qt resources")

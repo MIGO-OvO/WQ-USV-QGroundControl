@@ -84,10 +84,8 @@ runs:
         echo "ANDROID_NDK_HOME=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
         echo "ANDROID_NDK=${{ steps.setup-ndk.outputs.ndk-path }}" >> "$GITHUB_ENV"
         if [[ "$RUNNER_OS" == "Windows" ]]; then
-          "${ANDROID_SDK_ROOT}"/cmdline-tools/latest/bin/sdkmanager.bat --update
           "${GITHUB_WORKSPACE}"/android/gradlew.bat --version
         else
-          sdkmanager --update
           "${GITHUB_WORKSPACE}"/android/gradlew --version
         fi
 

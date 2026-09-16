@@ -10,6 +10,13 @@ message(STATUS "QGC: Adding USV Custom Plugin")
 # ============================================================================
 
 if(ANDROID)
+    # Preserve the upstream Java/JNI namespace. Qt 6.10 extracts that namespace
+    # ahead of QT_ANDROID_PACKAGE_NAME, so set the install ID in Gradle instead.
+    set(FINAL_ANDROID_DIR "${CMAKE_BINARY_DIR}/custom/android")
+    file(COPY "${CMAKE_SOURCE_DIR}/android/." DESTINATION "${FINAL_ANDROID_DIR}")
+    file(APPEND "${FINAL_ANDROID_DIR}/gradle.properties"
+        "\nqgcApplicationId=org.wqusv.qgroundcontrol\n")
+    set(QGC_ANDROID_PACKAGE_SOURCE_DIR "${FINAL_ANDROID_DIR}" CACHE PATH "USV Android package template" FORCE)
     set(CUSTOM_ANDROID_DIR "${CMAKE_SOURCE_DIR}/custom/android")
     if(EXISTS "${CUSTOM_ANDROID_DIR}")
         file(GLOB CUSTOM_ANDROID_FILES "${CUSTOM_ANDROID_DIR}/*")
@@ -17,7 +24,6 @@ if(ANDROID)
             message(STATUS "QGC: Custom Android package template found. Overlaying custom files...")
             set(DEFAULT_ANDROID_DIR "${CMAKE_SOURCE_DIR}/android")
             set(FINAL_ANDROID_DIR "${CMAKE_BINARY_DIR}/custom/android")
-            file(COPY "${DEFAULT_ANDROID_DIR}/." DESTINATION "${FINAL_ANDROID_DIR}")
             file(COPY "${CUSTOM_ANDROID_DIR}/." DESTINATION "${FINAL_ANDROID_DIR}")
             set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
                 "${DEFAULT_ANDROID_DIR}/"
@@ -44,6 +50,9 @@ set(QML_IMPORT_PATH ${QML_IMPORT_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/res" CACHE S
 # ============================================================================
 
 qt_add_library(USVModule STATIC)
+
+# Dependencies must belong to this target, not only to the final executable.
+target_link_libraries(USVModule PRIVATE Qt6::Core Qt6::Qml Qt6::Quick)
 
 qt_add_qml_module(USVModule
     URI USV
@@ -138,6 +147,5 @@ set(CUSTOM_DEFINITIONS
 
 set(CUSTOM_QT_COMPONENTS
     Core
-    Charts
     CACHE INTERNAL "" FORCE
 )

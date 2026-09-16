@@ -2,15 +2,14 @@ name: Android
 
 on:
   push:
-    branches:
-      - master
-      - 'Stable*'
     tags:
       - 'v*'
     paths-ignore:
       - 'docs/**'
   pull_request:
     paths:
+      - 'custom/**'
+      - '.github/build-config.json'
       - '.github/workflows/android.yml'
       - '.github/actions/**'
       - 'deploy/android/**'
@@ -25,7 +24,7 @@ on:
       build_type:
         description: 'Build type'
         required: false
-        default: 'Release'
+        default: 'Debug'
         type: choice
         options:
           - Release
@@ -58,31 +57,42 @@ jobs:
             qt_host_path: gcc_64
             shell: bash
             primary: true
+            abi: arm64-v8a
+            artifact_arch: arm64
+          - host: linux-emulator
+            runner: ubuntu-22.04
+            arch: linux_gcc_64
+            qt_host_path: gcc_64
+            shell: bash
+            primary: false
+            abi: x86_64
+            artifact_arch: x86_64
           - host: mac
             runner: macos-latest
             arch: clang_64
             qt_host_path: macos
             shell: bash
             primary: false
+            abi: arm64-v8a
+            artifact_arch: arm64
           - host: windows
             runner: windows-latest
             arch: win64_msvc2022_64
             qt_host_path: msvc2022_64
             shell: pwsh
             primary: false
+            abi: arm64-v8a
+            artifact_arch: arm64
 
     defaults:
       run:
         shell: ${{ matrix.shell }}
 
     env:
-      PACKAGE: QGroundControl
-      QT_ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/deploy/android/android_release.keystore
-      QT_ANDROID_KEYSTORE_ALIAS: QGCAndroidKeyStore
-      QT_ANDROID_KEYSTORE_STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      QT_ANDROID_KEYSTORE_KEY_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      QT_ANDROID_ABIS: ${{ matrix.primary && 'arm64-v8a;armeabi-v7a' || 'arm64-v8a' }}
-      HAS_PLAYSTORE_SECRET: ${{ secrets.GOOGLE_SERVICE_ACCOUNT != '' }}
+      PACKAGE: WQ-USV-QGroundControl-Android-${{ matrix.artifact_arch }}
+      BUILD_TYPE: ${{ inputs.build_type || (github.ref_type == 'tag' && 'Release' || 'Debug') }}
+      QT_ANDROID_ABIS: ${{ matrix.abi }}
+      GRADLE_OPTS: -Dorg.gradle.daemon=false
 
     steps:
       - name: Harden Runner
@@ -105,15 +115,18 @@ jobs:
       - name: Initial Setup
         uses: ./.github/actions/common
 
+      - name: USV contracts and JSON
+        run: python -m unittest discover -s custom/tests -p 'test_*.py' -v
+
       - name: Install Qt for Android
         uses: ./.github/actions/qt-android
         with:
-          host: ${{ matrix.host }}
+          host: ${{ matrix.host == 'linux-emulator' && 'linux' || matrix.host }}
           arch: ${{ matrix.arch }}
           version: ${{ steps.config.outputs.qt_version }}
           modules: ${{ steps.config.outputs.qt_modules }}
           abis: ${{ env.QT_ANDROID_ABIS }}
-          build-type: ${{ inputs.build_type || 'Release' }}
+          build-type: ${{ env.BUILD_TYPE }}
           cpm-modules: ${{ runner.temp }}/build/cpm_modules
           ndk-version: ${{ steps.config.outputs.ndk_version }}
           java-version: ${{ steps.config.outputs.java_version }}
@@ -122,26 +135,47 @@ jobs:
           android-build-tools: ${{ steps.config.outputs.android_build_tools }}
           save-cache: ${{ github.event_name != 'pull_request' }}
 
+      # Test signing is deliberately independent of production credentials.
+      # A new key per run means cross-run upgrades require uninstalling first.
+      - name: Create test signing key
+        shell: bash
+        run: |
+          keytool -genkeypair -keystore "$RUNNER_TEMP/usv-debug.keystore" \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=USV CI Debug,O=USV,C=CN"
+          {
+            echo "QT_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/usv-debug.keystore"
+            echo "QT_ANDROID_KEYSTORE_ALIAS=androiddebugkey"
+            echo "QT_ANDROID_KEYSTORE_STORE_PASS=android"
+            echo "QT_ANDROID_KEYSTORE_KEY_PASS=android"
+          } >> "$GITHUB_ENV"
+
       - name: Configure
         shell: bash
         working-directory: ${{ runner.temp }}/build
         run: |
+          set -o pipefail
           QT_DIR="${QT_ROOT_DIR//\\//}"        # Convert backslashes for Windows
           WORKSPACE="${GITHUB_WORKSPACE//\\//}"
           "${QT_DIR}/bin/qt-cmake" \
             -S "${WORKSPACE}" \
             -B . -G Ninja \
-            -DCMAKE_BUILD_TYPE=${{ inputs.build_type || 'Release' }} \
+            -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
             -DCMAKE_WARN_DEPRECATED=FALSE \
             -DQT_ANDROID_ABIS="${{ env.QT_ANDROID_ABIS }}" \
             -DQT_HOST_PATH="${QT_DIR}/../${{ matrix.qt_host_path }}" \
-            -DQT_ANDROID_SIGN_APK=${{ matrix.primary && env.QT_ANDROID_KEYSTORE_STORE_PASS != '' && 'ON' || 'OFF' }} \
-            -DQGC_STABLE_BUILD=${{ github.ref_type == 'tag' || contains(github.ref, 'Stable') && 'ON' || 'OFF' }}
+            -DQT_ANDROID_SIGN_APK=ON \
+            -DQGC_STABLE_BUILD=${{ (github.ref_type == 'tag' || contains(github.ref, 'Stable')) && 'ON' || 'OFF' }} \
+            2>&1 | tee configure.log
+          grep -q 'QGC: Adding USV Custom Plugin' configure.log
 
       - name: Build
         shell: bash
         working-directory: ${{ runner.temp }}/build
-        run: cmake --build . --target all --config ${{ inputs.build_type || 'Release' }} --parallel
+        run: |
+          set -o pipefail
+          cmake --build . --target all --config "$BUILD_TYPE" --parallel 3 2>&1 | tee build.log
 
       - name: Prepare Artifact
         shell: bash
@@ -153,7 +187,64 @@ jobs:
             ls -la "${APK_DIR}" 2>/dev/null || echo "Build directory does not exist"
             exit 1
           fi
-          cp "${APK_DIR}"/*.apk "${TEMP_DIR}/build/${{ env.PACKAGE }}.apk"
+          mapfile -t APKS < <(find "$APK_DIR" -maxdepth 1 -name '*.apk')
+          test "${#APKS[@]}" -eq 1
+          "${ANDROID_SDK_ROOT}/build-tools/${{ steps.config.outputs.android_build_tools }}/apksigner${{ runner.os == 'Windows' && '.bat' || '' }}" verify --verbose "${APKS[0]}"
+          cp "${APKS[0]}" "${TEMP_DIR}/build/${{ env.PACKAGE }}.apk"
+
+      - name: Upload sideload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PACKAGE }}-${{ matrix.host }}.apk
+          path: ${{ runner.temp }}/build/${{ env.PACKAGE }}.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Android lint
+        if: matrix.primary
+        shell: bash
+        working-directory: ${{ runner.temp }}/build/android-build
+        run: |
+          set -o pipefail
+          ./gradlew "lint${BUILD_TYPE}" --no-daemon --stacktrace 2>&1 | tee ../gradle-lint.log
+
+      - name: Enable emulator KVM
+        if: matrix.host == 'linux-emulator'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Tablet boot smoke
+        if: matrix.host == 'linux-emulator'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: python3 custom/tests/android_boot_smoke.py "${{ runner.temp }}/build/${{ env.PACKAGE }}.apk" "${{ runner.temp }}/build/smoke"
+
+      - name: Android diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ matrix.host }}-diagnostics
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/build/configure.log
+            ${{ runner.temp }}/build/build.log
+            ${{ runner.temp }}/build/gradle-lint.log
+            ${{ runner.temp }}/build/CMakeFiles/CMakeConfigureLog.yaml
+            ${{ runner.temp }}/build/.ninja_log
+            ${{ runner.temp }}/build/*deployment-settings.json
+            ${{ runner.temp }}/build/android-build/build/outputs/logs/**
+            ${{ runner.temp }}/build/android-build/build/reports/**
+            ${{ runner.temp }}/build/smoke/**
+            .github/build-config.json
 
       - name: Attest Build Provenance
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -161,19 +252,3 @@ jobs:
         with:
           subject-path: '${{ runner.temp }}/build/${{ env.PACKAGE }}.apk'
 
-      - name: Upload Build File
-        uses: ./.github/actions/upload
-        with:
-          artifact_name: ${{ env.PACKAGE }}.apk
-          package_name: ${{ matrix.primary && env.PACKAGE || format('{0}-{1}', env.PACKAGE, matrix.host) }}
-          aws_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_distribution_id: ${{ secrets.AWS_DISTRIBUTION_ID }}
-          upload_aws: ${{ matrix.primary }}
-
-      - name: Deploy to Play Store
-        if: matrix.primary && github.ref_type == 'tag' && env.HAS_PLAYSTORE_SECRET == 'true'
-        uses: ./.github/actions/playstore
-        with:
-          artifact: ${{ runner.temp }}/build/${{ env.PACKAGE }}.apk
-          service_account_json: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}

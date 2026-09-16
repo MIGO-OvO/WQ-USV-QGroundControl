@@ -309,6 +309,14 @@ QQmlApplicationEngine *USVPlugin::createQmlApplicationEngine(QObject *parent)
     _interceptor = new USVQmlOverrideInterceptor();
     _qmlEngine->addUrlInterceptor(_interceptor);
 
+    // Positive boot evidence: an alive Android process alone does not prove QML loaded.
+    connect(_qmlEngine, &QQmlApplicationEngine::objectCreated, this,
+            [](QObject *object, const QUrl &) {
+        if (object) {
+            qCInfo(USVPluginLog) << "USV boot: root QML object created";
+        }
+    });
+
     return _qmlEngine;
 }
 
