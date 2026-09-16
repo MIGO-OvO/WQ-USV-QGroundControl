@@ -43,7 +43,7 @@ on:
   workflow_call:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.smoke_run_id || 'build' }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 permissions:
