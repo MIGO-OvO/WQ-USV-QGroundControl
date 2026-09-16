@@ -1,5 +1,10 @@
 .pragma library
 
+// Logical viewport/font units: physical resolution alone is not a breakpoint.
+function compactSamplingLayout(viewportWidth, fontWidth) {
+    return viewportWidth < fontWidth * 130
+}
+
 // Status constants — extended for auto-sampling mission stages
 var StatusIdle = 0
 var StatusSampling = 1

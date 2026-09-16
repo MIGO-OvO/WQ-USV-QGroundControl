@@ -6,6 +6,21 @@ import "../res/USVFlyViewLayout.js" as USVLayout
 TestCase {
     name: "USVFlyViewLayoutLogic"
 
+    function test_tabletBreakpoints_data() {
+        return [
+            { tag: "1280x800-mdpi", width: 1280, font: 9, compact: false },
+            { tag: "1280x800-hdpi", width: 1280 / 1.5, font: 9, compact: true },
+            { tag: "1920x1200-xhdpi", width: 1920 / 2, font: 9, compact: true },
+            { tag: "1920x1200-mdpi", width: 1920, font: 9, compact: false },
+            { tag: "large-font", width: 1280, font: 12, compact: true },
+            { tag: "boundary", width: 1170, font: 9, compact: false }
+        ]
+    }
+
+    function test_tabletBreakpoints(data) {
+        compare(USVLayout.compactSamplingLayout(data.width, data.font), data.compact)
+    }
+
     function test_idleState_staysCompact() {
         const state = USVLayout.payloadState(true, USVLayout.StatusIdle, true, false)
         compare(state.compact, true)

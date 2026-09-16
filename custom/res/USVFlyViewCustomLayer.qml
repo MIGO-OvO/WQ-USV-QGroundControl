@@ -78,15 +78,15 @@ Item {
         leftEdgeTopInset: parentToolInsets.leftEdgeTopInset
         leftEdgeCenterInset: parentToolInsets.leftEdgeCenterInset
         leftEdgeBottomInset: parentToolInsets.leftEdgeBottomInset
-        rightEdgeTopInset: Math.max(parentToolInsets.rightEdgeTopInset, summaryStrip.visible ? summaryStrip.y + summaryStrip.height + _toolsMargin : parentToolInsets.rightEdgeTopInset)
-        rightEdgeCenterInset: parentToolInsets.rightEdgeCenterInset
-        rightEdgeBottomInset: Math.max(parentToolInsets.rightEdgeBottomInset, instrumentPanel.height + _toolsMargin * 1.5)
+        rightEdgeTopInset: Math.max(parentToolInsets.rightEdgeTopInset, summaryStrip.visible ? summaryStrip.width + _toolsMargin : 0)
+        rightEdgeCenterInset: Math.max(parentToolInsets.rightEdgeCenterInset, detailDrawer.visible ? detailDrawer.width + _toolsMargin : 0)
+        rightEdgeBottomInset: Math.max(parentToolInsets.rightEdgeBottomInset, instrumentPanel.width + _toolsMargin)
         topEdgeLeftInset: parentToolInsets.topEdgeLeftInset
         topEdgeCenterInset: parentToolInsets.topEdgeCenterInset
-        topEdgeRightInset: Math.max(parentToolInsets.topEdgeRightInset, summaryStrip.visible ? summaryStrip.x + summaryStrip.width + _toolsMargin : parentToolInsets.topEdgeRightInset)
+        topEdgeRightInset: Math.max(parentToolInsets.topEdgeRightInset, summaryStrip.visible ? summaryStrip.y + summaryStrip.height + _toolsMargin : 0)
         bottomEdgeLeftInset: parentToolInsets.bottomEdgeLeftInset
-        bottomEdgeCenterInset: Math.max(parentToolInsets.bottomEdgeCenterInset, actionBar.visible ? actionBar.height + _toolsMargin * 1.5 : parentToolInsets.bottomEdgeCenterInset)
-        bottomEdgeRightInset: Math.max(parentToolInsets.bottomEdgeRightInset, instrumentPanel.width + _toolsMargin * 1.5)
+        bottomEdgeCenterInset: Math.max(parentToolInsets.bottomEdgeCenterInset, actionBar.visible ? _root.height - actionBar.y + _toolsMargin : 0)
+        bottomEdgeRightInset: Math.max(parentToolInsets.bottomEdgeRightInset, _root.height - instrumentPanel.y + _toolsMargin)
     }
 
     // 1. 顶部警告横幅 (仅致命级)
@@ -119,8 +119,8 @@ Item {
         id: summaryStrip
         anchors.top: parent.top
         anchors.right: parent.right
-        anchors.topMargin: 0
-        anchors.rightMargin: 0
+        anchors.topMargin: parentToolInsets.topEdgeRightInset + _toolsMargin
+        anchors.rightMargin: _toolsMargin
         vehicle: activeVehicle
         visible: !!activeVehicle
         z: 999
@@ -136,7 +136,7 @@ Item {
         anchors.top: summaryStrip.bottom
         anchors.right: parent.right
         anchors.topMargin: _toolsMargin * 0.5
-        anchors.rightMargin: 0
+        anchors.rightMargin: _toolsMargin
         vehicle: activeVehicle
         maxHeight: Math.max(0, instrumentPanel.y > 0 ? (instrumentPanel.y - summaryStrip.y - summaryStrip.height - _toolsMargin * 1.5) : (parent.height - instrumentPanel.height - summaryStrip.y - summaryStrip.height - _toolsMargin * 3))
         z: 998
@@ -147,15 +147,16 @@ Item {
         id: instrumentPanel
         anchors.bottom: parent.bottom
         anchors.right: parent.right
-        anchors.bottomMargin: 0
-        anchors.rightMargin: 0
+        anchors.bottomMargin: parentToolInsets.bottomEdgeRightInset + _toolsMargin
+        anchors.rightMargin: _toolsMargin
         vehicle: activeVehicle
     }
 
     // 5. 底部居中：操作栏
     USVActionBar {
         id: actionBar
-        anchors.horizontalCenter: parent.horizontalCenter
+        x: parentToolInsets.leftEdgeBottomInset + _toolsMargin
+        availableWidth: Math.max(ScreenTools.defaultFontPixelWidth * 16, instrumentPanel.x - x - _toolsMargin)
         anchors.bottom: parent.bottom
         anchors.bottomMargin: parentToolInsets.bottomEdgeCenterInset + _toolsMargin
         vehicle: activeVehicle

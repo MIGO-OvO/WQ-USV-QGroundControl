@@ -362,9 +362,29 @@ class USVQGCContractTests(unittest.TestCase):
         cmake = (REPO_ROOT / "custom/CMakeLists.txt").read_text(encoding="utf-8")
         self.assertIn("target_link_libraries(USVModule PRIVATE Qt6::Core Qt6::Qml Qt6::Quick)", cmake)
         self.assertIn("USVModule", cmake)
+        self.assertIn("res/USVPayloadPanel.qml", cmake)
+        detail = (REPO_ROOT / "custom/res/USVPayloadDetailPanel.qml").read_text(encoding="utf-8")
+        self.assertIn("USVPayloadPanel {", detail)
         manifest = ET.parse(REPO_ROOT / "android/AndroidManifest.xml")
         activity = manifest.find("application/activity")
         self.assertEqual(activity.attrib["{http://schemas.android.com/apk/res/android}screenOrientation"], "sensorLandscape")
+
+    def test_tablet_layout_and_lifecycle_guards(self):
+        sampling = (REPO_ROOT / "custom/res/USVSamplingDataView.qml").read_text(encoding="utf-8")
+        for token in ("compactSamplingLayout", "pageTabs.showStatus", "contentHeight: statusColumn.implicitHeight",
+                      "Qt.application.state === Qt.ApplicationActive", "root._foreground"):
+            self.assertIn(token, sampling)
+        self.assertNotIn("Layout.preferredHeight: parent.height *", sampling)
+        action = (REPO_ROOT / "custom/res/USVActionBar.qml").read_text(encoding="utf-8")
+        self.assertIn("Flow {", action)
+        self.assertIn("availableWidth", action)
+        self.assertIn("ScreenTools.minTouchPixels", action)
+        diagnostics = (REPO_ROOT / "custom/res/USVDiagnosticsManualView.qml").read_text(encoding="utf-8")
+        for token in ("function prepareForUnload()", "_abortRequests()", "requestTimeout", "_requests.length > 0"):
+            self.assertIn(token, diagnostics)
+        panel = (REPO_ROOT / "custom/res/USVPayloadPanel.qml").read_text(encoding="utf-8")
+        self.assertIn("onVehicleChanged:", panel)
+        self.assertIn("Date.now() - root._pendingSince", panel)
 
 
 if __name__ == "__main__":

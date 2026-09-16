@@ -23,6 +23,26 @@ Item {
     property string manualState: "--"
     property string lastCommandState: "--"
     property bool requestPending: false
+    property bool _pageActive: true
+    property var _requests: []
+
+    function prepareForUnload() {
+        _pageActive = false
+        refreshTimer.stop()
+        requestTimeout.stop()
+        _abortRequests()
+    }
+
+    function _abortRequests() {
+        var requests = _requests
+        _requests = []
+        for (var i = 0; i < requests.length; ++i) {
+            requests[i].onreadystatechange = null
+            requests[i].onerror = null
+            requests[i].abort()
+        }
+        requestPending = false
+    }
     property string selectedAxis: "X"
     property string selectedDirection: "F"
     property bool continuousMode: false
@@ -55,7 +75,19 @@ Item {
     }
 
     function _request(method, path, payload, callback) {
+        if (!_pageActive) return
         var xhr = new XMLHttpRequest()
+        _requests.push(xhr)
+        if (!requestTimeout.running) requestTimeout.start()
+        var finished = false
+        function finish(status, body) {
+            if (finished) return
+            finished = true
+            var index = root._requests.indexOf(xhr)
+            if (index >= 0) root._requests.splice(index, 1)
+            if (root._requests.length === 0) requestTimeout.stop()
+            if (root._pageActive) callback(status, body)
+        }
         xhr.open(method, webBaseUrl.replace(/\/$/, "") + path)
         xhr.setRequestHeader("Content-Type", "application/json")
         xhr.onreadystatechange = function() {
@@ -68,15 +100,16 @@ Item {
             } catch (e) {
                 body = { success: false, message: xhr.responseText }
             }
-            callback(xhr.status, body)
+            finish(xhr.status, body)
         }
         xhr.onerror = function() {
-            callback(0, { success: false, message: qsTr("Jetson Web 不可达") })
+            finish(0, { success: false, message: qsTr("Jetson Web 不可达") })
         }
         xhr.send(payload ? JSON.stringify(payload) : "")
     }
 
     function refreshDiagnostics() {
+        if (!_pageActive || _requests.length > 0) return
         _request("GET", "/api/diagnostics/link", null, function(status, body) {
             webState = status === 200 ? qsTr("在线") : qsTr("不可达")
             if (body && body.data) {
@@ -136,10 +169,21 @@ Item {
     }
 
     Timer {
+        id: refreshTimer
         interval: 5000
-        running: true
+        running: root._pageActive && root.visible && Qt.application.state === Qt.ApplicationActive
         repeat: true
         onTriggered: refreshDiagnostics()
+    }
+
+    Timer {
+        id: requestTimeout
+        interval: 10000
+        onTriggered: {
+            root._abortRequests()
+            root.webState = qsTr("请求超时")
+            root.lastCommandState = qsTr("响应超时，请核对设备状态；不会自动重发命令")
+        }
     }
 
     QGCPalette {
@@ -202,7 +246,7 @@ Item {
 
             GridLayout {
                 Layout.fillWidth: true
-                columns: 2
+                columns: root.width < _m * 100 ? 1 : 2
                 columnSpacing: _m
                 rowSpacing: _m
 

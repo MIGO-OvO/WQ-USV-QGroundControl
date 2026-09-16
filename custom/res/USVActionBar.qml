@@ -12,6 +12,7 @@ Rectangle {
 
     property var vehicle: null
     property int payloadStatus: USVLayout.StatusIdle
+    property real availableWidth: parent ? parent.width : implicitWidth
 
     readonly property int _cmdStart: 31010
     readonly property int _cmdStop: 31011
@@ -42,9 +43,10 @@ Rectangle {
                               || payloadStatus === USVLayout.StatusResumingAuto
                               || payloadStatus === USVLayout.StatusSurveying
 
-    width: actionRow.implicitWidth + _m * 3
-    height: ScreenTools.defaultFontPixelHeight * USVLayout.Tokens.touch.minHeight + _m
-    radius: height / 2
+    implicitWidth: _m * 91
+    width: Math.min(implicitWidth, availableWidth)
+    height: actionRow.implicitHeight + _m * 2
+    radius: _m
     color: Qt.rgba(qgcPal.window.r, qgcPal.window.g, qgcPal.window.b, USVLayout.Tokens.opacity.panel)
     border.width: 1
     border.color: Qt.rgba(qgcPal.windowShade.r, qgcPal.windowShade.g, qgcPal.windowShade.b, 0.45)
@@ -61,9 +63,11 @@ Rectangle {
         }
     }
 
-    RowLayout {
+    Flow {
         id: actionRow
-        anchors.centerIn: parent
+        x: _m
+        y: _m
+        width: parent.width - _m * 2
         spacing: _m * USVLayout.Tokens.spacing.md
 
         Repeater {
@@ -79,9 +83,8 @@ Rectangle {
 
             delegate: Rectangle {
                 id: btnRect
-                Layout.fillHeight: true
-                height: ScreenTools.defaultFontPixelHeight * 1.8
-                width: textLabel.implicitWidth + _m * 4
+                height: Math.max(ScreenTools.minTouchPixels, ScreenTools.defaultFontPixelHeight * 2.5)
+                width: Math.min(actionRow.width, textLabel.implicitWidth + _m * 3)
                 radius: height / 2
 
                 property bool isHovered: btnMouse.containsMouse

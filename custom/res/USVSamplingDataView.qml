@@ -39,6 +39,8 @@ Rectangle {
 
     property real _m: ScreenTools.defaultFontPixelWidth
     property real _h: ScreenTools.defaultFontPixelHeight
+    readonly property bool _compactLayout: USVLayout.compactSamplingLayout(width, _m)
+    readonly property bool _foreground: Qt.application.state === Qt.ApplicationActive
 
     property bool _linkOk: _linkActiveFact ? Number(_linkActiveFact.value) === 1 : false
     property int payloadStatus: _statusFact ? Number(_statusFact.value) : USVLayout.StatusIdle
@@ -319,14 +321,50 @@ Rectangle {
     }
 
     RowLayout {
-        anchors.fill: parent
+        id: pageTabs
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.margins: _m
+        visible: root._hasPayloadGroup && root._compactLayout
+        property bool showStatus: false
+        QGCButton {
+            text: qsTr("实时曲线")
+            Layout.fillWidth: true
+            checked: !pageTabs.showStatus
+            onClicked: pageTabs.showStatus = false
+        }
+        QGCButton {
+            text: qsTr("载荷状态 / 统计")
+            Layout.fillWidth: true
+            checked: pageTabs.showStatus
+            onClicked: pageTabs.showStatus = true
+        }
+    }
+
+    RowLayout {
+        anchors.top: pageTabs.visible ? pageTabs.bottom : parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
         anchors.margins: _m * SDTokens.Tokens.spacing.lg
         spacing: _m * SDTokens.Tokens.spacing.lg
         visible: root._hasPayloadGroup
 
-        Rectangle {
+        Flickable {
+            id: chartScroll
             Layout.fillHeight: true
             Layout.preferredWidth: parent.width * 0.6
+            Layout.fillWidth: root._compactLayout
+            visible: !root._compactLayout || !pageTabs.showStatus
+            contentWidth: width
+            contentHeight: Math.max(height, _h * 24)
+            clip: true
+            ScrollBar.vertical: ScrollBar {}
+
+        Rectangle {
+            width: chartScroll.width
+            height: chartScroll.contentHeight
             radius: _m * SDTokens.Tokens.radius.md
             color: root._cardColor()
             border.width: 1
@@ -637,20 +675,32 @@ Rectangle {
             }
         }
 
-        ColumnLayout {
+        }
+
+        Flickable {
             Layout.fillHeight: true
             Layout.fillWidth: true
+            visible: !root._compactLayout || pageTabs.showStatus
+            contentWidth: width
+            contentHeight: statusColumn.implicitHeight
+            clip: true
+            ScrollBar.vertical: ScrollBar {}
+
+        ColumnLayout {
+            id: statusColumn
+            width: parent.width
             spacing: _m * SDTokens.Tokens.spacing.lg
 
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: parent.height * 0.3
+                implicitHeight: overviewContent.implicitHeight + _m * SDTokens.Tokens.spacing.lg * 2
                 radius: _m * SDTokens.Tokens.radius.md
                 color: root._cardColor()
                 border.width: 1
                 border.color: root._cardBorderColor()
 
                 ColumnLayout {
+                    id: overviewContent
                     anchors.fill: parent
                     anchors.margins: _m * SDTokens.Tokens.spacing.lg
                     spacing: _m * SDTokens.Tokens.spacing.md
@@ -681,8 +731,7 @@ Rectangle {
                     }
 
                     GridLayout {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
+                        Layout.fillWidth: true
                         columns: 2
                         columnSpacing: _m * SDTokens.Tokens.spacing.lg
                         rowSpacing: _m * SDTokens.Tokens.spacing.sm
@@ -731,13 +780,14 @@ Rectangle {
 
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: parent.height * 0.35
+                implicitHeight: pumpContent.implicitHeight + _m * SDTokens.Tokens.spacing.lg * 2
                 radius: _m * SDTokens.Tokens.radius.md
                 color: root._cardColor()
                 border.width: 1
                 border.color: root._cardBorderColor()
 
                 ColumnLayout {
+                    id: pumpContent
                     anchors.fill: parent
                     anchors.margins: _m * SDTokens.Tokens.spacing.lg
                     spacing: _m * SDTokens.Tokens.spacing.md
@@ -843,13 +893,14 @@ Rectangle {
 
             Rectangle {
                 Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitHeight: statisticsContent.implicitHeight + _m * SDTokens.Tokens.spacing.lg * 2
                 radius: _m * SDTokens.Tokens.radius.md
                 color: root._cardColor()
                 border.width: 1
                 border.color: root._cardBorderColor()
 
                 ColumnLayout {
+                    id: statisticsContent
                     anchors.fill: parent
                     anchors.margins: _m * SDTokens.Tokens.spacing.lg
                     spacing: _m * SDTokens.Tokens.spacing.md
@@ -880,12 +931,14 @@ Rectangle {
                         Rectangle {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
+                            implicitHeight: voltageStats.implicitHeight + _m * 1.2
                             radius: _m * SDTokens.Tokens.radius.sm
                             color: root._mutedColor(qgcPal.windowShade, 0.18)
                             border.width: 1
                             border.color: root._mutedColor(qgcPal.text, 0.08)
 
                             ColumnLayout {
+                                id: voltageStats
                                 anchors.fill: parent
                                 anchors.margins: _m * 0.6
                                 spacing: _m * SDTokens.Tokens.spacing.sm
@@ -917,12 +970,14 @@ Rectangle {
                         Rectangle {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
+                            implicitHeight: absorbanceStats.implicitHeight + _m * 1.2
                             radius: _m * SDTokens.Tokens.radius.sm
                             color: root._mutedColor(qgcPal.windowShade, 0.18)
                             border.width: 1
                             border.color: root._mutedColor(qgcPal.text, 0.08)
 
                             ColumnLayout {
+                                id: absorbanceStats
                                 anchors.fill: parent
                                 anchors.margins: _m * 0.6
                                 spacing: _m * SDTokens.Tokens.spacing.sm
@@ -956,11 +1011,13 @@ Rectangle {
         }
     }
 
+    }
+
     Timer {
         id: sampleTimer
         interval: SDTokens.Tokens.chart.sampleIntervalMs
         repeat: true
-        running: root._pageActive && root._hasPayloadGroup && !root._chartPaused && root._shouldChart
+        running: root._pageActive && root._hasPayloadGroup && root._foreground && !root._chartPaused && root._shouldChart
         onTriggered: {
             if (!root._pageActive || !root._hasPayloadGroup) {
                 return
@@ -978,7 +1035,7 @@ Rectangle {
         id: durationTimer
         interval: 1000
         repeat: true
-        running: root._pageActive && root._hasPayloadGroup
+        running: root._pageActive && root._hasPayloadGroup && root._foreground
         onTriggered: {
             if (!root._pageActive) {
                 return

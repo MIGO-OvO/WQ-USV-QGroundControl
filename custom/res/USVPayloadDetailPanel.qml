@@ -16,7 +16,7 @@ Rectangle {
 
     property real _m: ScreenTools.defaultFontPixelWidth
 
-    width: _m * 24
+    width: Math.min(_m * 36, parent ? parent.width - _m * 2 : _m * 36)
     height: isExpanded ? Math.min(layout.implicitHeight + _m * 3, maxHeight) : 0
     radius: _m * USVLayout.Tokens.radius.md
     color: Qt.rgba(qgcPal.window.r, qgcPal.window.g, qgcPal.window.b, USVLayout.Tokens.opacity.panel)
@@ -40,6 +40,13 @@ Rectangle {
     property bool _linkOk: _linkActiveFact ? _linkActiveFact.value === 1 : !_hasPayloadGroup
 
     QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
+
+    Flickable {
+        anchors.fill: parent
+        contentWidth: width
+        contentHeight: layout.implicitHeight + _m * 3
+        clip: true
+        ScrollBar.vertical: ScrollBar {}
 
     ColumnLayout {
         id: layout
@@ -75,11 +82,13 @@ Rectangle {
             radius: _m * USVLayout.Tokens.radius.sm
             opacity: _linkOk ? 1.0 : USVLayout.Tokens.opacity.subtle
 
-            RowLayout {
+            GridLayout {
                 id: pumpRow
                 anchors.centerIn: parent
                 width: parent.width - _m * 2
-                spacing: 0
+                columns: 2
+                columnSpacing: _m
+                rowSpacing: _m
 
                 Repeater {
                     model: [
@@ -180,5 +189,11 @@ Rectangle {
                 }
             }
         }
+        USVPayloadPanel {
+            Layout.fillWidth: true
+            vehicle: root.vehicle
+            _expanded: true
+        }
+    }
     }
 }

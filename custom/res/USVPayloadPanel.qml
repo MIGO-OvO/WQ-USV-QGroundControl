@@ -11,7 +11,8 @@ Rectangle {
     id: root
 
     width: _panelState.compact ? compactWidth : expandedWidth
-    height: mainColumn.implicitHeight + _m * 1.3
+    implicitHeight: mainColumn.implicitHeight + _m * 2.1
+    height: implicitHeight
     radius: ScreenTools.defaultFontPixelWidth
     color: Qt.rgba(qgcPal.window.r, qgcPal.window.g, qgcPal.window.b, 0.9)
     border.width: 1
@@ -87,8 +88,26 @@ Rectangle {
     property string _lastCommandMessage: ""
     property bool _lastCommandWarning: false
     property int _pendingCommand: 0
+    property double _pendingSince: 0
     property bool _hasPendingCommand: _pendingCommand > 0
     readonly property int _commandTimeoutMs: 5000
+
+    onVehicleChanged: {
+        _clearPendingCommand(_pendingCommand)
+        _lastCommandMessage = ""
+    }
+
+    Connections {
+        target: Qt.application
+        function onStateChanged() {
+            if (Qt.application.state === Qt.ApplicationActive && root._hasPendingCommand
+                    && Date.now() - root._pendingSince >= root._commandTimeoutMs) {
+                root._lastCommandWarning = true
+                root._lastCommandMessage = root._commandName(root._pendingCommand) + qsTr("响应超时，请核对载荷状态")
+                root._clearPendingCommand(root._pendingCommand)
+            }
+        }
+    }
 
     function statusColor(st) {
         if (st === _stSurveying) {
@@ -132,6 +151,7 @@ Rectangle {
     function _send(cmdId, param1) {
         if (vehicle && !_hasPendingCommand) {
             _pendingCommand = cmdId
+            _pendingSince = Date.now()
             _lastCommandWarning = false
             _lastCommandMessage = _commandName(cmdId) + qsTr("发送中")
             commandTimeoutTimer.restart()
@@ -490,7 +510,7 @@ Rectangle {
                             delegate: Rectangle {
                                 Layout.fillWidth: true
                                 Layout.columnSpan: modelData.span
-                                height: ScreenTools.defaultFontPixelHeight * 1.9
+                                height: Math.max(ScreenTools.minTouchPixels, ScreenTools.defaultFontPixelHeight * 2.5)
                                 radius: _m * 0.45
                                 color: !modelData.en
                                        ? Qt.rgba(qgcPal.windowShade.r, qgcPal.windowShade.g, qgcPal.windowShade.b, 0.18)
