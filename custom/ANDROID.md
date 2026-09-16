@@ -138,3 +138,7 @@ Windows host path 用 msvc2022_64、macOS 用 macos。要显式测试签名，�
 本地测试 key 并设置 QT_ANDROID_KEYSTORE_* 环境变量及 QT_ANDROID_SIGN_APK=ON。
 不要提交 key、SDK、NDK、build 或真实设备日志。CI 失败先下载 `android-<host>-diagnostics`，
 工具链安装阶段失败则查看 Actions step 日志；这时尚无 CMake/Gradle 输出是正常的。
+
+已存在 x86_64 artifact 时，可手动运行 **Android APK Smoke**，输入原 Android build run ID，
+仅重跑 emulator，避免重复编译。测试使用所选分支的 smoke 脚本和指定运行的 APK；验收记录
+必须同时记下两者，不能把旧 APK 的启动结果归到新代码。

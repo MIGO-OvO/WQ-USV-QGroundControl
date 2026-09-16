@@ -1,0 +1,57 @@
+name: Android APK Smoke
+
+# Retry emulator diagnostics against an existing x86_64 artifact without rebuilding Qt/QGC.
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'Android build run ID containing the x86_64 APK artifact'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/build-config
+        id: config
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ steps.config.outputs.java_version }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: WQ-USV-QGroundControl-Android-x86_64-linux-emulator.apk
+          path: ${{ runner.temp }}/apk
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Tablet boot smoke
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ steps.config.outputs.android_platform }}
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: python3 custom/tests/android_boot_smoke.py "${{ runner.temp }}/apk/WQ-USV-QGroundControl-Android-x86_64.apk" "${{ runner.temp }}/smoke"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-smoke-run-${{ inputs.build_run_id }}
+          path: ${{ runner.temp }}/smoke
+          if-no-files-found: warn
+          retention-days: 14
