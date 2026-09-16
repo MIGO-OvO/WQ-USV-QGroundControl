@@ -20,6 +20,11 @@ on:
       - 'CMakeLists.txt'
       - 'cmake/**'
       - 'translations/*'
+      - 'resources/**'
+      - '*.qrc'
+      - 'tools/**'
+      - '.gitmodules'
+      - 'CMakePresets.json'
   workflow_dispatch:
     inputs:
       build_type:
@@ -53,7 +58,7 @@ jobs:
       matrix:
         include:
           - host: linux
-            runner: ubuntu-latest
+            runner: ubuntu-24.04
             arch: linux_gcc_64
             qt_host_path: gcc_64
             shell: bash
@@ -61,7 +66,7 @@ jobs:
             abi: arm64-v8a
             artifact_arch: arm64
           - host: linux-emulator
-            runner: ubuntu-22.04
+            runner: ubuntu-24.04
             arch: linux_gcc_64
             qt_host_path: gcc_64
             shell: bash
@@ -152,6 +157,14 @@ jobs:
             echo "QT_ANDROID_KEYSTORE_KEY_PASS=android"
           } >> "$GITHUB_ENV"
 
+      - name: Host QML logic tests
+        if: matrix.primary
+        shell: bash
+        run: |
+          HOST_QT="${QT_ROOT_DIR}/../${{ matrix.qt_host_path }}"
+          QT_QPA_PLATFORM=offscreen QT_PLUGIN_PATH="$HOST_QT/plugins" \
+            "$HOST_QT/bin/qmltestrunner" -input custom/tests -o "$RUNNER_TEMP/build/qml-tests.txt",txt
+
       - name: Configure
         shell: bash
         working-directory: ${{ runner.temp }}/build
@@ -188,9 +201,11 @@ jobs:
             ls -la "${APK_DIR}" 2>/dev/null || echo "Build directory does not exist"
             exit 1
           fi
-          mapfile -t APKS < <(find "$APK_DIR" -maxdepth 1 -name '*.apk')
+          APKS=("$APK_DIR"/*.apk)
           test "${#APKS[@]}" -eq 1
           "${ANDROID_SDK_ROOT}/build-tools/${{ steps.config.outputs.android_build_tools }}/apksigner${{ runner.os == 'Windows' && '.bat' || '' }}" verify --verbose "${APKS[0]}"
+          "${ANDROID_SDK_ROOT}/build-tools/${{ steps.config.outputs.android_build_tools }}/aapt${{ runner.os == 'Windows' && '.exe' || '' }}" dump badging "${APKS[0]}" > "$TEMP_DIR/build/apk-metadata.txt"
+          grep -q "package: name='org.wqusv.qgroundcontrol'" "$TEMP_DIR/build/apk-metadata.txt"
           cp "${APKS[0]}" "${TEMP_DIR}/build/${{ env.PACKAGE }}.apk"
 
       - name: Upload sideload APK
@@ -239,6 +254,8 @@ jobs:
             ${{ runner.temp }}/build/configure.log
             ${{ runner.temp }}/build/build.log
             ${{ runner.temp }}/build/gradle-lint.log
+            ${{ runner.temp }}/build/qml-tests.txt
+            ${{ runner.temp }}/build/apk-metadata.txt
             ${{ runner.temp }}/build/CMakeFiles/CMakeConfigureLog.yaml
             ${{ runner.temp }}/build/.ninja_log
             ${{ runner.temp }}/build/*deployment-settings.json

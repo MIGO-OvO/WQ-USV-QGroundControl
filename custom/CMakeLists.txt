@@ -14,8 +14,6 @@ if(ANDROID)
     # ahead of QT_ANDROID_PACKAGE_NAME, so set the install ID in Gradle instead.
     set(FINAL_ANDROID_DIR "${CMAKE_BINARY_DIR}/custom/android")
     file(COPY "${CMAKE_SOURCE_DIR}/android/." DESTINATION "${FINAL_ANDROID_DIR}")
-    file(APPEND "${FINAL_ANDROID_DIR}/gradle.properties"
-        "\nqgcApplicationId=org.wqusv.qgroundcontrol\n")
     set(QGC_ANDROID_PACKAGE_SOURCE_DIR "${FINAL_ANDROID_DIR}" CACHE PATH "USV Android package template" FORCE)
     set(CUSTOM_ANDROID_DIR "${CMAKE_SOURCE_DIR}/custom/android")
     if(EXISTS "${CUSTOM_ANDROID_DIR}")
@@ -32,6 +30,14 @@ if(ANDROID)
             set(QGC_ANDROID_PACKAGE_SOURCE_DIR "${FINAL_ANDROID_DIR}" CACHE PATH "Path to a custom Android package template" FORCE)
         endif()
     endif()
+    # Read the original properties each configure: never accumulate duplicate IDs.
+    file(READ "${CMAKE_SOURCE_DIR}/android/gradle.properties" _usv_gradle_properties)
+    file(WRITE "${FINAL_ANDROID_DIR}/gradle.properties"
+        "${_usv_gradle_properties}\nqgcApplicationId=org.wqusv.qgroundcontrol\n")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+        "${CMAKE_SOURCE_DIR}/android/gradle.properties"
+        "${CMAKE_SOURCE_DIR}/android/build.gradle"
+        "${CMAKE_SOURCE_DIR}/android/AndroidManifest.xml")
 endif()
 
 # ============================================================================
@@ -111,7 +117,10 @@ if(USV_TS_SOURCES)
     message(STATUS "QGC: Adding USV translation files: ${USV_TS_SOURCES}")
 
     # 设置翻译文件输出位置到 i18n 目录
-    set_source_files_properties(${USV_TS_SOURCES} PROPERTIES OUTPUT_LOCATION "${CMAKE_BINARY_DIR}/i18n")
+    # qt_add_translations is called in the parent directory; source properties
+    # are directory-scoped. Without DIRECTORY, USV qm files land at / instead.
+    set_source_files_properties(${USV_TS_SOURCES} DIRECTORY "${CMAKE_SOURCE_DIR}"
+        PROPERTIES OUTPUT_LOCATION "${CMAKE_BINARY_DIR}/i18n")
 
     # 将 USV 翻译文件添加到主项目的翻译列表
     set(USV_TRANSLATIONS ${USV_TS_SOURCES} CACHE INTERNAL "USV Translation files" FORCE)

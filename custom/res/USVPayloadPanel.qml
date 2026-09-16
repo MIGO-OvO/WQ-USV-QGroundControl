@@ -10,7 +10,8 @@ import "USVFlyViewLayout.js" as USVLayout
 Rectangle {
     id: root
 
-    width: _panelState.compact ? compactWidth : expandedWidth
+    implicitWidth: _panelState.compact ? compactWidth : expandedWidth
+    width: implicitWidth
     implicitHeight: mainColumn.implicitHeight + _m * 2.1
     height: implicitHeight
     radius: ScreenTools.defaultFontPixelWidth
@@ -162,7 +163,7 @@ Rectangle {
     function _clearPendingCommand(command) {
         if (_pendingCommand === command) {
             _pendingCommand = 0
-            commandTimeoutTimer.stop()
+            if (commandTimeoutTimer) commandTimeoutTimer.stop()
         }
     }
 

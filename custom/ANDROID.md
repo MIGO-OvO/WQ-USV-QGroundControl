@@ -35,7 +35,7 @@ Qt Android 包使用 `all_os/android` 下载入口；桌面 host tools 仍按宿
 | custom 是否触发 | Android PR 新增 custom、build-config；push 覆盖开发分支；custom-build 不再复制 custom-example |
 | USVModule | 静态 QML 模块链接到主目标；补齐自身 Core/Qml/Quick 依赖；MAVLink 生成依赖沿用 src/MAVLink/CMakeLists.txt |
 | QtCharts / Canvas | 主 QGC 仍链接 Charts；custom 不再声明多余 Charts；采样页保留有界 Canvas 数组、单一绘制入口和静默卸载 |
-| 资源/翻译 | custom.qrc 加入 executable；USV QML 使用 /qml；USV_TRANSLATIONS 加入 qt_add_translations，非 Windows 文件路径 |
+| 资源/翻译 | custom.qrc 加入 executable；USV QML 使用 /qml；修正翻译 source property 的目录作用域，使 qm 真正位于插件加载的 /i18n |
 | 签名/artifact | 所有宿主生成测试密钥，apksigner verify 后直接 upload-artifact；不依赖 AWS/商店 |
 | 平台 API | custom 未发现必需的 Windows 专用 API；原 Windows assert hook 保持平台保护、不改 |
 | Android overlay | 原仓库无 custom/android；本次在 build tree 生成上游模板副本，仅追加 applicationId 属性 |

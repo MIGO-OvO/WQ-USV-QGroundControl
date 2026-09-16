@@ -22,6 +22,8 @@ def main():
         adb("shell", "wm", "size", "1280x800")
         adb("shell", "wm", "density", "160")
         adb("install", "-r", apk)
+        # Same signer/version upgrade must also be accepted, without clearing data.
+        adb("install", "-r", apk)
         adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/{ACTIVITY}")
         for _ in range(12):
             time.sleep(5)
@@ -35,8 +37,10 @@ def main():
         adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/{ACTIVITY}")
         time.sleep(5)
         assert adb("shell", "pidof", PACKAGE).strip(), "Application exited on resume"
-        subprocess.run(["adb", "exec-out", "screencap", "-p"],
-                       stdout=(output / "tablet.png").open("wb"), check=True)
+        resumed_log = adb("logcat", "-d", "-v", "threadtime")
+        assert not re.search(r"QQmlApplicationEngine failed|module .* is not installed|Type USV\w+ unavailable|FATAL EXCEPTION|Fatal signal", resumed_log), "Resume errors in logcat"
+        with (output / "tablet.png").open("wb") as screenshot:
+            subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=screenshot, check=True)
     finally:
         (output / "logcat.txt").write_text(adb("logcat", "-d", "-v", "threadtime"), encoding="utf-8")
         (output / "activity.txt").write_text(adb("shell", "dumpsys", "activity", "activities"), encoding="utf-8")
