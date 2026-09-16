@@ -259,6 +259,8 @@ jobs:
             ${{ runner.temp }}/build/CMakeFiles/CMakeConfigureLog.yaml
             ${{ runner.temp }}/build/.ninja_log
             ${{ runner.temp }}/build/*deployment-settings.json
+            ${{ runner.temp }}/build/android-build/AndroidManifest.xml
+            ${{ runner.temp }}/build/android-build/gradle.properties
             ${{ runner.temp }}/build/android-build/build/outputs/logs/**
             ${{ runner.temp }}/build/android-build/build/reports/**
             ${{ runner.temp }}/build/smoke/**

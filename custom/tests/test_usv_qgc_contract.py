@@ -363,6 +363,8 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("target_link_libraries(USVModule PRIVATE Qt6::Core Qt6::Qml Qt6::Quick)", cmake)
         self.assertIn("USVModule", cmake)
         self.assertIn("res/USVPayloadPanel.qml", cmake)
+        self.assertIn('DIRECTORY "${CMAKE_SOURCE_DIR}"', cmake)
+        self.assertIn("qgcApplicationId=org.wqusv.qgroundcontrol", cmake)
         detail = (REPO_ROOT / "custom/res/USVPayloadDetailPanel.qml").read_text(encoding="utf-8")
         self.assertIn("USVPayloadPanel {", detail)
         manifest = ET.parse(REPO_ROOT / "android/AndroidManifest.xml")
