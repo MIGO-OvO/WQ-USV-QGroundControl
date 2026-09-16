@@ -1,5 +1,6 @@
 """CI-only, no vehicle: install, launch, background/resume and retain evidence."""
 import pathlib
+import base64
 import re
 import subprocess
 import sys
@@ -28,7 +29,11 @@ def main():
         # otherwise backgrounds the Qt engine before it can create the root.
         # Real-device permission UX remains a separate field acceptance test.
         adb("shell", "appops", "set", PACKAGE, "MANAGE_EXTERNAL_STORAGE", "allow")
-        adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/{ACTIVITY}")
+        # Qt 6.10 debug APKs accept base64 environment extras. Also supports
+        # older artifacts which incorrectly forced Unix stderr on Android.
+        qt_env = base64.b64encode(b"QT_FORCE_STDERR_LOGGING=0 QT_ASSUME_STDERR_HAS_CONSOLE=0").decode("ascii")
+        adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/{ACTIVITY}",
+            "--es", "extraenvvars", qt_env)
         for _ in range(12):
             time.sleep(5)
             assert adb("shell", "pidof", PACKAGE).strip(), "Application exited during cold boot"

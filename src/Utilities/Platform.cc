@@ -250,7 +250,9 @@ void setWindowsErrorModes(bool quietWindowsAsserts)
 
 void Platform::setupPreApp(const QGCCommandLineParser::CommandLineParseResult &cli)
 {
-#ifdef Q_OS_UNIX
+#if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)
+    // Android has no attached console: forcing stderr bypasses Qt's logcat sink
+    // and hides QML/module failures from field and emulator diagnostics.
     if (!qEnvironmentVariableIsSet("QT_ASSUME_STDERR_HAS_CONSOLE")) {
         (void) qputenv("QT_ASSUME_STDERR_HAS_CONSOLE", "1");
     }

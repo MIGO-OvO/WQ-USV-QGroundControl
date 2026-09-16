@@ -49,6 +49,8 @@ https://github.com/mavlink/qgroundcontrol/blob/master/.github/workflows/android.
 “Gradle 退出 0”不等于零 lint 问题。Gradle 执行错误仍使 job 失败。
 首轮报告暴露的三个 Error 已针对性修复：唤醒锁标签（仅名称）、coarse location 声明、
 ContextCompat receiver 注册（保留 NOT_EXPORTED，不新增串口驱动）。
+启动审计还发现 Platform.cc 把 Android 当作普通 Unix 强制 stderr，导致 logcat 丢失
+Qt/QML 日志；本次仅将 Android 排除出该分支，Windows assert hook 和桌面日志保持不变。
 
 可复用的是固定工具链和 CI 入口，不承诺字节级可复现：上游仍含跟随 main/master 的
 CPM 依赖、runner 镜像和 action major tag，且每次测试签名不同。正式发行需冻结这些依赖。

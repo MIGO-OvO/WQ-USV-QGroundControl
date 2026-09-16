@@ -388,6 +388,10 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("onVehicleChanged:", panel)
         self.assertIn("Date.now() - root._pendingSince", panel)
 
+    def test_android_keeps_native_logcat_sink(self):
+        source = (REPO_ROOT / "src/Utilities/Platform.cc").read_text(encoding="utf-8")
+        self.assertIn('#if defined(Q_OS_UNIX) && !defined(Q_OS_ANDROID)\n', source)
+
 
 if __name__ == "__main__":
     unittest.main()
