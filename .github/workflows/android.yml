@@ -2,6 +2,7 @@ name: Android
 
 on:
   push:
+    branches: ['**']
     tags:
       - 'v*'
     paths-ignore:
@@ -251,4 +252,3 @@ jobs:
         uses: actions/attest-build-provenance@v3
         with:
           subject-path: '${{ runner.temp }}/build/${{ env.PACKAGE }}.apk'
-
