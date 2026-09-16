@@ -26,7 +26,7 @@ import org.qtproject.qt.android.bindings.QtActivity;
 
 public class QGCActivity extends QtActivity {
     private static final String TAG = QGCActivity.class.getSimpleName();
-    private static final String SCREEN_BRIGHT_WAKE_LOCK_TAG = "QGroundControl";
+    private static final String SCREEN_BRIGHT_WAKE_LOCK_TAG = "QGroundControl:screen";
     private static final String MULTICAST_LOCK_TAG = "QGroundControl";
 
     private static QGCActivity m_instance = null;

@@ -5,6 +5,8 @@
     android:versionName="-- %%INSERT_VERSION_NAME%% --">
 
     <!-- %%INSERT_PERMISSIONS -->
+    <!-- Qt Positioning requests fine location; Android 12+ also requires coarse. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- %%INSERT_FEATURES -->
 

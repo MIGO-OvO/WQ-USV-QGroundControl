@@ -6,6 +6,7 @@ import android.content.*;
 import android.hardware.usb.*;
 import android.os.Process;
 import android.util.Log;
+import androidx.core.content.ContextCompat;
 
 import com.hoho.android.usbserial.driver.*;
 import com.hoho.android.usbserial.util.*;
@@ -111,13 +112,8 @@ public class QGCUsbSerialManager {
         filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
 
         try {
-            if (android.os.Build.VERSION.SDK_INT >=
-                android.os.Build.VERSION_CODES.TIRAMISU) {
-                int flags = Context.RECEIVER_NOT_EXPORTED;
-                context.registerReceiver(usbReceiver, filter, flags);
-            } else {
-                context.registerReceiver(usbReceiver, filter);
-            }
+            ContextCompat.registerReceiver(context, usbReceiver, filter,
+                    ContextCompat.RECEIVER_NOT_EXPORTED);
 
             QGCLogger.i(TAG, "BroadcastReceiver registered successfully.");
         } catch (Exception e) {

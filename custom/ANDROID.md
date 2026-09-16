@@ -47,6 +47,8 @@ https://github.com/mavlink/qgroundcontrol/blob/master/.github/workflows/android.
 未升级 QGC/Qt 主版本，未整体移植 upstream。
 当前 Gradle 的 lintOptions.abortOnError=false 沿用上游：lint 报告是审查证据，
 “Gradle 退出 0”不等于零 lint 问题。Gradle 执行错误仍使 job 失败。
+首轮报告暴露的三个 Error 已针对性修复：唤醒锁标签（仅名称）、coarse location 声明、
+ContextCompat receiver 注册（保留 NOT_EXPORTED，不新增串口驱动）。
 
 可复用的是固定工具链和 CI 入口，不承诺字节级可复现：上游仍含跟随 main/master 的
 CPM 依赖、runner 镜像和 action major tag，且每次测试签名不同。正式发行需冻结这些依赖。
@@ -64,6 +66,8 @@ CPM 依赖、runner 镜像和 action major tag，且每次测试签名不同。�
   10 秒超时不自动重放 POST；车辆切换清除 UI pending，回前台按墙钟核对命令等待超时。
 - 原生 AUTO/RTL/Hold 和危险操作确认流程不变。自定义 action bar 原本是直接发送载荷命令，
   不是所有红色按钮都有确认；本次不将其误描述为新增安全确认，也不改变紧急停止行为。
+- CI 模拟器预授予运行时权限与 MANAGE_EXTERNAL_STORAGE appop，以避免首次启动停留在
+  Android 存储设置页；真机 clean install 必须另验权限允许/拒绝/返回流程。CI 不代替权限 UX 验收。
 
 ### 屏幕唤醒已知风险
 
