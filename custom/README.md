@@ -26,6 +26,9 @@
 
 ## 构建方法
 
+Android 平板测试 APK 优先通过 GitHub Actions 获取，无需本地 Qt/NDK。
+参见 [Android 构建、侧载与现场验收](ANDROID.md)（签名/升级限制、链路边界及验证矩阵）。
+
 1. 确保 `custom` 目录位于 QGC 源码根目录
 2. 清理之前的构建：
    ```bash
