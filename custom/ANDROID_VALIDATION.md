@@ -13,9 +13,10 @@
 | PASS | Windows MissionCommandTreeTest 5 项、SimpleMissionItemTest 10 项、FactSystemTestGeneric 6 项；隔离 unittest 设置空间，退出码 0 |
 | PASS | Windows `--simple-boot-test` 退出码 0；它只启动子系统，不证明 QML 页面渲染 |
 | PASS | actionlint 1.7.12：android.yml、android-smoke.yml、custom-build.yml；JSON/Python 语法与 git diff --check |
-| PASS | [Android build 35175330164](https://github.com/MIGO-OvO/WQ-USV-QGroundControl/actions/runs/35175330164)（commit `e32f20166`，push 触发，当前代码最终态）：四宿主全部成功；linux 宿主 `Android lint` 成功，linux-emulator 宿主 `Tablet boot smoke` 成功 |
-| PASS | 同一次运行四宿主 `Verify USV payload in APK` 全部成功，输出形如 `lib/arm64-v8a/libQGroundControl_arm64-v8a.so :: usv_zh_CN.qm -> present`；x86_64 宿主同样通过，说明打包门控不是靠单一 ABI 侥幸通过 |
-| PASS | [Android build 35119772116](https://github.com/MIGO-OvO/WQ-USV-QGroundControl/actions/runs/35119772116)（commit `c02dbb440`，push 触发）：windows / linux / mac / linux-emulator 四宿主全部成功；各宿主均完成 USV 契约、configure、编译、签名校验、上传 |
+| PASS | [Android build 35177617767](https://github.com/MIGO-OvO/WQ-USV-QGroundControl/actions/runs/35177617767)（commit `1b85bf7bd`，push 触发，**当前分支最终态**）：windows / linux / mac / linux-emulator 四宿主全部成功；linux 宿主 `Android lint` 成功；linux-emulator 宿主 `Tablet boot smoke` 成功；产出 4 个 APK + 4 份诊断 artifact |
+| PASS | 同一次运行四宿主 `Verify USV payload in APK` 全部成功，输出形如 `lib/arm64-v8a/libQGroundControl_arm64-v8a.so :: usv_zh_CN.qm -> present`；x86_64 宿主输出 `lib/x86_64/libQGroundControl_x86_64.so :: ...`，说明打包门控不是靠单一 ABI 侥幸通过 |
+| PASS | [Android build 35175330164](https://github.com/MIGO-OvO/WQ-USV-QGroundControl/actions/runs/35175330164)（commit `e32f20166`）：四宿主与上述门控同样全绿；两次运行互为对照 |
+| PASS | [Android build 35119772116](https://github.com/MIGO-OvO/WQ-USV-QGroundControl/actions/runs/35119772116)（commit `c02dbb440`）：windows / linux / mac / linux-emulator 四宿主全部成功；各宿主均完成 USV 契约、configure、编译、签名校验、上传 |
 | PASS | 该次运行内 linux 宿主 `Android lint` 执行成功，报告 `0 errors, 37 warnings`；三条 Error 已消除（其余为上游携带的警告，Gradle `abortOnError=false` 沿用上游，不能据此宣称零告警） |
 | PASS | 该次运行内 linux-emulator 宿主 `Tablet boot smoke` 通过：1280×800/mdpi 下同包覆盖安装、60 秒存活、`USV boot: root QML object created`、`Override resource check: .../FlyViewCustomLayer.qml exists: true`、无 QML/模块/FATAL 错误，后台/前台恢复再次通过 |
 | PASS | artifact 实际下载：`WQ-USV-QGroundControl-Android-arm64-linux.apk`；本机独立 `apksigner verify` 为 v3 方案、RSA 2048、DN `CN=USV CI Debug`；`aapt dump badging` 为 `org.wqusv.qgroundcontrol`、arm64-v8a、minSdk 28、targetSdk 35、landscape |
