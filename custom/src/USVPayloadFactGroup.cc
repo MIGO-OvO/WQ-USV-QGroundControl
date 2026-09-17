@@ -265,6 +265,7 @@ void USVPayloadFactGroup::_handleDebug(const mavlink_message_t &message)
 
 void USVPayloadFactGroup::_telemetryTimeout()
 {
+    _spectrometerValidFact.setRawValue(QVariant::fromValue(static_cast<uint32_t>(0)));
     linkActive()->setRawValue(0);
     _setTelemetryAvailable(false);
     qCDebug(USVPayloadLog) << "Telemetry timeout - link inactive";

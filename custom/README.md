@@ -1,5 +1,11 @@
 # QGroundControl USV (无人船) 定制构建
 
+## safety1 匹配固件
+
+Plan 中定点采样的超时说明已改为 HOLD，须配套 safety1 ArduRover 与 ROS；UI 文案不会让旧固件自动获得安全行为。22 个显示遥测字段、component 191、手动命令 31010..31019 保持不变。链路整体超时会清除分光有效位，源测量过期由 ROS 的 `USV_VLD=0` 传递。完整验收仍需要实际构建与端到端链路测试。
+
+静态契约：`python -m unittest discover -s custom/tests -p test_usv_qgc_contract.py`。协议与现场步骤见总仓库 `docs/current/40_interfaces.md`、`70_verification.md`。
+
 ## 概述
 
 这是一个针对无人船 (Unmanned Surface Vehicle, USV) 的 QGroundControl 定制构建。
