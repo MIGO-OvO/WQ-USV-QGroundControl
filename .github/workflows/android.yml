@@ -220,6 +220,14 @@ jobs:
           grep -q "package: name='org.wqusv.qgroundcontrol'" "$TEMP_DIR/build/apk-metadata.txt"
           cp "${APKS[0]}" "${TEMP_DIR}/build/${{ env.PACKAGE }}.apk"
 
+      # Compiling is not proof the custom layer shipped: on Android the override,
+      # custom.qrc content and translations live inside the native library.
+      - name: Verify USV payload in APK
+        shell: bash
+        run: |
+          TEMP_DIR="${RUNNER_TEMP//\\//}"
+          python custom/tests/verify_apk_payload.py "$TEMP_DIR/build/${{ env.PACKAGE }}.apk"
+
       - name: Upload sideload APK
         uses: actions/upload-artifact@v4
         with:
