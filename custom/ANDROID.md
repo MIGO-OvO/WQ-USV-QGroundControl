@@ -2,6 +2,7 @@
 
 适用：8–11 英寸 Android 横屏平板，Android 9/API 28 及以上，arm64。
 QGC 是现场驾驶舱；历史任务、浓度、热力图/surface、科研图件与深度诊断仍归 ROS/Web。
+已执行结果与明确的未验收项见 [验证记录](ANDROID_VALIDATION.md)。
 
 ## 获取 APK（不需要本地 Qt/NDK）
 
@@ -35,7 +36,7 @@ Qt Android 包使用 `all_os/android` 下载入口；桌面 host tools 仍按宿
 | custom 是否触发 | Android PR 新增 custom、build-config；push 覆盖开发分支；custom-build 不再复制 custom-example |
 | USVModule | 静态 QML 模块链接到主目标；补齐自身 Core/Qml/Quick 依赖；MAVLink 生成依赖沿用 src/MAVLink/CMakeLists.txt |
 | QtCharts / Canvas | 主 QGC 仍链接 Charts；custom 不再声明多余 Charts；采样页保留有界 Canvas 数组、单一绘制入口和静默卸载 |
-| 资源/翻译 | custom.qrc 加入 executable；USV QML 使用 /qml；修正翻译 source property 的目录作用域，使 qm 真正位于插件加载的 /i18n |
+| 资源/翻译 | custom.qrc 加入 executable；USV QML 使用 /qml；修正翻译 source property 的目录作用域，使 qm 真正位于插件加载的 /i18n；构建后由 `custom/tests/verify_apk_payload.py` 强制校验 APK 原生库内确实含 override、custom QML 与 usv_zh_CN.qm |
 | 签名/artifact | 所有宿主生成测试密钥，apksigner verify 后直接 upload-artifact；不依赖 AWS/商店 |
 | 平台 API | custom 未发现必需的 Windows 专用 API；原 Windows assert hook 保持平台保护、不改 |
 | Android overlay | 原仓库无 custom/android；本次在 build tree 生成上游模板副本，仅追加 applicationId 属性 |
