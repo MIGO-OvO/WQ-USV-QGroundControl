@@ -7,7 +7,7 @@ QGC 是现场驾驶舱；历史任务、浓度、热力图/surface、科研图�
 ## 获取 APK（不需要本地 Qt/NDK）
 
 1. 打开本 fork 的 GitHub → Actions → **Android**。
-2. 选择目标 commit 的成功运行；开发分支 push 和涉及 custom 的 PR 均触发。
+2. 选择目标 commit 的成功运行；开发分支 push 和涉及 custom 的 PR 均触发（纯 Markdown 改动不触发）。
 3. 下载 `WQ-USV-QGroundControl-Android-arm64-linux.apk` artifact，解压 ZIP。
 4. 将其中 `WQ-USV-QGroundControl-Android-arm64.apk` 复制到平板，允许该文件管理器安装未知应用后侧载。
 5. 核对运行 commit、设备型号、Android 版本；不要把测试包当作已完成真船验收的发行版。

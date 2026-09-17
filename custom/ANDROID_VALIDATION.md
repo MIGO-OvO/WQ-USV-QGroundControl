@@ -13,9 +13,11 @@
 | PASS | Windows MissionCommandTreeTest 5 项、SimpleMissionItemTest 10 项、FactSystemTestGeneric 6 项；隔离 unittest 设置空间，退出码 0 |
 | PASS | Windows `--simple-boot-test` 退出码 0；它只启动子系统，不证明 QML 页面渲染 |
 | PASS | actionlint 1.7.12：android.yml、android-smoke.yml、custom-build.yml；JSON/Python 语法与 git diff --check |
+| PASS | [Android build 35175330164](https://github.com/MIGO-OvO/WQ-USV-QGroundControl/actions/runs/35175330164)（commit `e32f20166`，push 触发，当前代码最终态）：四宿主全部成功；linux 宿主 `Android lint` 成功，linux-emulator 宿主 `Tablet boot smoke` 成功 |
+| PASS | 同一次运行四宿主 `Verify USV payload in APK` 全部成功，输出形如 `lib/arm64-v8a/libQGroundControl_arm64-v8a.so :: usv_zh_CN.qm -> present`；x86_64 宿主同样通过，说明打包门控不是靠单一 ABI 侥幸通过 |
 | PASS | [Android build 35119772116](https://github.com/MIGO-OvO/WQ-USV-QGroundControl/actions/runs/35119772116)（commit `c02dbb440`，push 触发）：windows / linux / mac / linux-emulator 四宿主全部成功；各宿主均完成 USV 契约、configure、编译、签名校验、上传 |
-| PASS | 同一次运行内 linux 宿主 `Android lint` 执行成功，报告 `0 errors, 37 warnings`；三条 Error 已消除（其余为上游携带的警告，Gradle `abortOnError=false` 沿用上游，不能据此宣称零告警） |
-| PASS | 同一次运行内 linux-emulator 宿主 `Tablet boot smoke` 通过：1280×800/mdpi 下同包覆盖安装、60 秒存活、`USV boot: root QML object created`、`Override resource check: .../FlyViewCustomLayer.qml exists: true`、无 QML/模块/FATAL 错误，后台/前台恢复再次通过 |
+| PASS | 该次运行内 linux 宿主 `Android lint` 执行成功，报告 `0 errors, 37 warnings`；三条 Error 已消除（其余为上游携带的警告，Gradle `abortOnError=false` 沿用上游，不能据此宣称零告警） |
+| PASS | 该次运行内 linux-emulator 宿主 `Tablet boot smoke` 通过：1280×800/mdpi 下同包覆盖安装、60 秒存活、`USV boot: root QML object created`、`Override resource check: .../FlyViewCustomLayer.qml exists: true`、无 QML/模块/FATAL 错误，后台/前台恢复再次通过 |
 | PASS | artifact 实际下载：`WQ-USV-QGroundControl-Android-arm64-linux.apk`；本机独立 `apksigner verify` 为 v3 方案、RSA 2048、DN `CN=USV CI Debug`；`aapt dump badging` 为 `org.wqusv.qgroundcontrol`、arm64-v8a、minSdk 28、targetSdk 35、landscape |
 | PASS | 同一 APK 内 `lib/arm64-v8a/libQGroundControl_arm64-v8a.so` 含 UTF-16 资源名 `USV/qml/QGroundControl/FlyView/FlyViewCustomLayer.qml`、`USVSamplingDataView.qml`、`usv_zh_CN.qm`，回答“翻译/自定义 qrc/QML override 是否进入 APK” |
 | PASS | 新增 `custom/tests/verify_apk_payload.py` 门控已用上述真实 APK 复跑通过，并已在四宿主构建后强制校验，防止“编译成功但定制层未打包” |
@@ -38,8 +40,7 @@
 
 - `CI verified` 与 `emulator verified` 仅对应上述具体运行，不自动推广到后续 commit。
 - 启动测试的预授权发生在一次性模拟器；真机权限拒绝/允许/返回路径仍需验证。
-- 模拟器截图出现 SwiftShader/GLES 渲染伪影；不作为平板 visual QA 通过依据。
-- 1280×800/mdpi 模拟器只证明可启动与资源齐全，不证明 1920×1200、各 DPI、大字体下的排版。
+- 模拟器截图出现 SwiftShader/GLES 渲染伪影；不作为平板 visual QA 通过依据。- 1280×800/mdpi 模拟器只证明可启动与资源齐全，不证明 1920×1200、各 DPI、大字体下的排版。
 - 普通 shallow CI 构建生成 fallback `versionName 0.0.0`；正式发布前须验证 tag/versionCode 递增与稳定签名。
 - `NOT RUN`：正式生产签名/tag 发布、真机截图矩阵、长时压力与耗电验收。
 - `HARDWARE REQUIRED`：USB OTG 供电/权限/拔插、Wi-Fi 链路、31010..31019 ACK、baseline gate、
