@@ -39,6 +39,7 @@ def main():
             assert adb("shell", "pidof", PACKAGE).strip(), "Application exited during cold boot"
         pid = adb("shell", "pidof", PACKAGE).strip()
         log = adb("logcat", "-d", "--pid=" + pid, "-v", "threadtime")
+        (output / "app-logcat.txt").write_text(log, encoding="utf-8")
         assert "USV boot: root QML object created" in log, "No positive QML boot marker"
         assert re.search(r"Override resource check:.*FlyViewCustomLayer.qml.*exists: true", log), "USV override missing"
         assert not re.search(r"QQmlApplicationEngine failed|module .* is not installed|Type USV\w+ unavailable|FATAL EXCEPTION|Fatal signal", log), "Boot errors in logcat"
@@ -48,12 +49,24 @@ def main():
         time.sleep(5)
         assert adb("shell", "pidof", PACKAGE).strip(), "Application exited on resume"
         resumed_log = adb("logcat", "-d", "--pid=" + pid, "-v", "threadtime")
+        (output / "app-logcat.txt").write_text(resumed_log, encoding="utf-8")
         assert not re.search(r"QQmlApplicationEngine failed|module .* is not installed|Type USV\w+ unavailable|FATAL EXCEPTION|Fatal signal", resumed_log), "Resume errors in logcat"
     finally:
-        (output / "logcat.txt").write_text(adb("logcat", "-d", "-v", "threadtime"), encoding="utf-8")
-        (output / "activity.txt").write_text(adb("shell", "dumpsys", "activity", "activities"), encoding="utf-8")
-        with (output / "tablet.png").open("wb") as screenshot:
-            subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=screenshot, check=True, timeout=30)
+        # A failed diagnostic command must not mask the actual boot assertion.
+        # The process-scoped evidence above remains mandatory and is saved first.
+        for name, args in (("logcat.txt", ("logcat", "-d", "-v", "threadtime")),
+                           ("activity.txt", ("shell", "dumpsys", "activity", "activities"))):
+            try:
+                result = adb(*args)
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+                result = f"Diagnostic collection failed: {error}\n{error.output or ''}"
+                print(f"::warning::{name}: {error}")
+            (output / name).write_text(result, encoding="utf-8")
+        try:
+            with (output / "tablet.png").open("wb") as screenshot:
+                subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=screenshot, check=True, timeout=30)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+            print(f"::warning::Screenshot collection failed: {error}")
 
 
 if __name__ == "__main__":

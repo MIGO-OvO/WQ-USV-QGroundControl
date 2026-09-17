@@ -15,13 +15,16 @@ GOOD_LOG = (
 
 
 class AndroidBootGateTests(unittest.TestCase):
-    def run_gate(self, cold_log=GOOD_LOG, resume_log=GOOD_LOG, missing_process=False, install_error=False):
+    def run_gate(self, cold_log=GOOD_LOG, resume_log=GOOD_LOG, missing_process=False, install_error=False,
+                 diagnostic_error=False):
         logs = iter([cold_log, resume_log, resume_log])
 
         def adb(*args):
             if args[0] == "install" and install_error:
                 raise subprocess.CalledProcessError(1, ["adb", *args])
             if args[:2] == ("logcat", "-d"):
+                if diagnostic_error and not any(arg.startswith("--pid=") for arg in args):
+                    raise subprocess.CalledProcessError(255, ["adb", *args], output="Unexpected EOF")
                 return next(logs, resume_log)
             if args[:2] == ("shell", "pidof"):
                 return "" if missing_process else "1234"
@@ -64,6 +67,13 @@ class AndroidBootGateTests(unittest.TestCase):
     def test_install_failure_still_collects_logs(self):
         with self.assertRaises(subprocess.CalledProcessError):
             self.run_gate(install_error=True)
+
+    def test_secondary_logcat_failure_preserves_boot_evidence(self):
+        self.run_gate(diagnostic_error=True)
+
+    def test_secondary_logcat_failure_does_not_hide_boot_failure(self):
+        with self.assertRaisesRegex(AssertionError, "QML boot marker"):
+            self.run_gate(cold_log="alive", diagnostic_error=True)
 
 
 if __name__ == "__main__":
