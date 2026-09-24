@@ -8,7 +8,7 @@
             "id":                   42702,
             "rawName":              "MAV_CMD_NAV_SCRIPT_TIME",
             "friendlyName":         "定点采样任务项",
-            "description":          "航线定点采样任务项（Plan only）：放在需要采样的航点之后，param1 固定为 1，param2 为最大等待秒数；飞控发送 USV_SMPL 后等待 USV_DONE 或超时继续。不要作为载荷面板手动命令发送。",
+            "description":          "航线定点采样任务项（Plan only）：放在需要采样的航点之后，param1 固定为 1，param2 为最大等待秒数；飞控发送 USV_SMPL 后等待 USV_DONE，超时或伴随链路失联进入 HOLD，不自动继续。仅 ROS 明确成功或配置 SKIP 的结果允许放行。需匹配安全版 USV 固件。不要作为载荷面板手动命令发送。",
             "specifiesCoordinate":  false,
             "friendlyEdit":         true,
             "category":             "USV",
