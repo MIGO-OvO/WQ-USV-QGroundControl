@@ -27,6 +27,8 @@ class USVPayloadFactGroup : public FactGroup
     Q_PROPERTY(Fact *packetCount  READ packetCount  CONSTANT)
     Q_PROPERTY(Fact *stepCurrent  READ stepCurrent  CONSTANT)
     Q_PROPERTY(Fact *stepTotal    READ stepTotal    CONSTANT)
+    Q_PROPERTY(Fact *loopCurrent  READ loopCurrent  CONSTANT)
+    Q_PROPERTY(Fact *loopTotal    READ loopTotal    CONSTANT)
     Q_PROPERTY(Fact *sampleCount  READ sampleCount  CONSTANT)
     Q_PROPERTY(Fact *pidError     READ pidError     CONSTANT)
     Q_PROPERTY(Fact *pidMode      READ pidMode      CONSTANT)
@@ -63,6 +65,8 @@ public:
     Fact *packetCount()  { return &_packetCountFact; }
     Fact *stepCurrent()  { return &_stepCurrentFact; }
     Fact *stepTotal()    { return &_stepTotalFact; }
+    Fact *loopCurrent()  { return &_loopCurrentFact; }
+    Fact *loopTotal()    { return &_loopTotalFact; }
     Fact *sampleCount()  { return &_sampleCountFact; }
     Fact *pidError()     { return &_pidErrorFact; }
     Fact *pidMode()      { return &_pidModeFact; }
@@ -111,6 +115,8 @@ private:
     Fact _packetCountFact;
     Fact _stepCurrentFact;
     Fact _stepTotalFact;
+    Fact _loopCurrentFact;
+    Fact _loopTotalFact;
     Fact _sampleCountFact;
     Fact _pidErrorFact;
     Fact _pidModeFact;
@@ -128,6 +134,8 @@ private:
 
     static constexpr const char *_stepCurrentName  = "stepCurrent";
     static constexpr const char *_stepTotalName    = "stepTotal";
+    static constexpr const char *_loopCurrentName  = "loopCurrent";
+    static constexpr const char *_loopTotalName    = "loopTotal";
     static constexpr const char *_sampleCountName  = "sampleCount";
     static constexpr const char *_pidErrorName     = "pidError";
     static constexpr const char *_pidModeName      = "pidMode";

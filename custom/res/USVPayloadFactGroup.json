@@ -89,6 +89,20 @@
     "default":          0
 },
 {
+    "name":             "loopCurrent",
+    "shortDesc":        "当前循环",
+    "type":             "float",
+    "decimalPlaces":    0,
+    "default":          0
+},
+{
+    "name":             "loopTotal",
+    "shortDesc":        "总循环数",
+    "type":             "float",
+    "decimalPlaces":    0,
+    "default":          0
+},
+{
     "name":             "sampleCount",
     "shortDesc":        "采样计数",
     "type":             "float",
