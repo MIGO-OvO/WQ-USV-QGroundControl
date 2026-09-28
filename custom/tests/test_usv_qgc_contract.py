@@ -50,6 +50,8 @@ class USVQGCContractTests(unittest.TestCase):
             "jetsonCpu",
             "jetsonMemory",
             "detectorHeap",
+            "loopCurrent",
+            "loopTotal",
         ):
             self.assertIn(fact_name, header)
             self.assertIn(fact_name, metadata)
@@ -205,7 +207,7 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("#include <QtQml/QQmlEngine>", source)
         self.assertIn("USVPayloadFactGroup::_markFactsCppOwned()", source)
         self.assertIn("_markFactsCppOwned();", source)
-        self.assertIn("const std::array<Fact*, 23> facts", source)
+        self.assertIn("const std::array<Fact*, 25> facts", source)
         self.assertIn("QQmlEngine::setObjectOwnership", source)
         self.assertIn("QQmlEngine::CppOwnership", source)
 
@@ -221,6 +223,8 @@ class USVQGCContractTests(unittest.TestCase):
             "_packetCountFact",
             "_stepCurrentFact",
             "_stepTotalFact",
+            "_loopCurrentFact",
+            "_loopTotalFact",
             "_sampleCountFact",
             "_pidErrorFact",
             "_pidModeFact",
@@ -287,6 +291,36 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("payloadStatus === _stHoldNoMission", payload_panel)
         self.assertIn("en: vehicle && _linkOk && spectrometerValid && baselineSet && _canStartPointSample", payload_panel)
         self.assertNotIn("spectrometerValid && baselineSet && payloadStatus === _stIdle", payload_panel)
+
+    def test_sampling_data_view_renders_loop_progress(self):
+        data_view = (REPO_ROOT / "custom" / "res" / "USVSamplingDataView.qml").read_text(encoding="utf-8")
+
+        self.assertIn('getFact("usvPayload.loopCurrent")', data_view)
+        self.assertIn('getFact("usvPayload.loopTotal")', data_view)
+        self.assertIn("function _loopProgressText()", data_view)
+        # Infinite loops show x/∞; idle shows -- instead of a fake 0/0.
+        self.assertIn('"∞"', data_view)
+        self.assertIn('qsTr("循环")', data_view)
+
+    def test_rover_mission_speed_section_supports_groundspeed_and_default_1mps(self):
+        speed_section = (REPO_ROOT / "src" / "MissionManager" / "SpeedSection.cc").read_text(encoding="utf-8")
+        plugin = (REPO_ROOT / "custom" / "src" / "USVPlugin.cc").read_text(encoding="utf-8")
+        metadata = json.loads((REPO_ROOT / "src" / "MissionManager" / "SpeedSection.FactMetaData.json").read_text(encoding="utf-8"))
+        flight_speed = next(entry for entry in metadata["QGC.MetaData.Facts"] if entry["name"] == "FlightSpeed")
+
+        # Rover/Boat missions allow the speed section like multiRotor/fixedWing.
+        self.assertIn("_masterController->controllerVehicle()->rover()", speed_section)
+        # Rover emits DO_CHANGE_SPEED with param1=1 (groundspeed).
+        self.assertIn("groundSpeed ? 1 : 0", speed_section)
+        self.assertIn("rover()", speed_section.split("groundSpeed")[1].split(";\n")[0])
+        # Scan accepts the same groundspeed marker on Rover.
+        self.assertIn("rover() && missionItem.param1() != 1", speed_section)
+        # Plan default cruise speed matches the field-verified 1 m/s, not 5 m/s.
+        self.assertIn("metaData.setRawDefaultValue(1.0);", plugin)
+        self.assertNotIn("metaData.setRawDefaultValue(5.0);", plugin)
+        # The metadata explains the WP_SPEED relationship; no auto PARAM_SET.
+        self.assertIn("WP_SPEED", flight_speed["longDesc"])
+        self.assertIn("DO_CHANGE_SPEED", flight_speed["longDesc"])
 
     def test_rover_plan_metadata_keeps_manual_actions_out(self):
         metadata = json.loads((REPO_ROOT / "src" / "MissionManager" / "MavCmdInfoRover.json").read_text(encoding="utf-8"))
