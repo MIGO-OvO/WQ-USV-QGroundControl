@@ -54,7 +54,11 @@ bool SpeedSection::settingsSpecified(void) const
 void SpeedSection::setAvailable(bool available)
 {
     if (available != _available) {
-        if (available && (_masterController->controllerVehicle()->multiRotor() || _masterController->controllerVehicle()->fixedWing())) {
+        // Rover/Boat also support mission speed changes: ArduRover consumes
+        // MAV_CMD_DO_CHANGE_SPEED (param1=1 groundspeed) via wp_nav set_speed_max.
+        if (available && (_masterController->controllerVehicle()->multiRotor() ||
+                          _masterController->controllerVehicle()->fixedWing() ||
+                          _masterController->controllerVehicle()->rover())) {
             _available = available;
             emit availableChanged(available);
         }
@@ -89,10 +93,14 @@ void SpeedSection::appendSectionItems(QList<MissionItem*>& items, QObject* missi
     // IMPORTANT NOTE: If anything changes here you must also change SpeedSection::scanForSettings
 
     if (_specifyFlightSpeed) {
+        // MAV_CMD_DO_CHANGE_SPEED param1: 1 = groundspeed (multiRotor and Rover/Boat),
+        // 0 = airspeed (fixedWing). ArduRover treats groundspeed as its nav speed.
+        const bool groundSpeed = _masterController->controllerVehicle()->multiRotor() ||
+                                 _masterController->controllerVehicle()->rover();
         MissionItem* item = new MissionItem(seqNum++,
                                             MAV_CMD_DO_CHANGE_SPEED,
                                             MAV_FRAME_MISSION,
-                                            _masterController->controllerVehicle()->multiRotor() ? 1 /* groundspeed */ : 0 /* airspeed */,    // Change airspeed or groundspeed
+                                            groundSpeed ? 1 : 0,
                                             _flightSpeedFact.rawValue().toDouble(),
                                             -1,                                                                 // No throttle change
                                             0,                                                                  // Absolute speed change
@@ -123,6 +131,8 @@ bool SpeedSection::scanForSection(QmlObjectListModel* visualItems, int scanIndex
         if (_masterController->controllerVehicle()->multiRotor() && missionItem.param1() != 1) {
             return false;
         } else if (_masterController->controllerVehicle()->fixedWing() && missionItem.param1() != 0) {
+            return false;
+        } else if (_masterController->controllerVehicle()->rover() && missionItem.param1() != 1) {
             return false;
         }
         visualItems->removeAt(scanIndex)->deleteLater();

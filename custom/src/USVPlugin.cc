@@ -244,8 +244,10 @@ void USVPlugin::adjustSettingMetaData(const QString &settingsGroup,
 
         // ========== 调整巡航速度默认值 ==========
         if (name == QStringLiteral("offlineEditingCruiseSpeed")) {
-            // 无人船典型巡航速度 5 m/s (约 10 节)
-            metaData.setRawDefaultValue(5.0);
+            // 实船确认手动约 1 m/s 可达；该值同时是 Plan 速度默认值与
+            // 时间估算基准。它不代表飞控 AUTO 的 WP_SPEED 参数，两者是
+            // 两个独立配置，互不写入。
+            metaData.setRawDefaultValue(1.0);
             return;
         }
 
