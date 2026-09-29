@@ -498,7 +498,7 @@ class USVQGCContractTests(unittest.TestCase):
 
     def test_spectrometer_transport_ack_timeout(self):
         source = (REPO_ROOT / "src/Vehicle/Vehicle.cc").read_text(encoding="utf-8")
-        self.assertIn("if (component == 191 && command == 31018)", source)
+        self.assertIn("if (targetCompId == 191 && command == 31018)", source)
         self.assertIn("qMax(entry.ackTimeoutMSecs, 10000)", source)
         self.assertIn("isHighLatency() ? _mavCommandAckTimeoutMSecsHighLatency : _mavCommandAckTimeoutMSecs", source)
         self.assertIn("_sendMavCommandShouldRetry(command) ? _mavCommandMaxRetryCount : 1", source)

@@ -2657,7 +2657,7 @@ void Vehicle::_sendMavCommandWorker(
     entry.ackTimeoutMSecs   = sharedLink->linkConfiguration()->isHighLatency() ? _mavCommandAckTimeoutMSecsHighLatency : _mavCommandAckTimeoutMSecs;
     // Payload spectrometer start verifies mapping, configuration and the first frame.
     // Keep the transport deadline aligned with the panel without retrying actuators.
-    if (component == 191 && command == 31018) {
+    if (targetCompId == 191 && command == 31018) {
         entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 10000);
     }
     entry.elapsedTimer.start();
