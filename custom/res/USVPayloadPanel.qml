@@ -93,6 +93,11 @@ Rectangle {
     property bool _hasPendingCommand: _pendingCommand > 0
     readonly property int _commandTimeoutMs: 5000
 
+    function _commandTimeoutFor(command) {
+        // ROS: four bounded 2s stages plus at most 1s failure cleanup.
+        return command === _cmdSpectroStart ? 10000 : _commandTimeoutMs
+    }
+
     onVehicleChanged: {
         _clearPendingCommand(_pendingCommand)
         _lastCommandMessage = ""
@@ -102,7 +107,7 @@ Rectangle {
         target: Qt.application
         function onStateChanged() {
             if (Qt.application.state === Qt.ApplicationActive && root._hasPendingCommand
-                    && Date.now() - root._pendingSince >= root._commandTimeoutMs) {
+                    && Date.now() - root._pendingSince >= root._commandTimeoutFor(root._pendingCommand)) {
                 root._lastCommandWarning = true
                 root._lastCommandMessage = root._commandName(root._pendingCommand) + qsTr("响应超时，请核对载荷状态")
                 root._clearPendingCommand(root._pendingCommand)
@@ -188,6 +193,9 @@ Rectangle {
             if (targetComponent !== _payloadCompId || command < _cmdStart || command > _cmdSpectroStop) {
                 return
             }
+            if (_hasPendingCommand && command !== _pendingCommand) {
+                return
+            }
             _clearPendingCommand(command)
             _lastCommandWarning = ackResult !== 0
             _lastCommandMessage = _commandName(command) + (ackResult === 0 ? qsTr("已接受") : qsTr("未执行"))
@@ -196,7 +204,7 @@ Rectangle {
 
     Timer {
         id: commandTimeoutTimer
-        interval: _commandTimeoutMs
+        interval: _commandTimeoutFor(_pendingCommand)
         repeat: false
         onTriggered: {
             if (_hasPendingCommand) {

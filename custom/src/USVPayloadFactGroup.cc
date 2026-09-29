@@ -91,6 +91,8 @@ void USVPayloadFactGroup::_markFactsCppOwned()
         &_packetCountFact,
         &_stepCurrentFact,
         &_stepTotalFact,
+        &_loopCurrentFact,
+        &_loopTotalFact,
         &_sampleCountFact,
         &_pidErrorFact,
         &_pidModeFact,
