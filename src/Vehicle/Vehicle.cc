@@ -2655,6 +2655,11 @@ void Vehicle::_sendMavCommandWorker(
     entry.rgParam7          = param7;
     entry.maxTries          = _sendMavCommandShouldRetry(command) ? _mavCommandMaxRetryCount : 1;
     entry.ackTimeoutMSecs   = sharedLink->linkConfiguration()->isHighLatency() ? _mavCommandAckTimeoutMSecsHighLatency : _mavCommandAckTimeoutMSecs;
+    // Payload spectrometer start verifies mapping, configuration and the first frame.
+    // Keep the transport deadline aligned with the panel without retrying actuators.
+    if (targetCompId == 191 && command == 31018) {
+        entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 10000);
+    }
     entry.elapsedTimer.start();
 
     qCDebug(VehicleLog) << Q_FUNC_INFO << "command:param1-7" << command << param1 << param2 << param3 << param4 << param5 << param6 << param7;
