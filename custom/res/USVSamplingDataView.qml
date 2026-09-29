@@ -100,9 +100,16 @@ Rectangle {
 
     // 循环进度：运行中显示 x/y；无限循环（total==0 且 current>0）显示 x/∞；未运行显示 --
     function _loopProgressText() {
+        var activeTask = payloadStatus === USVLayout.StatusSampling
+                         || payloadStatus === USVLayout.StatusDetecting
+                         || payloadStatus === USVLayout.StatusPaused
+                         || payloadStatus === USVLayout.StatusSurveying
+        if (!_linkOk || !activeTask || _valueOrDefault(_pidModeFact, SDTokens.PidIdle) !== SDTokens.PidRunning) {
+            return "--"
+        }
         var current = Math.max(0, Math.round(_valueOrDefault(_loopCurrentFact, 0)))
         var total = Math.max(0, Math.round(_valueOrDefault(_loopTotalFact, 0)))
-        if (current <= 0 && total <= 0) {
+        if (!isFinite(current) || !isFinite(total) || current <= 0) {
             return "--"
         }
         return current + "/" + (total > 0 ? total : "∞")
