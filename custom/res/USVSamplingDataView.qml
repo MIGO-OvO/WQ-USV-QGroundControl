@@ -25,6 +25,8 @@ Rectangle {
     property var _linkActiveFact:  _hasPayloadGroup ? _activeVehicle.getFact("usvPayload.linkActive")  : null
     property var _stepCurrentFact: _hasPayloadGroup ? _activeVehicle.getFact("usvPayload.stepCurrent") : null
     property var _stepTotalFact:   _hasPayloadGroup ? _activeVehicle.getFact("usvPayload.stepTotal")   : null
+    property var _loopCurrentFact: _hasPayloadGroup ? _activeVehicle.getFact("usvPayload.loopCurrent") : null
+    property var _loopTotalFact:   _hasPayloadGroup ? _activeVehicle.getFact("usvPayload.loopTotal")   : null
     property var _sampleCountFact: _hasPayloadGroup ? _activeVehicle.getFact("usvPayload.sampleCount") : null
     property var _packetCountFact: _hasPayloadGroup ? _activeVehicle.getFact("usvPayload.packetCount") : null
     property var _pumpXFact:       _hasPayloadGroup ? _activeVehicle.getFact("usvPayload.pumpX")       : null
@@ -94,6 +96,23 @@ Rectangle {
 
     function _valueOrDefault(fact, fallback) {
         return fact && fact.value !== undefined ? Number(fact.value) : fallback
+    }
+
+    // 循环进度：运行中显示 x/y；无限循环（total==0 且 current>0）显示 x/∞；未运行显示 --
+    function _loopProgressText() {
+        var activeTask = payloadStatus === USVLayout.StatusSampling
+                         || payloadStatus === USVLayout.StatusDetecting
+                         || payloadStatus === USVLayout.StatusPaused
+                         || payloadStatus === USVLayout.StatusSurveying
+        if (!_linkOk || !activeTask || _valueOrDefault(_pidModeFact, SDTokens.PidIdle) !== SDTokens.PidRunning) {
+            return "--"
+        }
+        var current = Math.max(0, Math.round(_valueOrDefault(_loopCurrentFact, 0)))
+        var total = Math.max(0, Math.round(_valueOrDefault(_loopTotalFact, 0)))
+        if (!isFinite(current) || !isFinite(total) || current <= 0) {
+            return "--"
+        }
+        return current + "/" + (total > 0 ? total : "∞")
     }
 
     function _formatFixed(value, digits) {
@@ -753,6 +772,12 @@ Rectangle {
                         QGCLabel { text: qsTr("步骤"); opacity: SDTokens.Tokens.opacity.subtle }
                         QGCLabel {
                             text: qsTr("步骤 %1/%2").arg(Math.max(0, Math.round(root._valueOrDefault(root._stepCurrentFact, 0)))).arg(Math.max(0, Math.round(root._valueOrDefault(root._stepTotalFact, 0))))
+                            font.bold: true
+                        }
+
+                        QGCLabel { text: qsTr("循环"); opacity: SDTokens.Tokens.opacity.subtle }
+                        QGCLabel {
+                            text: root._loopProgressText()
                             font.bold: true
                         }
 

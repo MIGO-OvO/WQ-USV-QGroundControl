@@ -28,6 +28,8 @@ USVPayloadFactGroup::USVPayloadFactGroup(QObject *parent)
     , _packetCountFact(0, QStringLiteral("packetCount"), FactMetaData::valueTypeFloat)
     , _stepCurrentFact(0, QStringLiteral("stepCurrent"), FactMetaData::valueTypeFloat)
     , _stepTotalFact  (0, QStringLiteral("stepTotal"),   FactMetaData::valueTypeFloat)
+    , _loopCurrentFact(0, QStringLiteral("loopCurrent"), FactMetaData::valueTypeFloat)
+    , _loopTotalFact  (0, QStringLiteral("loopTotal"),   FactMetaData::valueTypeFloat)
     , _sampleCountFact(0, QStringLiteral("sampleCount"), FactMetaData::valueTypeFloat)
     , _pidErrorFact   (0, QStringLiteral("pidError"),    FactMetaData::valueTypeFloat)
     , _pidModeFact    (0, QStringLiteral("pidMode"),     FactMetaData::valueTypeUint32)
@@ -52,6 +54,8 @@ USVPayloadFactGroup::USVPayloadFactGroup(QObject *parent)
     _addFact(&_packetCountFact);
     _addFact(&_stepCurrentFact, _stepCurrentName);
     _addFact(&_stepTotalFact,   _stepTotalName);
+    _addFact(&_loopCurrentFact, _loopCurrentName);
+    _addFact(&_loopTotalFact,   _loopTotalName);
     _addFact(&_sampleCountFact, _sampleCountName);
     _addFact(&_pidErrorFact,    _pidErrorName);
     _addFact(&_pidModeFact,     _pidModeName);
@@ -75,7 +79,7 @@ USVPayloadFactGroup::USVPayloadFactGroup(QObject *parent)
 
 void USVPayloadFactGroup::_markFactsCppOwned()
 {
-    const std::array<Fact*, 23> facts = {
+    const std::array<Fact*, 25> facts = {
         &_voltageFact,
         &_absorbanceFact,
         &_pumpXFact,
@@ -87,6 +91,8 @@ void USVPayloadFactGroup::_markFactsCppOwned()
         &_packetCountFact,
         &_stepCurrentFact,
         &_stepTotalFact,
+        &_loopCurrentFact,
+        &_loopTotalFact,
         &_sampleCountFact,
         &_pidErrorFact,
         &_pidModeFact,
@@ -180,6 +186,10 @@ void USVPayloadFactGroup::_handleNamedValueFloat(const mavlink_message_t &messag
         _stepCurrentFact.setRawValue(namedValue.value); handled = true;
     } else if (name == QLatin1String("USV_STOT")) {
         _stepTotalFact.setRawValue(namedValue.value); handled = true;
+    } else if (name == QLatin1String("USV_LOOP")) {
+        _loopCurrentFact.setRawValue(namedValue.value); handled = true;
+    } else if (name == QLatin1String("USV_LTOT")) {
+        _loopTotalFact.setRawValue(namedValue.value); handled = true;
     } else if (name == QLatin1String("USV_SCNT")) {
         _sampleCountFact.setRawValue(namedValue.value); handled = true;
     } else if (name == QLatin1String("USV_PERR")) {

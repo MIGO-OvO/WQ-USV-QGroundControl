@@ -5,7 +5,8 @@
 [
 {
     "name":             "FlightSpeed",
-    "shortDesc":        "Set the current flight speed",
+    "shortDesc":        "指定任务航点速度",
+    "longDesc":         "在任务中插入 MAV_CMD_DO_CHANGE_SPEED 指令，ArduRover AUTO 将以此速度航行（地面速度）。不勾选指定速度时不插入该指令，AUTO 使用飞控 WP_SPEED 参数。此值与飞控参数 WP_SPEED 相互独立，QGC 不会自动修改飞控参数。",
     "type":             "double",
     "units":            "m/s",
     "min":              0,

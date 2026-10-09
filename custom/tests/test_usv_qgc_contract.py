@@ -1,4 +1,7 @@
 import json
+import re
+import shutil
+import subprocess
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -35,6 +38,77 @@ PAYLOAD_NAMED_VALUE_FIELDS = {
 
 
 class USVQGCContractTests(unittest.TestCase):
+    def test_ownership_initializer_contains_every_fact_exactly_once(self):
+        source = (REPO_ROOT / 'custom/src/USVPayloadFactGroup.cc').read_text(encoding='utf-8')
+        header = (REPO_ROOT / 'custom/src/USVPayloadFactGroup.h').read_text(encoding='utf-8')
+        function = source.split('void USVPayloadFactGroup::_markFactsCppOwned()', 1)[1].split(
+            'void USVPayloadFactGroup::handleMessage', 1)[0]
+        size, initializer = re.search(r'std::array<Fact\*,\s*(\d+)> facts = \{(.*?)\};', function, re.S).groups()
+        owned = re.findall(r'&(_\w+Fact)', initializer)
+        declared = re.findall(r'\bFact\s+(_\w+Fact)\s*;', header)
+        self.assertEqual(len(owned), int(size))
+        self.assertEqual(len(owned), len(set(owned)))
+        self.assertEqual(set(owned), set(declared))
+        self.assertIn('_loopCurrentFact', owned)
+        self.assertIn('_loopTotalFact', owned)
+
+    def _run_qml_functions(self, file_name, functions, script):
+        node = shutil.which('node')
+        if not node:
+            self.skipTest('Node.js required to execute QML JavaScript contracts')
+        source = (REPO_ROOT / 'custom/res' / file_name).read_text(encoding='utf-8')
+        bodies = []
+        for name in functions:
+            match = re.search(r'    function ' + re.escape(name) + r'\([^\n]*\) \{.*?\n    \}', source, re.S)
+            self.assertIsNotNone(match, name)
+            bodies.append(match.group(0))
+        subprocess.run([node, '-e', '\n'.join(bodies) + '\n' + script], check=True,
+                       capture_output=True, text=True, timeout=10)
+
+    def test_loop_display_state_matrix_executes_real_qml_function(self):
+        layout = (REPO_ROOT / 'custom/res/USVFlyViewLayout.js').read_text(encoding='utf-8')
+        constants = dict((name, int(value)) for name, value in re.findall(r'var (Status\w+) = (\d+)', layout))
+        self._run_qml_functions('USVSamplingDataView.qml', ['_valueOrDefault', '_loopProgressText'],
+            'var USVLayout = ' + json.dumps(constants) + ';\n' + '''
+            const assert = require('node:assert/strict');
+            var SDTokens = {PidIdle: 0, PidRunning: 1};
+            var _linkOk = true, payloadStatus = 0, _pidModeFact = {value: 0};
+            var _loopCurrentFact = {value: 1}, _loopTotalFact = {value: 1};
+            assert.equal(_loopProgressText(), '--');
+            _pidModeFact.value = 1; payloadStatus = USVLayout.StatusSampling;
+            _loopCurrentFact.value = 2; _loopTotalFact.value = 5;
+            assert.equal(_loopProgressText(), '2/5');
+            payloadStatus = USVLayout.StatusPaused;
+            assert.equal(_loopProgressText(), '2/5');
+            payloadStatus = USVLayout.StatusSampling;
+            _loopCurrentFact.value = 12; _loopTotalFact.value = 0;
+            assert.equal(_loopProgressText(), '12/∞');
+            for (const state of [0, 3, 9, 12, 13]) {
+                payloadStatus = state;
+                assert.equal(_loopProgressText(), '--');
+            }
+            payloadStatus = USVLayout.StatusSampling; _linkOk = false;
+            assert.equal(_loopProgressText(), '--');
+            _linkOk = true; _pidModeFact.value = 2;
+            assert.equal(_loopProgressText(), '--');
+            ''')
+
+    def test_spectro_timeout_is_per_command_and_late_ack_does_not_clear_another(self):
+        source = (REPO_ROOT / 'custom/res/USVPayloadPanel.qml').read_text(encoding='utf-8')
+        self.assertIn('interval: _commandTimeoutFor(_pendingCommand)', source)
+        self.assertIn('root._commandTimeoutFor(root._pendingCommand)', source)
+        self._run_qml_functions('USVPayloadPanel.qml', ['_commandTimeoutFor', '_clearPendingCommand'], '''
+            const assert = require('node:assert/strict');
+            var _cmdSpectroStart = 31018, _commandTimeoutMs = 5000;
+            assert.equal(_commandTimeoutFor(31010), 5000);
+            assert.equal(_commandTimeoutFor(31019), 5000);
+            assert.equal(_commandTimeoutFor(31018), 10000);
+            var _pendingCommand = 31019;
+            var commandTimeoutTimer = {stop() {throw Error('new timer stopped by old ACK');}};
+            _clearPendingCommand(31018);
+            assert.equal(_pendingCommand, 31019);
+            ''')
+
     def test_fact_group_declares_and_parses_baseline_and_detector_valid_facts(self):
         header = (REPO_ROOT / "custom" / "src" / "USVPayloadFactGroup.h").read_text(encoding="utf-8")
         source = (REPO_ROOT / "custom" / "src" / "USVPayloadFactGroup.cc").read_text(encoding="utf-8")
@@ -50,6 +124,8 @@ class USVQGCContractTests(unittest.TestCase):
             "jetsonCpu",
             "jetsonMemory",
             "detectorHeap",
+            "loopCurrent",
+            "loopTotal",
         ):
             self.assertIn(fact_name, header)
             self.assertIn(fact_name, metadata)
@@ -205,7 +281,7 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("#include <QtQml/QQmlEngine>", source)
         self.assertIn("USVPayloadFactGroup::_markFactsCppOwned()", source)
         self.assertIn("_markFactsCppOwned();", source)
-        self.assertIn("const std::array<Fact*, 23> facts", source)
+        self.assertIn("const std::array<Fact*, 25> facts", source)
         self.assertIn("QQmlEngine::setObjectOwnership", source)
         self.assertIn("QQmlEngine::CppOwnership", source)
 
@@ -221,6 +297,8 @@ class USVQGCContractTests(unittest.TestCase):
             "_packetCountFact",
             "_stepCurrentFact",
             "_stepTotalFact",
+            "_loopCurrentFact",
+            "_loopTotalFact",
             "_sampleCountFact",
             "_pidErrorFact",
             "_pidModeFact",
@@ -287,6 +365,36 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("payloadStatus === _stHoldNoMission", payload_panel)
         self.assertIn("en: vehicle && _linkOk && spectrometerValid && baselineSet && _canStartPointSample", payload_panel)
         self.assertNotIn("spectrometerValid && baselineSet && payloadStatus === _stIdle", payload_panel)
+
+    def test_sampling_data_view_renders_loop_progress(self):
+        data_view = (REPO_ROOT / "custom" / "res" / "USVSamplingDataView.qml").read_text(encoding="utf-8")
+
+        self.assertIn('getFact("usvPayload.loopCurrent")', data_view)
+        self.assertIn('getFact("usvPayload.loopTotal")', data_view)
+        self.assertIn("function _loopProgressText()", data_view)
+        # Infinite loops show x/∞; idle shows -- instead of a fake 0/0.
+        self.assertIn('"∞"', data_view)
+        self.assertIn('qsTr("循环")', data_view)
+
+    def test_rover_mission_speed_section_supports_groundspeed_and_default_1mps(self):
+        speed_section = (REPO_ROOT / "src" / "MissionManager" / "SpeedSection.cc").read_text(encoding="utf-8")
+        plugin = (REPO_ROOT / "custom" / "src" / "USVPlugin.cc").read_text(encoding="utf-8")
+        metadata = json.loads((REPO_ROOT / "src" / "MissionManager" / "SpeedSection.FactMetaData.json").read_text(encoding="utf-8"))
+        flight_speed = next(entry for entry in metadata["QGC.MetaData.Facts"] if entry["name"] == "FlightSpeed")
+
+        # Rover/Boat missions allow the speed section like multiRotor/fixedWing.
+        self.assertIn("_masterController->controllerVehicle()->rover()", speed_section)
+        # Rover emits DO_CHANGE_SPEED with param1=1 (groundspeed).
+        self.assertIn("groundSpeed ? 1 : 0", speed_section)
+        self.assertIn("rover()", speed_section.split("groundSpeed")[1].split(";\n")[0])
+        # Scan accepts the same groundspeed marker on Rover.
+        self.assertIn("rover() && missionItem.param1() != 1", speed_section)
+        # Plan default cruise speed matches the field-verified 1 m/s, not 5 m/s.
+        self.assertIn("metaData.setRawDefaultValue(1.0);", plugin)
+        self.assertNotIn("metaData.setRawDefaultValue(5.0);", plugin)
+        # The metadata explains the WP_SPEED relationship; no auto PARAM_SET.
+        self.assertIn("WP_SPEED", flight_speed["longDesc"])
+        self.assertIn("DO_CHANGE_SPEED", flight_speed["longDesc"])
 
     def test_rover_plan_metadata_keeps_manual_actions_out(self):
         metadata = json.loads((REPO_ROOT / "src" / "MissionManager" / "MavCmdInfoRover.json").read_text(encoding="utf-8"))
@@ -387,6 +495,13 @@ class USVQGCContractTests(unittest.TestCase):
         panel = (REPO_ROOT / "custom/res/USVPayloadPanel.qml").read_text(encoding="utf-8")
         self.assertIn("onVehicleChanged:", panel)
         self.assertIn("Date.now() - root._pendingSince", panel)
+
+    def test_spectrometer_transport_ack_timeout(self):
+        source = (REPO_ROOT / "src/Vehicle/Vehicle.cc").read_text(encoding="utf-8")
+        self.assertIn("if (targetCompId == 191 && command == 31018)", source)
+        self.assertIn("qMax(entry.ackTimeoutMSecs, 10000)", source)
+        self.assertIn("isHighLatency() ? _mavCommandAckTimeoutMSecsHighLatency : _mavCommandAckTimeoutMSecs", source)
+        self.assertIn("_sendMavCommandShouldRetry(command) ? _mavCommandMaxRetryCount : 1", source)
 
     def test_android_keeps_native_logcat_sink(self):
         source = (REPO_ROOT / "src/Utilities/Platform.cc").read_text(encoding="utf-8")
