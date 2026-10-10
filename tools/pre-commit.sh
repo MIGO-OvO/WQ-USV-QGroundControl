@@ -111,9 +111,15 @@ if [[ "$MODE" == "changed" ]]; then
     # Check if we can compare against master
     # SECURITY: Branch name "master" is hardcoded to prevent command injection.
     # If making this dynamic, validate: [[ "$branch" =~ ^[a-zA-Z0-9/_-]+$ ]]
-    if git rev-parse --verify master &>/dev/null || git rev-parse --verify origin/master &>/dev/null; then
+    BASE_REF=""
+    if git rev-parse --verify master &>/dev/null; then
+        BASE_REF="master"
+    elif git rev-parse --verify origin/master &>/dev/null; then
+        BASE_REF="origin/master"
+    fi
+    if [[ -n "$BASE_REF" ]]; then
         log_info "Running on files changed vs master..."
-        ARGS+=("--from-ref" "master" "--to-ref" "HEAD")
+        ARGS+=("--from-ref" "$BASE_REF" "--to-ref" "HEAD")
     else
         log_warn "master branch not available, running on all files"
         ARGS+=("--all-files")
@@ -225,4 +231,4 @@ if [[ $EXIT_CODE -ne 0 ]]; then
     echo "  3. Amend your commit: git commit --amend --no-edit"
 fi
 
-exit $EXIT_CODE
+exit "$EXIT_CODE"

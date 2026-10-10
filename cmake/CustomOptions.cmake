@@ -78,7 +78,10 @@ option(QGC_ENABLE_QT_VIDEOSTREAMING "Enable QtMultimedia video backend" OFF)
 set(QGC_MAVLINK_GIT_REPO "https://github.com/mavlink/mavlink.git" CACHE STRING "MAVLink repository URL")
 set(QGC_MAVLINK_GIT_TAG "dd17c1a65de7b9ad8dd6e3491a8690c0d0b27ba1" CACHE STRING "MAVLink repository commit/tag")
 # Keep the event receiver API compatible with the pinned MAVLink generator and QGC callbacks.
-set(QGC_LIBEVENTS_GIT_TAG "077677a7d2f48f0af0eb8a4e4a7b6310956728bc" CACHE STRING "libevents repository commit/tag")
+set(QGC_LIBEVENTS_GIT_TAG
+    "077677a7d2f48f0af0eb8a4e4a7b6310956728bc"
+    CACHE STRING "libevents repository commit/tag"
+)
 set(QGC_MAVLINK_DIALECT "all" CACHE STRING "MAVLink dialect")
 set(QGC_MAVLINK_VERSION "2.0" CACHE STRING "MAVLink protocol version")
 

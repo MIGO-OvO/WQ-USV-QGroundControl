@@ -47,7 +47,7 @@ class Violation:
     suggestion: str
 
 
-def has_null_check_before(lines: list[str], current_line: int, var_name: str = None) -> bool:
+def has_null_check_before(lines: list[str], current_line: int, var_name: str | None = None) -> bool:
     """Check if there's a null check in the preceding lines (within same function scope)."""
     start = max(0, current_line - 10)
     context = '\n'.join(lines[start:current_line])

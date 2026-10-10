@@ -93,8 +93,13 @@ done
 # SECURITY: Branch name "master" is hardcoded to prevent command injection.
 # If making this dynamic, validate: [[ "$branch" =~ ^[a-zA-Z0-9/_-]+$ ]]
 can_compare_master() {
-    git -C "$REPO_ROOT" rev-parse --verify master &>/dev/null || \
-    git -C "$REPO_ROOT" rev-parse --verify origin/master &>/dev/null
+    if git -C "$REPO_ROOT" rev-parse --verify master &>/dev/null; then
+        BASE_REF="master"
+    elif git -C "$REPO_ROOT" rev-parse --verify origin/master &>/dev/null; then
+        BASE_REF="origin/master"
+    else
+        return 1
+    fi
 }
 
 # Get C++ files to analyze
@@ -105,10 +110,12 @@ get_cpp_files() {
         find "$REPO_ROOT/src" -type f \( -name "*.cc" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" \)
     elif can_compare_master; then
         # Only changed files vs master (prepend repo root and filter existing files)
-        git -C "$REPO_ROOT" diff --name-only master... -- '*.cc' '*.cpp' '*.h' '*.hpp' 2>/dev/null | \
+        git -C "$REPO_ROOT" diff --name-only "$BASE_REF"... -- '*.cc' '*.cpp' '*.h' '*.hpp' 2>/dev/null | \
             while read -r f; do
                 local full_path="$REPO_ROOT/$f"
-                [[ -f "$full_path" ]] && echo "$full_path"
+                if [[ -f "$full_path" ]]; then
+                    echo "$full_path"
+                fi
             done
     else
         log_warn "master branch not available, analyzing all files"
@@ -124,10 +131,12 @@ get_qml_files() {
         find "$REPO_ROOT/src" -type f -name "*.qml"
     elif can_compare_master; then
         # Only changed files vs master (prepend repo root and filter existing files)
-        git -C "$REPO_ROOT" diff --name-only master... -- '*.qml' 2>/dev/null | \
+        git -C "$REPO_ROOT" diff --name-only "$BASE_REF"... -- '*.qml' 2>/dev/null | \
             while read -r f; do
                 local full_path="$REPO_ROOT/$f"
-                [[ -f "$full_path" ]] && echo "$full_path"
+                if [[ -f "$full_path" ]]; then
+                    echo "$full_path"
+                fi
             done
     else
         log_warn "master branch not available, analyzing all files"
