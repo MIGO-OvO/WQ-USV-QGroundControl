@@ -81,8 +81,10 @@ repos:
     rev: v0.6.13
     hooks:
       - id: cmake-format
+        additional_dependencies: [PyYAML==6.0.3]
         args: [--check]
       - id: cmake-lint
+        additional_dependencies: [PyYAML==6.0.3]
         exclude: ^(build/|libs/)
 
   # GitHub Actions linting
@@ -110,6 +112,8 @@ repos:
     rev: v3.13.0
     hooks:
       - id: vale
+        entry: bash -c 'vale sync && vale "$@"' --
+        require_serial: true
         files: ^docs/
         args: ['--no-exit']  # Don't fail on warnings, just report
 
