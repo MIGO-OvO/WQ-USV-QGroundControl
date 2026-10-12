@@ -17,9 +17,9 @@ Plan 中定点采样的超时说明已改为 HOLD，须配套 safety1 ArduRover 
 - ✂️ **功能精简**：隐藏不适用于无人船的功能（起飞、降落、高度控制等）
 - 📋 **专用检查清单**：无人船预航检查清单（含载荷状态自动检测）
 - 🎨 **可选品牌定制**：支持自定义 Logo 和主题颜色
-- 📊 **水质载荷面板**：实时显示检测电压、吸光度、泵组角度、baseline 状态，支持采样/校准/设基线/走航控制
-- 🧭 **综合仪表盘**：替换默认罗盘，集成航行状态和姿态监测
-- ⚠️ **姿态预警**：船体横滚/俯仰超限时顶部闪烁警告
+- 📊 **作业 Tab 面板**：系统状态、传感器数据、自动任务、调试信息；默认突出 GPS、船速、航向、任务进度和采样状态
+- 🧭 **系统状态栏与航行控制**：顶部汇总五类系统状态，底部集中模式、任务、暂停、返航与紧急停止
+- ⚠️ **作业预警**：显示通信中断、姿态异常、采样失败和低电量；离线时屏蔽陈旧遥测
 
 ## 支持的固件
 
@@ -60,6 +60,11 @@ custom/
 │   │   └── usv_actions.json            # MAVLink Actions 定义
 │   ├── USVChecklist.qml                # 无人船预航检查清单 (qrc 覆盖)
 │   ├── USVFlyViewCustomLayer.qml       # 飞行视图自定义层 (qrc 覆盖)
+│   ├── USVFlyViewToolBar.qml           # 系统状态栏与原生确认入口 (qrc 覆盖)
+│   ├── USVOperationsPanel.qml          # 四 Tab 作业面板
+│   ├── USVOperationsState.qml          # 航行/任务/采样状态汇总
+│   ├── USVOperationsTheme.qml          # 局部工业深色主题
+│   ├── USVActionBar.qml                # 底部航行与紧急停止控制
 │   ├── USVFlyViewCustomLayer_TEST.qml  # 覆盖机制测试文件
 │   ├── USVFlyViewBottomRightRowLayout.qml  # 隐藏原版遥测条 (qrc 覆盖)
 │   ├── USVInstrumentPanel.qml          # 综合仪表盘 (qrc 覆盖 IntegratedCompassAttitude)
@@ -159,11 +164,13 @@ import QGroundControl.Controls
 - 下水前水域/天气/通信/载荷/安全检查
 - 载荷状态自动检测（通过 `usvPayload.status` FactGroup）
 
-### 6. 水质载荷控制面板 (USVPayloadPanel)
-- 实时显示：检测电压、吸光度、泵组角度 (X/Y/Z/A)
-- 控制流程：启动信号采集、设基线、开始点采样/开始走航、停止检测、停止信号采集
-- 维护动作：暂停、恢复、零点校准折叠在展开面板内
-- 按钮根据链路、有效采样、baseline 和载荷状态自动启用/禁用
+### 6. 作业 Tab 面板 (USVOperationsPanel)
+- 地图优先布局，以 Windows 笔记本 1280×720 和 1920×1080 为主要验证尺寸
+- 系统状态：GPS、船速、航向、距返航点、航线任务项位置、采样步骤与次数
+- 传感器数据：检测电压、吸光度、有效信号、baseline、设备温度；提供启动/停止信号和设基线入口
+- 自动任务：任务与采样状态，手动点采样/停止/暂停/恢复/走航控制
+- 调试信息：泵组角度、PID、参考/基线电压、CPU/内存/堆、接收计数和维护动作
+- 载荷按钮根据链路、有效采样、baseline 和任务状态启用；发送、处理中、接受与超时分别反馈，接受不代表设备已执行完成
 - `USV_STAT=3` 显示为任务失败/采样失败，不再直接提示“载荷故障”
 - MAVLink 指令：CMD `31010..31019`
   - `31010` 仅用于手动点采样；航线定点采样使用 Plan 任务项 `MAV_CMD_NAV_SCRIPT_TIME(param1=1)`
@@ -173,14 +180,19 @@ import QGroundControl.Controls
   - `31018` 启动分光检测器信号采集
   - `31019` 停止分光检测器信号采集
 
-### 7. 综合仪表盘 (USVInstrumentPanel)
-- 替换默认 IntegratedCompassAttitude
-- 集成罗盘、航行状态（航速/航向/油门/距Home）、姿态监测（横滚/俯仰）
-- 姿态警告/危险双阈值，颜色渐变提示
+### 7. 系统状态栏 (USVFlyViewToolBar / USVSystemStatusBar)
+- 顶部显示 GPS、飞控连接、电池、网络/船载链路、任务状态
+- 网络状态由现有载荷遥测链路推断，不代表 Wi-Fi 或互联网连接质量
+- 自动模式且已解锁并载有任务时显示“自动执行”；未解锁明确显示“待解锁”
+- 保留 QGC 菜单、飞控检查与任务确认入口、任务下载进度
+- 工业深色仅作用于作业界面，不改写 QGC 全局主题设置
 
-### 8. 姿态危险警告横幅
-- 横滚 > 25° 或俯仰 > 20° 时顶部闪烁红色警告
-- 实时显示当前姿态角度
+### 8. 航行控制与作业预警 (USVActionBar)
+- 底部集中手动/自动、开始或继续任务、暂停、返航、紧急停止；模式与任务沿用 QGC 原生确认
+- 暂停航行调用固件提供的保持模式；载荷采样的暂停与恢复位于自动任务 Tab
+- 紧急停止确认后调用 QGC 原生推进急停，并向 component 191 发送既有停止采样命令 31011
+- 急停反馈仅跟踪本次目标车辆的待响应命令；拒绝、超时、车辆切换和晚到结果有明确处理，实际停止仍需核对设备
+- 横滚 > 25° 或俯仰 > 20° 时显示姿态异常；链路中断、采样失败和低电量保持可见
 
 ### 9. 采样数据独立页面 (USVSamplingDataView)
 - 与航行/规划/配置/分析同级的独立顶层页面
@@ -192,6 +204,20 @@ import QGroundControl.Controls
 - MAVLink 遥测字段：`USV_STEP`, `USV_STOT`, `USV_SCNT`, `USV_PERR`, `USV_PMOD`, `USV_BSET`, `USV_REF`, `USV_BASE`, `USV_VLD`
 - `USV_STAT=14` 显示为“走航检测”
 - `USV_VLD=1` 表示分光检测器当前采样有效，可用于启用“设基线”
+
+## 主界面验证
+
+以下检查使用模拟 Facts 和生产 QML 组件，不连接设备、不发送实际控制命令：
+
+```powershell
+python -B -m unittest discover -s custom/tests -p test_usv_qgc_contract.py
+python -B custom/tests/verify_operations_ui.py --output build/operations-ui-preview
+Start-Process -FilePath 'C:/Qt/6.10.1/msvc2022_64/bin/qmltestrunner.exe' -ArgumentList @('-platform','offscreen','-input','custom/tests/tst_USVFlyViewLayoutLogic.qml','-o','build/operations-qmltest.txt,txt') -Wait -WindowStyle Hidden
+```
+
+离屏预览需要可用的 PySide6。覆盖 720p/1080p、四个 Tab、飞控断连、采样失败和未解锁自动模式；检查滚动区域不遮挡数据，验证采样准入与急停响应归属。顶部预览只呈现系统状态组件，不覆盖完整原生工具栏；完整菜单与确认交互还需在实际 QGC 窗口验证。预览可通过 `--map-image` 传入参考地图截图，地图上的旧标注不属于模拟遥测。
+
+实船仍需验证飞控检查、模式/任务确认、暂停与返航、推进和载荷急停，以及户外强光下的屏幕表现。既有链路的源码依据：推进急停沿用 `src/Vehicle/Vehicle.cc:2317`；手动载荷命令由 `custom/res/USVPayloadCommandController.qml:80` 发往 component 191，ROS 在 `../src/usv_ros/scripts/usv_mavlink_router_bridge.py:541` 接收并发布给采样状态机；载荷遥测由 `../ardupilot-usv/Rover/GCS_MAVLink_Rover.cpp:595` 缓存并转发。协议保持不变。
 
 ## 飞行模式对照
 

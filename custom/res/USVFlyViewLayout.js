@@ -5,6 +5,15 @@ function compactSamplingLayout(viewportWidth, fontWidth) {
     return viewportWidth < fontWidth * 130
 }
 
+function operationsPanelWidth(viewportWidth, fontWidth) {
+    return Math.min(fontWidth * 44, viewportWidth * 0.32)
+}
+
+function missionPosition(index, count) {
+    if (!isFinite(index) || !isFinite(count) || count <= 0) return 0
+    return Math.max(0, Math.min(1, index / count))
+}
+
 // Status constants — extended for auto-sampling mission stages
 var StatusIdle = 0
 var StatusSampling = 1

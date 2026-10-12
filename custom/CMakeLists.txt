@@ -69,6 +69,12 @@ qt_add_qml_module(USVModule
         src/USVPayloadFactGroup.h
     QML_FILES
         res/USVFlyViewLayout.js
+        res/USVOperationsTheme.qml
+        res/USVOperationsButton.qml
+        res/USVOperationsState.qml
+        res/USVPayloadCommandController.qml
+        res/USVOperationsPanel.qml
+        res/USVSystemStatusBar.qml
         res/USVPayloadSummaryStrip.qml
         res/USVPayloadDetailPanel.qml
         res/USVPayloadPanel.qml
