@@ -94,8 +94,9 @@ Rectangle {
     readonly property int _commandTimeoutMs: 5000
 
     function _commandTimeoutFor(command) {
-        // ROS: four bounded 2s stages plus at most 1s failure cleanup.
-        return command === _cmdSpectroStart ? 10000 : _commandTimeoutMs
+        if (command === _cmdSpectroStart) return 40000
+        if (command === _cmdStop || command === _cmdStopSurvey || command === _cmdSpectroStop) return 15000
+        return _commandTimeoutMs
     }
 
     onVehicleChanged: {
@@ -155,7 +156,8 @@ Rectangle {
     }
 
     function _send(cmdId, param1) {
-        if (vehicle && !_hasPendingCommand) {
+        const stopping = cmdId === _cmdStop || cmdId === _cmdStopSurvey || cmdId === _cmdSpectroStop
+        if (vehicle && (!_hasPendingCommand || (stopping && _pendingCommand !== cmdId))) {
             _pendingCommand = cmdId
             _pendingSince = Date.now()
             _lastCommandWarning = false

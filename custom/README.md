@@ -6,6 +6,14 @@ Plan 中定点采样的超时说明已改为 HOLD，须配套 safety1 ArduRover 
 
 静态契约：`python -m unittest discover -s custom/tests -p test_usv_qgc_contract.py`。协议与现场步骤见总仓库 `docs/current/40_interfaces.md`、`70_verification.md`。
 
+## 载荷启动与停止验收
+
+采样准备遥测 `USV_STAT=8` 时，流程带主按钮为“停止采样准备”；进入采样步骤后再提供暂停/恢复。普通停止在其他载荷命令或遥测确认等待期间可发送，同一停止命令等待响应时不重复发送。`31011` 的停止终态接受空闲、无任务保持、已中止或采样完成。
+
+发送层和 QML 响应期限同步：分光启动 40 秒，停止类 `31011/31016/31019` 为 15 秒。该期限涵盖 ROS 的有界初始化重试与设备停机确认，不表示每次操作固定等待。飞控高延迟链路保留原有更长传输期限；控制面板仍按上述本地期限提示核对实际状态。
+
+重新编译后，在台架冷启动 ROS 并立即点击启动信号；使用同一 Web 配置核对点采样进样速度；准备中、采样中、暂停中分别执行普通停止。离屏按钮验证：`python -B custom/tests/verify_workflow_ui.py`，输出是模拟 Fact 场景，实际停泵仍需设备验收。
+
 ## 概述
 
 这是一个针对无人船 (Unmanned Surface Vehicle, USV) 的 QGroundControl 定制构建。
@@ -17,9 +25,9 @@ Plan 中定点采样的超时说明已改为 HOLD，须配套 safety1 ArduRover 
 - ✂️ **功能精简**：隐藏不适用于无人船的功能（起飞、降落、高度控制等）
 - 📋 **专用检查清单**：无人船预航检查清单（含载荷状态自动检测）
 - 🎨 **可选品牌定制**：支持自定义 Logo 和主题颜色
-- 📊 **水质载荷面板**：实时显示检测电压、吸光度、泵组角度、baseline 状态，支持采样/校准/设基线/走航控制
-- 🧭 **综合仪表盘**：替换默认罗盘，集成航行状态和姿态监测
-- ⚠️ **姿态预警**：船体横滚/俯仰超限时顶部闪烁警告
+- 📊 **采样准备流程带**：连接设备、获取有效信号、设置基线、手动点采样；设备控制和通信诊断按需展开
+- 🧭 **原生航行 UI**：保留 QGC 官方顶栏、任务确认和 overlay 航行仪表；流程带避让原生工具、仪表、PIP 与虚拟摇杆
+- ⚠️ **作业预警**：显示通信中断、姿态异常、采样失败和低电量；离线时屏蔽陈旧遥测
 
 ## 支持的固件
 
@@ -60,9 +68,15 @@ custom/
 │   │   └── usv_actions.json            # MAVLink Actions 定义
 │   ├── USVChecklist.qml                # 无人船预航检查清单 (qrc 覆盖)
 │   ├── USVFlyViewCustomLayer.qml       # 飞行视图自定义层 (qrc 覆盖)
+│   ├── USVSamplingWorkflow.qml         # 当前 FlyView 采样准备流程带
+│   ├── USVFlyViewToolBar.qml           # 旧定制顶栏，当前不作 qrc 覆盖
+│   ├── USVOperationsPanel.qml          # 旧四 Tab 组件，保留供兼容验证
+│   ├── USVOperationsState.qml          # 航行/任务/采样状态汇总
+│   ├── USVOperationsTheme.qml          # 局部工业深色主题
+│   ├── USVActionBar.qml                # 复用急停确认与 ACK 跟踪
 │   ├── USVFlyViewCustomLayer_TEST.qml  # 覆盖机制测试文件
-│   ├── USVFlyViewBottomRightRowLayout.qml  # 隐藏原版遥测条 (qrc 覆盖)
-│   ├── USVInstrumentPanel.qml          # 综合仪表盘 (qrc 覆盖 IntegratedCompassAttitude)
+│   ├── USVFlyViewBottomRightRowLayout.qml  # 旧覆盖文件，当前不启用
+│   ├── USVInstrumentPanel.qml          # 旧自定义仪表组件，当前不启用
 │   ├── USVPayloadPanel.qml             # 水质载荷控制面板 (USV QML 模块)
 │   ├── USVPayloadFactGroup.json        # 载荷 FactGroup 元数据
 │   ├── USVSelectViewDropdown.qml       # 中文化视图选择菜单 (qrc 覆盖)
@@ -159,11 +173,16 @@ import QGroundControl.Controls
 - 下水前水域/天气/通信/载荷/安全检查
 - 载荷状态自动检测（通过 `usvPayload.status` FactGroup）
 
-### 6. 水质载荷控制面板 (USVPayloadPanel)
-- 实时显示：检测电压、吸光度、泵组角度 (X/Y/Z/A)
-- 控制流程：启动信号采集、设基线、开始点采样/开始走航、停止检测、停止信号采集
-- 维护动作：暂停、恢复、零点校准折叠在展开面板内
-- 按钮根据链路、有效采样、baseline 和载荷状态自动启用/禁用
+### 6. 采样准备流程带 (USVSamplingWorkflow)
+- 地图优先布局，以 Windows 笔记本 1280×720 和 1920×1080 为主要验证尺寸
+- 四阶段流程：连接设备 → 获取有效信号 → 设置基线 → 手动点采样；主按钮随真实准备状态变化
+- 检测电压要求有效信号，吸光度同时要求有效信号与基线；离线或无效时显示“—”
+- 设备控制：启动/停止信号、重设基线、校准泵组、走航检测、停止采样；泵组只展示真实角度
+- 通信诊断：飞控链路、载荷报文计数、数据龄期及设备温度
+- 载荷按钮根据链路、有效信号、基线和任务状态启用；ACK 接受后等待遥测更新，接受不代表执行完成，停止命令在等待期间仍可用
+- `USVFlyViewLayout.workflowDock` 优先将面板停靠在仪表左侧；横向空间不足时放到原生底部控件上方，按字体单位切换双列/单列布局
+- 底部锚点固定，220 ms 高度过渡与 140 ms 内容淡入淡出；收起立即禁用内容并返回标题按钮焦点；长内容使用受限滚动区
+- 展开设备/诊断后，等待高度过渡完成，再用 180 ms 滚动将操作区及其切换/收回入口一起带入视野
 - `USV_STAT=3` 显示为任务失败/采样失败，不再直接提示“载荷故障”
 - MAVLink 指令：CMD `31010..31019`
   - `31010` 仅用于手动点采样；航线定点采样使用 Plan 任务项 `MAV_CMD_NAV_SCRIPT_TIME(param1=1)`
@@ -173,14 +192,17 @@ import QGroundControl.Controls
   - `31018` 启动分光检测器信号采集
   - `31019` 停止分光检测器信号采集
 
-### 7. 综合仪表盘 (USVInstrumentPanel)
-- 替换默认 IntegratedCompassAttitude
-- 集成罗盘、航行状态（航速/航向/油门/距Home）、姿态监测（横滚/俯仰）
-- 姿态警告/危险双阈值，颜色渐变提示
+### 7. 官方顶栏与航行仪表
+- `custom.qrc` 不再覆盖 `FlyViewToolBar.qml` 和 `FlyViewBottomRightRowLayout.qml`，由官方组件显示状态、任务确认、遥测值与航行仪表
+- `USVFlyViewOptions::showInstrumentPanel()` 为 true；保留用户选择的原生仪表设置
+- 新增准备状态放在流程带标题同行，不改变 QGC 全局主题设置
 
-### 8. 姿态危险警告横幅
-- 横滚 > 25° 或俯仰 > 20° 时顶部闪烁红色警告
-- 实时显示当前姿态角度
+### 8. 作业预警与紧急停止
+- 模式、航线任务、暂停航行与返航沿用官方 QGC 交互；流程带的暂停/恢复只操作载荷采样
+- 流程带标题保留急停按钮，复用 `USVActionBar.requestEmergencyStop()` 的原有确认与 ACK 跟踪
+- 紧急停止确认后调用 QGC 原生推进急停，并向 component 191 发送既有停止采样命令 31011
+- 急停反馈仅跟踪本次目标车辆的待响应命令；拒绝、超时、车辆切换和晚到结果有明确处理，实际停止仍需核对设备
+- 横滚 > 25° 或俯仰 > 20° 时显示姿态异常；链路中断、采样失败和低电量保持可见
 
 ### 9. 采样数据独立页面 (USVSamplingDataView)
 - 与航行/规划/配置/分析同级的独立顶层页面
@@ -192,6 +214,21 @@ import QGroundControl.Controls
 - MAVLink 遥测字段：`USV_STEP`, `USV_STOT`, `USV_SCNT`, `USV_PERR`, `USV_PMOD`, `USV_BSET`, `USV_REF`, `USV_BASE`, `USV_VLD`
 - `USV_STAT=14` 显示为“走航检测”
 - `USV_VLD=1` 表示分光检测器当前采样有效，可用于启用“设基线”
+
+## 主界面验证
+
+以下检查使用模拟 Facts 和生产 QML 组件，不连接设备、不发送实际控制命令：
+
+```powershell
+python -B -m unittest discover -s custom/tests -p test_usv_qgc_contract.py
+python -B custom/tests/verify_workflow_ui.py --output build/workflow-ui-preview
+python -B custom/tests/verify_operations_ui.py --output build/operations-ui-preview
+Start-Process -FilePath 'C:/Qt/6.10.1/msvc2022_64/bin/qmltestrunner.exe' -ArgumentList @('-platform','offscreen','-input','custom/tests/tst_USVFlyViewLayoutLogic.qml','-o','build/operations-qmltest.txt,txt') -Wait -WindowStyle Hidden
+```
+
+离屏预览需要可用的 PySide6。新流程带覆盖 720p/1080p、900×600、大字体、PIP、设备/诊断、等待遥测、暂停、断连、收起告警、动画中间态与快速反复切换；检查面板不碰撞原生控件、滚动条通道、键盘焦点及隐藏控制器的急停对话框。预览使用生产 USV QML、官方罗盘/姿态 QML 和模拟 Facts；顶部是明确标注的验证占位，完整官方工具栏需以整机 QGC 窗口验收。旧 `verify_operations_ui.py` 保留对旧四 Tab 组件的兼容检查。
+
+实船仍需验证飞控检查、模式/任务确认、暂停与返航、推进和载荷急停，以及户外强光下的屏幕表现。既有链路的源码依据：推进急停沿用 `src/Vehicle/Vehicle.cc`；手动载荷命令由 `custom/res/USVPayloadCommandController.qml` 发往 component 191，ROS 在 `../src/usv_ros/scripts/usv_mavlink_router_bridge.py` 接收并发布给 `mavlink_trigger_node.py` 的采样状态机；载荷遥测由 `../ardupilot-usv/Rover/GCS_MAVLink_Rover.cpp:595` 缓存并转发。协议保持不变。
 
 ## 飞行模式对照
 

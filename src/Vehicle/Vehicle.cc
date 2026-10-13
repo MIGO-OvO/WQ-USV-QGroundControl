@@ -2655,10 +2655,12 @@ void Vehicle::_sendMavCommandWorker(
     entry.rgParam7          = param7;
     entry.maxTries          = _sendMavCommandShouldRetry(command) ? _mavCommandMaxRetryCount : 1;
     entry.ackTimeoutMSecs   = sharedLink->linkConfiguration()->isHighLatency() ? _mavCommandAckTimeoutMSecsHighLatency : _mavCommandAckTimeoutMSecs;
-    // Payload spectrometer start verifies mapping, configuration and the first frame.
-    // Keep the transport deadline aligned with the panel without retrying actuators.
+    // Payload startup includes bounded configuration retries and the first frame.
+    // Stop verifies firmware ACKs after cleanup; keep UI and transport aligned.
     if (targetCompId == 191 && command == 31018) {
-        entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 10000);
+        entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 40000);
+    } else if (targetCompId == 191 && (command == 31011 || command == 31016 || command == 31019)) {
+        entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 15000);
     }
     entry.elapsedTimer.start();
 

@@ -1,0 +1,295 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-12T04:24:15.200Z",
+  "title": "Design System: WQ-USV 作业界面",
+  "extensions": {
+    "colorMeta": {
+      "qgc-action-blue": {
+        "role": "primary",
+        "displayName": "操作蓝",
+        "tonalRamp": [
+          "oklch(15% 0.1315 242.2)",
+          "oklch(26% 0.1315 242.2)",
+          "oklch(38% 0.1315 242.2)",
+          "oklch(49% 0.1315 242.2)",
+          "oklch(61% 0.1315 242.2)",
+          "oklch(72% 0.1315 242.2)",
+          "oklch(84% 0.1315 242.2)",
+          "oklch(95% 0.1315 242.2)"
+        ]
+      },
+      "qgc-ready-green-dark": {
+        "role": "secondary",
+        "displayName": "就绪绿",
+        "tonalRamp": [
+          "oklch(15% 0.2405 146.1)",
+          "oklch(26% 0.2405 146.1)",
+          "oklch(38% 0.2405 146.1)",
+          "oklch(49% 0.2405 146.1)",
+          "oklch(61% 0.2405 146.1)",
+          "oklch(72% 0.2405 146.1)",
+          "oklch(84% 0.2405 146.1)",
+          "oklch(95% 0.2405 146.1)"
+        ]
+      },
+      "qgc-warning-orange-dark": {
+        "role": "secondary",
+        "displayName": "警示橙",
+        "tonalRamp": [
+          "oklch(15% 0.1564 64.8)",
+          "oklch(26% 0.1564 64.8)",
+          "oklch(38% 0.1564 64.8)",
+          "oklch(49% 0.1564 64.8)",
+          "oklch(61% 0.1564 64.8)",
+          "oklch(72% 0.1564 64.8)",
+          "oklch(84% 0.1564 64.8)",
+          "oklch(95% 0.1564 64.8)"
+        ]
+      },
+      "qgc-danger-red-dark": {
+        "role": "secondary",
+        "displayName": "急停红",
+        "tonalRamp": [
+          "oklch(15% 0.2326 24.7)",
+          "oklch(26% 0.2326 24.7)",
+          "oklch(38% 0.2326 24.7)",
+          "oklch(49% 0.2326 24.7)",
+          "oklch(61% 0.2326 24.7)",
+          "oklch(72% 0.2326 24.7)",
+          "oklch(84% 0.2326 24.7)",
+          "oklch(95% 0.2326 24.7)"
+        ]
+      },
+      "qgc-window-dark": {
+        "role": "neutral",
+        "displayName": "工具深灰",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.0)",
+          "oklch(26% 0.0000 0.0)",
+          "oklch(38% 0.0000 0.0)",
+          "oklch(49% 0.0000 0.0)",
+          "oklch(61% 0.0000 0.0)",
+          "oklch(72% 0.0000 0.0)",
+          "oklch(84% 0.0000 0.0)",
+          "oklch(95% 0.0000 0.0)"
+        ]
+      },
+      "qgc-text-dark": {
+        "role": "neutral",
+        "displayName": "高对比白",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.0)",
+          "oklch(26% 0.0000 0.0)",
+          "oklch(38% 0.0000 0.0)",
+          "oklch(49% 0.0000 0.0)",
+          "oklch(61% 0.0000 0.0)",
+          "oklch(72% 0.0000 0.0)",
+          "oklch(84% 0.0000 0.0)",
+          "oklch(95% 0.0000 0.0)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "title": {
+        "displayName": "区域与章节标题",
+        "purpose": "字号随 ScreenTools.defaultFontPointSize 变化；面板标题与章节标题承担不同层级。"
+      },
+      "body": {
+        "displayName": "正文与数据标签",
+        "purpose": "常规说明、标签和确认正文；数据值可切换为粗体。"
+      },
+      "label": {
+        "displayName": "操作与状态文字",
+        "purpose": "按钮、系统栏状态和 Tab 文字；选中与未选中状态的字重由 QML 控制。"
+      },
+      "metric": {
+        "displayName": "关键航行数值",
+        "purpose": "系统状态页的船速与航向；尺寸为运行时基础字号的 2.4 倍。"
+      }
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": [],
+    "nativeQml": {
+      "scope": "本次 custom/res 作业主界面组件；不定义全部上游 QGC 页面。",
+      "sourceFiles": [
+        "custom/res/USVOperationsTheme.qml",
+        "custom/res/USVOperationsButton.qml",
+        "custom/res/USVOperationsPanel.qml",
+        "custom/res/USVSystemStatusBar.qml",
+        "custom/res/USVActionBar.qml",
+        "custom/res/USVFlyViewToolBar.qml",
+        "custom/res/USVFlyViewCustomLayer.qml",
+        "custom/res/USVFlyViewLayout.js",
+        "src/QmlControls/QGCPalette.cc",
+        "src/QmlControls/QGCLabel.qml",
+        "src/QmlControls/ScreenTools.qml",
+        "src/QmlControls/ScreenToolsController.cc"
+      ],
+      "paletteContext": "前置颜色为 QGCPalette 默认 enabled Dark 的输入。运行时主题、插件与平台仍由 QGC 管理；组件用以下绑定派生本地颜色。",
+      "colorBindings": {
+        "accent": "Qt.lighter(palette.buttonHighlight, 1.15)",
+        "danger": "Qt.lighter(palette.colorRed, 1.25)",
+        "dangerFill": "Qt.darker(palette.colorRed, 1.3)",
+        "dark": "palette.globalTheme === QGCPalette.Dark",
+        "divider": "Qt.tint(surface, Qt.rgba(text.r, text.g, text.b, 0.20))",
+        "good": "Qt.lighter(palette.colorGreen, dark ? 1 : 1.7)",
+        "primaryFill": "Qt.darker(palette.buttonHighlight, 1.8)",
+        "raised": "Qt.lighter(surface, 1.45)",
+        "secondary": "Qt.tint(surface, Qt.rgba(text.r, text.g, text.b, 0.72))",
+        "surface": "dark ? Qt.darker(palette.window, 1.18) : Qt.darker(palette.window, 7)",
+        "text": "dark ? palette.text : palette.window",
+        "warning": "Qt.lighter(palette.colorOrange, 1.25)"
+      },
+      "fontBinding": "QGCLabel.font.family = ScreenTools.normalFontFamily; Chinese/default path uses Open Sans; Korean locale selects NanumGothic; missing glyph fallback is resolved by Qt/platform.",
+      "typographyRatios": {
+        "panelTitle": "ScreenTools.defaultFontPointSize * 1.3",
+        "sectionTitle": "ScreenTools.defaultFontPointSize * 1.05",
+        "body": "ScreenTools.defaultFontPointSize",
+        "button": "ScreenTools.defaultFontPointSize",
+        "statusLabel": "ScreenTools.defaultFontPointSize * 0.9",
+        "statusValue": "ScreenTools.defaultFontPointSize * 1.08",
+        "tab": "ScreenTools.defaultFontPointSize * 0.9",
+        "feedback": "ScreenTools.defaultFontPointSize * 0.95",
+        "metric": "ScreenTools.defaultFontPointSize * 2.4"
+      },
+      "metricBindings": {
+        "unit": "ScreenTools.defaultFontPixelWidth",
+        "line": "ScreenTools.defaultFontPixelHeight",
+        "gap": "unit * 1.5",
+        "radius": "unit * 0.5",
+        "controlHeight": "Math.max(ScreenTools.minTouchPixels, line * 2.7)",
+        "buttonPadding": "unit",
+        "buttonImplicitWidth": "label.implicitWidth + unit * 3",
+        "normalBorderWidth": 1,
+        "focusBorderWidth": 2,
+        "selectedTabUnderlineHeight": 2
+      },
+      "layoutBindings": {
+        "operationsPanelWidth": "Math.min(fontWidth * 44, viewportWidth * 0.32)",
+        "toolbarHeight": "Math.max(ScreenTools.toolbarHeight, theme.line * 3.5)",
+        "scrollLaneWidth": "scrollBar.width + theme.unit * 0.65",
+        "actionGroups": "Flow wraps at available logical width; controls and feedback contribute to implicitHeight.",
+        "mapInsets": "QGCToolInsets incorporates the right panel and bottom action bar; overlay coordinates already begin below the toolbar."
+      },
+      "viewportTargets": [
+        "1280×720",
+        "1920×1080"
+      ],
+      "previewTranslation": "HTML/CSS snippets are static, self-contained design-panel samples. Colors resolve the native enabled Dark palette and Qt QColor transforms, not screenshot sampling. CSS ch/lh/mm approximate native font and touch metrics for this panel only; original ScreenTools/QML formulas remain authoritative. Samples do not connect to a vehicle or execute commands.",
+      "tonalRampStatus": "Eight-step OKLCH ramps are synthesized only for swatch inspection. They are not additional QML colors or production scales.",
+      "evidenceLimits": [
+        "已有截图使用生产作业 QML 组件与 mock Facts；数值与测量不可提升为设备事实。",
+        "截图顶部覆盖系统状态组件，未包含完整原生工具栏与确认条。",
+        "原始地图背景中的旧 GPS 文字不属于新 UI。",
+        "完整 QGC 工具栏集成与实船行为由主任务验证，不能由侧栏样式样本证明。"
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "主要按钮",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "开始或继续任务、开始点采样等主要动作；颜色也用于已选模式。样本不发送命令。",
+      "html": "<button class=\"ds-button-primary\" type=\"button\">开始任务</button>",
+      "css": ".ds-button-primary { --ds-unit: 1ch; background: #20567a; color: #ffffff; border: 1px solid #4a4a4a; border-radius: calc(var(--ds-unit) * .5); padding: var(--ds-unit); min-height: max(5mm, 2.7lh); font-family: \"Open Sans\", sans-serif; font-size: 1rem; font-weight: 700; text-align: center; cursor: pointer; } .ds-button-primary:hover:not(:disabled) { background: #20567a; } .ds-button-primary:active:not(:disabled) { background: #276793; } .ds-button-primary:focus-visible { border: 2px solid #43b2fd; outline: none; } .ds-button-primary:disabled { background: #1d1d1d; color: #c0c0c0; cursor: default; }"
+    },
+    {
+      "name": "常规按钮",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "暂停、返航和一般载荷操作的共用文字按钮。样本不发送命令。",
+      "html": "<button class=\"ds-button-secondary\" type=\"button\">暂停</button>",
+      "css": ".ds-button-secondary { --ds-unit: 1ch; background: #2a2a2a; color: #ffffff; border: 1px solid #4a4a4a; border-radius: calc(var(--ds-unit) * .5); padding: var(--ds-unit); min-height: max(5mm, 2.7lh); font-family: \"Open Sans\", sans-serif; font-size: 1rem; font-weight: 700; text-align: center; cursor: pointer; } .ds-button-secondary:hover:not(:disabled) { background: #323232; } .ds-button-secondary:active:not(:disabled) { background: #276793; } .ds-button-secondary:focus-visible { border: 2px solid #43b2fd; outline: none; } .ds-button-secondary:disabled { background: #1d1d1d; color: #c0c0c0; cursor: default; }"
+    },
+    {
+      "name": "危险按钮",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "急停及危险确认动作。正式界面先确认，设备接受之后仍提示核对实际停止；样本不发送命令。",
+      "html": "<button class=\"ds-button-destructive\" type=\"button\">紧急停止</button>",
+      "css": ".ds-button-destructive { --ds-unit: 1ch; background: #bb1f2a; color: #ffffff; border: 1px solid #ff5b66; border-radius: calc(var(--ds-unit) * .5); padding: var(--ds-unit); min-height: max(5mm, 2.7lh); font-family: \"Open Sans\", sans-serif; font-size: 1rem; font-weight: 700; text-align: center; cursor: pointer; } .ds-button-destructive:hover:not(:disabled) { background: #bb1f2a; } .ds-button-destructive:active:not(:disabled) { background: #e02532; } .ds-button-destructive:focus-visible { border: 2px solid #43b2fd; outline: none; } .ds-button-destructive:disabled { background: #1d1d1d; color: #c0c0c0; cursor: default; }"
+    },
+    {
+      "name": "四项作业导航",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "等宽文字 Tab；选中底面与底部蓝线共同表示当前页。此样本展示状态，不切换实际页面。",
+      "html": "<div class=\"ds-navigation\" role=\"tablist\" aria-label=\"作业监控\"><button class=\"ds-nav-button\" role=\"tab\" aria-selected=\"true\">系统状态</button><button class=\"ds-nav-button\" role=\"tab\" aria-selected=\"false\">传感器数据</button><button class=\"ds-nav-button\" role=\"tab\" aria-selected=\"false\">自动任务</button><button class=\"ds-nav-button\" role=\"tab\" aria-selected=\"false\">调试信息</button></div>",
+      "css": ".ds-navigation { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: #1d1d1d; font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-nav-button { position: relative; padding: 1ch .5ch; min-height: max(5mm, 2.7lh); border: 1px solid #4a4a4a; background: #1d1d1d; color: #c0c0c0; font: inherit; font-size: .9em; text-align: center; cursor: pointer; } .ds-nav-button:hover { background: #1d1d1d; } .ds-nav-button[aria-selected=\"true\"] { background: #2a2a2a; color: #ffffff; font-weight: 700; } .ds-nav-button[aria-selected=\"true\"]:hover { background: #2a2a2a; } .ds-nav-button[aria-selected=\"true\"]::after { content: \"\"; position: absolute; inset-inline: 0; bottom: 0; height: 2px; background: #43b2fd; } .ds-nav-button:focus-visible { border: 2px solid #43b2fd; outline: none; }"
+    },
+    {
+      "name": "工具容器",
+      "kind": "card",
+      "description": "实色表面、细边界、轻微圆角与行式内容；仅描述本次作业组件的容器。",
+      "html": "<section class=\"ds-panel\"><h3 class=\"ds-panel-title\">作业监控</h3><div class=\"ds-panel-row\"><span>采样状态</span><strong>—</strong></div></section>",
+      "css": ".ds-panel { --ds-unit: 1ch; background: #1d1d1d; color: #ffffff; border: 1px solid #4a4a4a; border-radius: calc(var(--ds-unit) * .5); padding: calc(var(--ds-unit) * 1.5); font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-panel-title { margin: 0 0 1ch; font-size: 1.3em; font-weight: 700; } .ds-panel-row { display: flex; justify-content: space-between; gap: 1ch; color: #c0c0c0; } .ds-panel-row strong { color: #ffffff; font-weight: 700; }"
+    },
+    {
+      "name": "系统栏状态片段",
+      "kind": "custom",
+      "refersTo": "status-segment",
+      "description": "次要标签、圆形状态点与粗体文字重复构成系统栏；圆点颜色不替代状态名称。",
+      "html": "<div class=\"ds-status\"><span class=\"ds-status-label\">飞控连接</span><div class=\"ds-status-value\"><i class=\"ds-status-dot\" aria-hidden=\"true\"></i><strong>未连接</strong></div></div>",
+      "css": ".ds-status { background: #1d1d1d; color: #ffffff; padding: .6ch 1ch .6ch 1.5ch; font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-status-label { color: #c0c0c0; font-size: .9em; } .ds-status-value { display: flex; gap: .6ch; align-items: center; margin-top: .25ch; font-size: 1.08em; font-weight: 700; } .ds-status-dot { display: inline-block; width: .8ch; height: .8ch; border-radius: 50%; background: #ffa216; }"
+    },
+    {
+      "name": "遥测数据行",
+      "kind": "custom",
+      "refersTo": "data-row",
+      "description": "标签与数据值共享同一行；无有效数据时显示破折号。",
+      "html": "<div class=\"ds-data-row\"><span class=\"ds-data-label\">距返航点</span><strong class=\"ds-data-value\">—</strong></div>",
+      "css": ".ds-data-row { display: flex; justify-content: space-between; gap: 1ch; background: #1d1d1d; padding: .5ch 0; font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-data-label { color: #c0c0c0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-data-value { color: #ffffff; font-weight: 700; }"
+    },
+    {
+      "name": "航线进度轨道",
+      "kind": "custom",
+      "description": "线性填充表示当前任务项位置，不代表采样已经完成。样本填充仅用于展示样式。",
+      "html": "<div class=\"ds-progress-sample\"><span class=\"ds-progress-caption\">任务项位置（样式示例）</span><div class=\"ds-progress\" role=\"progressbar\" aria-label=\"样式示例\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"50\"><div class=\"ds-progress-fill\"></div></div></div>",
+      "css": ".ds-progress-sample { background: #1d1d1d; padding: 1ch; font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-progress-caption { display: block; margin-bottom: 1ch; color: #c0c0c0; } .ds-progress { overflow: hidden; background: #2a2a2a; height: .75ch; border-radius: .375ch; } .ds-progress-fill { width: 50%; height: 100%; border-radius: inherit; background: #43b2fd; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "工业作业台",
+    "overview": "地图是驾驶与任务判断的工作底面。实色深色工具面板承载连接、船态、采样和操作反馈；清晰中文与稳定的状态语义服务于户外使用 Windows 笔记本的驾驶员和采样操作员。信息紧凑，重要数值与可执行动作有明确的视觉层级。\n\n本系统只描述 `custom/res/` 中本次完成的作业主界面组件，不定义上游 QGC 的全部页面。视觉事实来自 `USVOperationsTheme.qml`、`USVOperationsButton.qml`、`USVOperationsPanel.qml`、`USVSystemStatusBar.qml`、`USVActionBar.qml` 和 `USVFlyViewToolBar.qml`。颜色与字体度量继续继承 QGC；不新增字体或外部视觉依赖。",
+    "keyCharacteristics": [
+      "不透明的工业深色表面，依靠明度与细边界分层。",
+      "蓝色操作与选中状态，绿色就绪，橙色警示，红色故障与急停。",
+      "大号航行数值、常规状态文字和次要标签组成可扫读的层级。",
+      "尺寸随 QGC 字体度量与可用逻辑空间变化。",
+      "操作提示区分发送、设备接受和遥测确认的实际状态。"
+    ],
+    "rules": [
+      {
+        "name": "The 状态语义 Rule",
+        "body": "蓝色指向操作、选中与进度，绿色指向就绪，橙色指向等待与警示，红色指向故障与急停；每种状态都同时提供可读文字。",
+        "section": "colors"
+      },
+      {
+        "name": "The 度量一致 Rule",
+        "body": "字体继承 `ScreenTools.normalFontFamily`，字号与空间继承运行时 QGC 字体度量；预览夹具的字体、点数和像素尺寸不作为产品常量。",
+        "section": "typography"
+      },
+      {
+        "name": "The 实色分层 Rule",
+        "body": "作业面板、控制栏和危险确认面使用实色底面；通过明度与边界分层，使地图内容不影响文字与控制的阅读。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** 复用 `USVOperationsTheme.qml` 和 `USVOperationsButton.qml`，让作业组件共享颜色、尺寸和交互状态。",
+      "**Do** 让状态颜色与明确文字共同出现，并保留未知、离线、等待和故障的区别。",
+      "**Do** 按运行时字体度量安排间距、圆角和控件高度，按可用逻辑宽度适配。",
+      "**Do** 为长告警、操作反馈和确认正文保留换行空间，为诊断内容保留滚动通道。",
+      "**Do** 使用可见的键盘焦点，并以设备条件控制按钮启用状态。",
+      "**Do** 分开表达命令发送、设备接受与遥测确认的实际作业状态。"
+    ],
+    "donts": [
+      "**Don't** 用预览夹具的字体、数值或固定像素尺寸替代 QGC 的运行时来源。",
+      "**Don't** 让未知或离线数据看起来像有效的零值，或让命令接受看起来像设备已经完成动作。",
+      "**Don't** 把航线进度与采样完成状态混为同一个指标。",
+      "**Don't** 将本次作业界面的构图、演示地图标注或验证视口推广成全部上游 QGC 的视觉规则。"
+    ]
+  }
+}

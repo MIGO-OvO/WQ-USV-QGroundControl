@@ -15,7 +15,6 @@
     <!-- 飞行视图自定义层 -->
     <qresource prefix="/USV/qml/QGroundControl/FlyView">
         <file alias="FlyViewCustomLayer.qml">res/USVFlyViewCustomLayer.qml</file>
-        <file alias="FlyViewBottomRightRowLayout.qml">res/USVFlyViewBottomRightRowLayout.qml</file>
     </qresource>
 
     <!-- USV 专用 QML 模块文件 -->
