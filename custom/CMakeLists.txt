@@ -73,6 +73,7 @@ qt_add_qml_module(USVModule
         res/USVOperationsButton.qml
         res/USVOperationsState.qml
         res/USVPayloadCommandController.qml
+        res/USVSamplingWorkflow.qml
         res/USVOperationsPanel.qml
         res/USVSystemStatusBar.qml
         res/USVPayloadSummaryStrip.qml

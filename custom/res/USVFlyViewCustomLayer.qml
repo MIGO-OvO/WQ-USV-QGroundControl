@@ -1,9 +1,9 @@
 /*
- * THESIS: 地图为主，驾驶、采样与诊断按作业频率分层。
- * OWN-WORLD: 实色工业深色面板，清晰文字，蓝色操作、橙色警示、红色急停。
- * STORY: 驾驶员先确认连接与船态，再启动和监控自动采样，按需进入诊断。
- * FIRST VIEWPORT: 顶部系统栏；右侧四个 Tab；底部集中航行控制；地图占主要区域。
- * FORM: 用户指定工业控制布局，优先 1280×720 / 1920×1080；brief overrides seed 6bf7e73d。
+ * THESIS: 采样准备沿一条流程带完成，地图保留主工作区。
+ * OWN-WORLD: QGC 原生顶栏和航行仪表，实色深色面板、蓝色主操作和克制的状态色。
+ * STORY: 连接设备、获取有效信号、设置基线，再手动点采样；设备和诊断按需展开。
+ * FIRST VIEWPORT: 流程带停靠地图下方、原生仪表左侧；收起时保留状态、告警和急停。
+ * FORM: 用户选择准备流程带；brief overrides direction seed c8468699；原生 QML。
  * FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
  */
 import QtQuick
@@ -18,8 +18,8 @@ Item {
 
     property var _guidedController: globals.guidedControllerFlyView
     readonly property int _payloadCompId: 191
-    readonly property real _toolsMargin: theme.unit * 0.75
     property var activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
+    readonly property var dockGeometry: operationsState.workflowDock(width, height, theme.unit, parentToolInsets)
     property var mapControl
     property var parentToolInsets
     property var totalToolInsets: toolInsets
@@ -36,43 +36,41 @@ Item {
         vehicle: root.activeVehicle
     }
 
-    // Overlay coordinates already start below the toolbar; parent top insets
-    // are map coordinates. Do not add the toolbar height a second time.
-    USVOperationsPanel {
-        id: operationsPanel
+    // Reuse the established confirmation and ACK handling. Its Dialog is
+    // parented to Overlay.overlay, so it remains usable by this hidden control.
+    USVActionBar {
+        id: emergencyController
 
-        anchors.bottom: actionBar.top
-        anchors.bottomMargin: root._toolsMargin
-        anchors.right: parent.right
-        anchors.top: parent.top
+        availableWidth: root.width
         operations: operationsState
         theme: theme
-        width: operationsState.panelWidth(root.width, theme.unit)
-        z: 10
+        visible: false
     }
-    USVActionBar {
-        id: actionBar
+    USVSamplingWorkflow {
+        id: workflow
 
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: root.parentToolInsets ? Math.max(root.parentToolInsets.bottomEdgeLeftInset, root.parentToolInsets.bottomEdgeRightInset) : 0
-        availableWidth: Math.max(0, root.width - x)
+        anchors.bottomMargin: root.dockGeometry.bottom
+        emergencyController: emergencyController
+        maxHeight: root.dockGeometry.maxHeight
         operations: operationsState
         theme: theme
-        x: root.parentToolInsets ? root.parentToolInsets.leftEdgeBottomInset : 0
-        z: 11
+        width: root.dockGeometry.width
+        x: root.dockGeometry.x
+        z: 10
     }
     QGCToolInsets {
         id: toolInsets
 
-        bottomEdgeCenterInset: Math.max(root.parentToolInsets ? root.parentToolInsets.bottomEdgeCenterInset : 0, root.height - actionBar.y + root._toolsMargin)
-        bottomEdgeLeftInset: Math.max(root.parentToolInsets ? root.parentToolInsets.bottomEdgeLeftInset : 0, root.height - actionBar.y + root._toolsMargin)
-        bottomEdgeRightInset: Math.max(root.parentToolInsets ? root.parentToolInsets.bottomEdgeRightInset : 0, root.height - actionBar.y + root._toolsMargin)
+        bottomEdgeCenterInset: Math.max(root.parentToolInsets ? root.parentToolInsets.bottomEdgeCenterInset : 0, workflow.x <= root.width / 2 && workflow.x + workflow.width >= root.width / 2 ? root.height - workflow.y + theme.gap : 0)
+        bottomEdgeLeftInset: Math.max(root.parentToolInsets ? root.parentToolInsets.bottomEdgeLeftInset : 0, root.height - workflow.y + theme.gap)
+        bottomEdgeRightInset: root.parentToolInsets ? root.parentToolInsets.bottomEdgeRightInset : 0
         leftEdgeBottomInset: root.parentToolInsets ? root.parentToolInsets.leftEdgeBottomInset : 0
         leftEdgeCenterInset: root.parentToolInsets ? root.parentToolInsets.leftEdgeCenterInset : 0
         leftEdgeTopInset: root.parentToolInsets ? root.parentToolInsets.leftEdgeTopInset : 0
-        rightEdgeBottomInset: Math.max(root.parentToolInsets ? root.parentToolInsets.rightEdgeBottomInset : 0, operationsPanel.width + root._toolsMargin)
-        rightEdgeCenterInset: Math.max(root.parentToolInsets ? root.parentToolInsets.rightEdgeCenterInset : 0, operationsPanel.width + root._toolsMargin)
-        rightEdgeTopInset: Math.max(root.parentToolInsets ? root.parentToolInsets.rightEdgeTopInset : 0, operationsPanel.width + root._toolsMargin)
+        rightEdgeBottomInset: root.parentToolInsets ? root.parentToolInsets.rightEdgeBottomInset : 0
+        rightEdgeCenterInset: root.parentToolInsets ? root.parentToolInsets.rightEdgeCenterInset : 0
+        rightEdgeTopInset: root.parentToolInsets ? root.parentToolInsets.rightEdgeTopInset : 0
         topEdgeCenterInset: root.parentToolInsets ? root.parentToolInsets.topEdgeCenterInset : 0
         topEdgeLeftInset: root.parentToolInsets ? root.parentToolInsets.topEdgeLeftInset : 0
         topEdgeRightInset: root.parentToolInsets ? root.parentToolInsets.topEdgeRightInset : 0

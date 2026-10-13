@@ -10,6 +10,7 @@ QtObject {
     readonly property color dangerFill: Qt.darker(palette.colorRed, 1.3)
     readonly property bool dark: palette.globalTheme === QGCPalette.Dark
     readonly property color divider: Qt.tint(surface, Qt.rgba(text.r, text.g, text.b, 0.20))
+    readonly property real dockRadius: unit * 1.5
     readonly property real gap: unit * 1.5
     readonly property color good: Qt.lighter(palette.colorGreen, dark ? 1 : 1.7)
     readonly property real line: ScreenTools.defaultFontPixelHeight

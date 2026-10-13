@@ -56,6 +56,9 @@ QtObject {
     function panelWidth(viewportWidth, fontWidth) {
         return USVLayout.operationsPanelWidth(viewportWidth, fontWidth);
     }
+    function workflowDock(viewportWidth, viewportHeight, fontWidth, insets) {
+        return USVLayout.workflowDock(viewportWidth, viewportHeight, fontWidth, insets);
+    }
     function payloadMetric(name, digits, suffix) {
         return metric(payload ? payload[name] : null, digits, suffix, payloadOnline);
     }

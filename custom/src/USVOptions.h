@@ -31,8 +31,8 @@ protected:
     bool showMultiVehicleList() const override { return true; }
 
     /// @brief 显示仪表盘
-    /// 禁用原版仪表盘，使用 USVFlyViewCustomLayer 中的自定义仪表盘
-    bool showInstrumentPanel() const override { return false; }
+    /// 保留 QGC 原生 overlay 航行仪表，采样流程带通过工具 inset 避让
+    bool showInstrumentPanel() const override { return true; }
 
     /// @brief 显示地图比例尺
     bool showMapScale() const override { return true; }

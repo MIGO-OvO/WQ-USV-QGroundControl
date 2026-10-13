@@ -32,14 +32,14 @@
         },
         {
             "label": "停止检测",
-            "description": "停止当前采样或检测任务",
+            "description": "停止采样准备或当前作业，停止全部泵输出并等待设备确认",
             "mavCmd": 31011,
             "compId": 191,
             "showError": false
         },
         {
             "label": "暂停采样",
-            "description": "暂停当前正在进行的采样任务",
+            "description": "暂停当前正在执行的采样步骤；采样准备期间请使用停止检测",
             "mavCmd": 31012,
             "compId": 191,
             "showError": false

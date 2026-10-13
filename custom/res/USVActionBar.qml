@@ -108,6 +108,12 @@ Rectangle {
         feedbackWarning = false;
         feedback = qsTr("请在顶部确认开始任务；解锁检查由飞控执行");
     }
+    function requestEmergencyStop() {
+        if (!operations.connected || propulsionStopPending || payloadStopPending)
+            return;
+        emergencyDialog.targetVehicle = vehicle;
+        emergencyDialog.open();
+    }
 
     border.color: theme.divider
     border.width: 1
@@ -150,7 +156,7 @@ Rectangle {
     Timer {
         id: emergencyTimeout
 
-        interval: 10000
+        interval: 15000
 
         onTriggered: root.expireEmergencyRequest()
     }
@@ -239,10 +245,7 @@ Rectangle {
             helpText: qsTr("确认后停止推进电机并取消当前采样")
             text: qsTr("紧急停止")
 
-            onClicked: {
-                emergencyDialog.targetVehicle = root.vehicle;
-                emergencyDialog.open();
-            }
+            onClicked: root.requestEmergencyStop()
         }
     }
     QGCLabel {
@@ -264,7 +267,9 @@ Rectangle {
         property var targetVehicle: null
 
         closePolicy: Popup.CloseOnEscape
+        focus: true
         modal: true
+        objectName: "usvEmergencyDialog"
         padding: root.theme.gap
         parent: Overlay.overlay
         width: Math.min(root.theme.unit * 58, parent.width * 0.9)

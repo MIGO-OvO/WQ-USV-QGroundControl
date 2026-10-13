@@ -23,6 +23,7 @@ Item {
     property string flightMode: "Auto"
     property bool flightModeSetAvailable: true
     property QtObject gps: QtObject {
+        property var courseOverGround: ({rawValue: 182})
         property var count: ({
                 rawValue: 18
             })
@@ -39,6 +40,8 @@ Item {
     property var heading: ({
             rawValue: 182
         })
+    property var headingToHome: ({rawValue: 30})
+    property var headingToNextWP: ({rawValue: 145})
     property int id: 1
     property int lastCommand: 0
     property int lastComponent: 0

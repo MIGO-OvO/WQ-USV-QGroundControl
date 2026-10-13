@@ -19,6 +19,7 @@ if os.name == "nt":
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QSG_RHI_BACKEND", "software")
+os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Basic")
 
 from PySide6.QtCore import QMetaObject, QObject, QUrl, Q_RETURN_ARG, qInstallMessageHandler
 from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication
@@ -40,14 +41,21 @@ def install_mock_imports(directory):
         "ScreenTools.qml": """pragma Singleton
 import QtQuick
 QtObject {
-    property real defaultFontPixelWidth: 9
-    property real defaultFontPixelHeight: 20
-    property real defaultFontPointSize: 12
+    property real fontFactor: 1
+    property real defaultFontPixelWidth: 9 * fontFactor
+    property real defaultFontPixelHeight: 20 * fontFactor
+    property real defaultFontPointSize: 12 * fontFactor
+    property real smallFontPointSize: 10 * fontFactor
     property real minTouchPixels: 44
+    property bool isTinyScreen: false
 }""",
         "QGCLabel.qml": """import QtQuick
 import QtQuick.Controls
-Label { font.pointSize: ScreenTools.defaultFontPointSize }""",
+Label {
+    font.pointSize: ScreenTools.defaultFontPointSize
+    color: labelPalette.text
+    QGCPalette { id: labelPalette }
+}""",
         "QGCPalette.qml": """import QtQuick
 QtObject {
     enum Theme { Light, Dark }
@@ -57,6 +65,8 @@ QtObject {
     property color text: globalTheme === QGCPalette.Dark ? "#ffffff" : "#333333"
     property color colorBlue: globalTheme === QGCPalette.Dark ? "#536dff" : "#1a72ff"
     property color buttonHighlight: "#3A9BDC"
+    property color primaryButton: "#3A9BDC"
+    property color mapIndicator: "#3A9BDC"
     property color colorGreen: globalTheme === QGCPalette.Dark ? "#00e04b" : "#008f2d"
     property color colorOrange: globalTheme === QGCPalette.Dark ? "#de8500" : "#bf7539"
     property color colorRed: globalTheme === QGCPalette.Dark ? "#f32836" : "#b52b2b"

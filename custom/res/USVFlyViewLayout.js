@@ -9,6 +9,36 @@ function operationsPanelWidth(viewportWidth, fontWidth) {
     return Math.min(fontWidth * 44, viewportWidth * 0.32)
 }
 
+// The overlay already starts below the toolbar. Prefer the space beside bottom
+// controls; lift the dock only when it cannot fit there, so the compass height
+// is not counted twice. All breakpoints follow logical font units.
+function workflowDock(viewportWidth, viewportHeight, fontWidth, insets) {
+    const w = Math.max(0, viewportWidth)
+    const h = Math.max(0, viewportHeight)
+    const unit = Math.max(1, fontWidth)
+    const gap = unit * 1.5
+    function inset(name) {
+        const value = insets ? Number(insets[name]) : 0
+        return isFinite(value) ? Math.max(0, value) : 0
+    }
+    const sideLeft = Math.max(inset("leftEdgeTopInset"), inset("leftEdgeCenterInset"))
+    const sideRight = Math.max(inset("rightEdgeTopInset"), inset("rightEdgeCenterInset"))
+    const besideLeft = Math.max(sideLeft, inset("leftEdgeBottomInset")) + gap
+    const besideRight = Math.max(sideRight, inset("rightEdgeBottomInset")) + gap
+    const besideWidth = Math.max(0, w - besideLeft - besideRight)
+    const lifted = besideWidth < unit * 62
+    const left = lifted ? sideLeft + gap : besideLeft
+    const right = lifted ? sideRight + gap : besideRight
+    const bottom = lifted ? Math.max(inset("bottomEdgeLeftInset"), inset("bottomEdgeCenterInset"), inset("bottomEdgeRightInset")) + gap : gap
+    return {
+        x: Math.min(left, w),
+        width: Math.max(0, Math.min(unit * 110, w - left - right)),
+        bottom: Math.min(bottom, h),
+        maxHeight: Math.max(0, h - bottom - gap),
+        lifted: lifted
+    }
+}
+
 function missionPosition(index, count) {
     if (!isFinite(index) || !isFinite(count) || count <= 0) return 0
     return Math.max(0, Math.min(1, index / count))
