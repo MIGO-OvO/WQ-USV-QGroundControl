@@ -78,7 +78,7 @@ void SendMavCommandWithHandlerTest::_testCaseWorker(TestCase_t& testCase)
         QVERIFY(QTest::qWaitFor([&]() { return _progressHandlerCalled; }, 10000));
     }
 
-    QVERIFY(QTest::qWaitFor([&]() { return _resultHandlerCalled; }, 10000));
+    QVERIFY(QTest::qWaitFor([&]() { return _resultHandlerCalled; }, 15000));
     QCOMPARE(_mockLink->receivedMavCommandCount(testCase.command), testCase.expectedSendCount);
     QCOMPARE(vehicle->_findMavCommandListEntryIndex(MAV_COMP_ID_AUTOPILOT1, testCase.command), -1);
 

@@ -72,6 +72,19 @@ qt_add_qml_module(USVModule
         res/USVOperationsTheme.qml
         res/USVOperationsButton.qml
         res/USVOperationsState.qml
+        res/USVCockpitIcon.qml
+        res/USVCockpitSurface.qml
+        res/USVCockpitValueRow.qml
+        res/USVSystemStatusCell.qml
+        res/USVCockpitController.qml
+        res/USVCurrentTaskPanel.qml
+        res/USVEmergencyStopPanel.qml
+        res/USVCockpitControlPanel.qml
+        res/USVCockpitDeviceControls.qml
+        res/USVCockpitNavigationControls.qml
+        res/USVCockpitDiagnostics.qml
+        res/USVCockpitMetric.qml
+        res/USVRealtimeDataStrip.qml
         res/USVPayloadCommandController.qml
         res/USVSamplingWorkflow.qml
         res/USVOperationsPanel.qml

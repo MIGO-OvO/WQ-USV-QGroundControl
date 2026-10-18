@@ -19,6 +19,8 @@ class SendMavCommandWithSignallingTest : public UnitTest
 private slots:
     void _performTestCases(void);
     void _duplicateCommand(void);
+    void _retryRestartsAckDeadline(void);
+    void _payloadRetryPolicy(void);
 
 private:
     typedef struct {

@@ -27,6 +27,7 @@ Item {
     property string message
     property int    action
     property var    actionData
+    property var    targetVehicle: null
     property bool   hideTrigger:        false
     property var    mapIndicator
     property alias  optionText:         optionCheckBox.text
@@ -58,6 +59,7 @@ Item {
     }
 
     function confirmCancelled() {
+        targetVehicle = null
         guidedValueSlider.visible = false
         visible = false
         hideTrigger = false
@@ -93,6 +95,7 @@ Item {
         spacing:    ScreenTools.defaultFontPixelWidth
 
         QGCDelayButton {
+            backgroundOpacity:  guidedController.singleMissionEntry ? ScreenTools.panelOpacity : 1
             text:               control.title
             enabled:            _utmspEnabled === true? utmspSliderTrigger : true
             opacity:            if(_utmspEnabled){utmspSliderTrigger === true ? 1 : 0.5} else{1}
@@ -105,7 +108,8 @@ Item {
                     guidedValueSlider.visible = false
                 }
                 hideTrigger = false
-                guidedController.executeAction(control.action, control.actionData, sliderOutputValue, control.optionChecked)
+                guidedController.executeAction(control.action, control.actionData, sliderOutputValue, control.optionChecked, control.targetVehicle)
+                control.targetVehicle = null
                 if (mapIndicator) {
                     mapIndicator.actionConfirmed()
                     mapIndicator = undefined

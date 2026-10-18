@@ -54,7 +54,7 @@ Item {
         rightEdgeCenterInset:   topRightPanel.rightEdgeCenterInset
         rightEdgeBottomInset:   bottomRightRowLayout.rightEdgeBottomInset
         topEdgeLeftInset:       toolStrip.topEdgeLeftInset
-        topEdgeCenterInset:     mapScale.topEdgeCenterInset
+        topEdgeCenterInset:     parentToolInsets.topEdgeCenterInset + mapScale.topEdgeCenterInset
         topEdgeRightInset:      topRightPanel.topEdgeRightInset
         bottomEdgeLeftInset:    virtualJoystickMultiTouch.visible ? virtualJoystickMultiTouch.bottomEdgeLeftInset : parentToolInsets.bottomEdgeLeftInset
         bottomEdgeCenterInset:  bottomRightRowLayout.bottomEdgeCenterInset
@@ -67,8 +67,8 @@ Item {
         anchors.right:          parent.right
         maximumHeight:          parent.height - (bottomRightRowLayout.height + _margins * 4)
 
-        property real topEdgeRightInset:    height + _layoutMargin
-        property real rightEdgeTopInset:    width + _layoutMargin
+        property real topEdgeRightInset:    visible ? height + _layoutMargin : 0
+        property real rightEdgeTopInset:    visible ? width + _layoutMargin : 0
         property real rightEdgeCenterInset: rightEdgeTopInset
     }
 
@@ -149,6 +149,7 @@ Item {
 
     FlyViewToolStrip {
         id:                     toolStrip
+        objectName:             "flyViewToolStrip"
         anchors.left:           parent.left
         anchors.top:            parent.top
         z:                      QGroundControl.zOrderWidgets
@@ -163,7 +164,7 @@ Item {
         }
 
         property real topEdgeLeftInset:     visible ? y + height : 0
-        property real leftEdgeTopInset:     visible ? x + width : 0
+        property real leftEdgeTopInset:     visible ? x + Math.max(width, _dropPanel.occupiedWidth) : 0
         property real leftEdgeCenterInset:  leftEdgeTopInset
     }
 
@@ -174,7 +175,7 @@ Item {
 
     MapScale {
         id:                 mapScale
-        anchors.left:       toolStrip.right
+        anchors.horizontalCenter: parent.horizontalCenter
         anchors.top:        parent.top
         mapControl:         _mapControl
         autoHide:           true

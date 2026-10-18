@@ -1,8 +1,22 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-12T04:24:15.200Z",
+  "generatedAt": "2026-10-12T13:22:27.322Z",
   "title": "Design System: WQ-USV 作业界面",
   "extensions": {
+    "currentCockpit": {
+      "updatedAt": "2026-10-15",
+      "approved": true,
+      "sources": ["custom/res/USVFlyViewCustomLayer.qml", "custom/res/USVFlyViewToolBar.qml", "custom/res/USVCockpitController.qml", "custom/res/USVOperationsTheme.qml"],
+      "regions": ["top system status", "left read-only task", "right controls", "independent top-right emergency stop", "bottom read-only telemetry"],
+      "panelAlpha": 0.92,
+      "toolbarAlpha": 0.97,
+      "foregroundAlpha": 1,
+      "controlHeight": "Math.max(ScreenTools.minTouchPixels, line * 2.4)",
+      "layout": "USVFlyViewLayout.cockpitLayout; font-derived metrics; native map tool insets",
+      "safety": "Dual propulsion/payload stop; ACK is not actual stop; explicit telemetry and physical verification before unlocking; process-local Vehicle safety latch",
+      "documentation": "custom/docs/cockpit-implementation.md",
+      "legacyScope": "Existing workflow motion, breakpoints, nativeQml, component previews and narrative below describe the earlier preparation dock. Preserve as history; currentCockpit and the current DESIGN.md section govern the approved cockpit."
+    },
     "colorMeta": {
       "qgc-action-blue": {
         "role": "primary",
@@ -91,42 +105,80 @@
     },
     "typographyMeta": {
       "title": {
-        "displayName": "区域与章节标题",
-        "purpose": "字号随 ScreenTools.defaultFontPointSize 变化；面板标题与章节标题承担不同层级。"
+        "displayName": "工具标题",
+        "purpose": "采样准备区域、当前操作与危险确认标题；字号随 QGC 运行时字号缩放。"
       },
       "body": {
-        "displayName": "正文与数据标签",
-        "purpose": "常规说明、标签和确认正文；数据值可切换为粗体。"
+        "displayName": "正文",
+        "purpose": "说明、状态、步骤名称、诊断与确认正文。"
       },
       "label": {
-        "displayName": "操作与状态文字",
-        "purpose": "按钮、系统栏状态和 Tab 文字；选中与未选中状态的字重由 QML 控制。"
+        "displayName": "动作标签",
+        "purpose": "共用文字按钮与当前准备步骤的强调文字。"
       },
       "metric": {
-        "displayName": "关键航行数值",
-        "purpose": "系统状态页的船速与航向；尺寸为运行时基础字号的 2.4 倍。"
+        "displayName": "测量数值",
+        "purpose": "检测电压与吸光度；无有效测量显示破折号。"
       }
     },
     "shadows": [],
-    "motion": [],
-    "breakpoints": [],
+    "motion": [
+      {
+        "name": "workflow-height",
+        "value": "220ms OutCubic",
+        "purpose": "展开／收起流程带的高度变化；收起即禁用正文并把焦点交还标题区展开按钮。"
+      },
+      {
+        "name": "workflow-content-opacity",
+        "value": "140ms OutCubic",
+        "purpose": "正文随展开／收起淡入淡出。"
+      },
+      {
+        "name": "detail-reveal-wait",
+        "value": "220ms",
+        "purpose": "等待流程带高度稳定后再定位详情。"
+      },
+      {
+        "name": "detail-reveal-scroll",
+        "value": "180ms OutCubic",
+        "purpose": "滚动至包含设备与诊断入口的详情区域，保留切换和收回入口。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "workflow-three-columns",
+        "value": "width >= ScreenTools.defaultFontPixelWidth * 93"
+      },
+      {
+        "name": "workflow-two-columns",
+        "value": "ScreenTools.defaultFontPixelWidth * 62 <= width < ScreenTools.defaultFontPixelWidth * 93"
+      },
+      {
+        "name": "workflow-one-column",
+        "value": "width < ScreenTools.defaultFontPixelWidth * 62"
+      }
+    ],
     "nativeQml": {
-      "scope": "本次 custom/res 作业主界面组件；不定义全部上游 QGC 页面。",
-      "sourceFiles": [
+      "sources": [
         "custom/res/USVOperationsTheme.qml",
         "custom/res/USVOperationsButton.qml",
-        "custom/res/USVOperationsPanel.qml",
-        "custom/res/USVSystemStatusBar.qml",
-        "custom/res/USVActionBar.qml",
-        "custom/res/USVFlyViewToolBar.qml",
+        "custom/res/USVSamplingWorkflow.qml",
+        "custom/res/USVPayloadCommandController.qml",
+        "custom/res/USVOperationsState.qml",
         "custom/res/USVFlyViewCustomLayer.qml",
         "custom/res/USVFlyViewLayout.js",
+        "custom/res/USVActionBar.qml",
+        "custom/custom.qrc",
+        "custom/src/USVOptions.h",
         "src/QmlControls/QGCPalette.cc",
         "src/QmlControls/QGCLabel.qml",
         "src/QmlControls/ScreenTools.qml",
-        "src/QmlControls/ScreenToolsController.cc"
+        "src/QmlControls/ScreenToolsController.cc",
+        "src/QmlControls/FlyViewToolBar.qml",
+        "src/FlyView/FlyViewBottomRightRowLayout.qml",
+        "src/FlyView/FlyViewInstrumentPanel.qml"
       ],
-      "paletteContext": "前置颜色为 QGCPalette 默认 enabled Dark 的输入。运行时主题、插件与平台仍由 QGC 管理；组件用以下绑定派生本地颜色。",
+      "paletteContext": "前置颜色为 QGCPalette 默认 enabled Dark 的输入。运行时主题、插件与平台仍由 QGC 管理；组件使用本地绑定派生颜色，不修改全局主题。",
       "colorBindings": {
         "accent": "Qt.lighter(palette.buttonHighlight, 1.15)",
         "danger": "Qt.lighter(palette.colorRed, 1.25)",
@@ -143,47 +195,68 @@
       },
       "fontBinding": "QGCLabel.font.family = ScreenTools.normalFontFamily; Chinese/default path uses Open Sans; Korean locale selects NanumGothic; missing glyph fallback is resolved by Qt/platform.",
       "typographyRatios": {
-        "panelTitle": "ScreenTools.defaultFontPointSize * 1.3",
-        "sectionTitle": "ScreenTools.defaultFontPointSize * 1.05",
+        "workflowTitle": "ScreenTools.defaultFontPointSize * 1.15",
+        "actionTitle": "ScreenTools.defaultFontPointSize * 1.2",
+        "confirmationTitle": "ScreenTools.defaultFontPointSize * 1.35",
         "body": "ScreenTools.defaultFontPointSize",
         "button": "ScreenTools.defaultFontPointSize",
-        "statusLabel": "ScreenTools.defaultFontPointSize * 0.9",
-        "statusValue": "ScreenTools.defaultFontPointSize * 1.08",
-        "tab": "ScreenTools.defaultFontPointSize * 0.9",
-        "feedback": "ScreenTools.defaultFontPointSize * 0.95",
-        "metric": "ScreenTools.defaultFontPointSize * 2.4"
+        "stepDescription": "ScreenTools.smallFontPointSize",
+        "metric": "ScreenTools.defaultFontPointSize * 1.45"
       },
       "metricBindings": {
         "unit": "ScreenTools.defaultFontPixelWidth",
         "line": "ScreenTools.defaultFontPixelHeight",
         "gap": "unit * 1.5",
         "radius": "unit * 0.5",
+        "dockRadius": "unit * 1.5",
         "controlHeight": "Math.max(ScreenTools.minTouchPixels, line * 2.7)",
         "buttonPadding": "unit",
         "buttonImplicitWidth": "label.implicitWidth + unit * 3",
         "normalBorderWidth": 1,
-        "focusBorderWidth": 2,
-        "selectedTabUnderlineHeight": 2
+        "focusBorderWidth": 2
       },
       "layoutBindings": {
-        "operationsPanelWidth": "Math.min(fontWidth * 44, viewportWidth * 0.32)",
-        "toolbarHeight": "Math.max(ScreenTools.toolbarHeight, theme.line * 3.5)",
-        "scrollLaneWidth": "scrollBar.width + theme.unit * 0.65",
-        "actionGroups": "Flow wraps at available logical width; controls and feedback contribute to implicitHeight.",
-        "mapInsets": "QGCToolInsets incorporates the right panel and bottom action bar; overlay coordinates already begin below the toolbar."
+        "dockMaximumWidth": "unit * 110",
+        "dockLiftThreshold": "besideWidth < unit * 62",
+        "dockInsets": "Use native left/right side and bottom tool insets; lift above bottom controls only when besideWidth cannot fit the dock. Overlay already begins below the official toolbar.",
+        "dockMaximumHeight": "Math.max(0, viewportHeight - dockBottom - gap)",
+        "workflowTargetHeight": "Math.min(maxHeight, header.implicitHeight + (expanded ? bodyColumn.implicitHeight + gap * 2 : 0))",
+        "workflowColumns": "stacked ? 1 : compact ? 2 : 3; primary action spans two columns only in the two-column layout.",
+        "contentWidth": "Math.max(0, body.width - gap * 2 - bodyScroll.width - unit)",
+        "scrollLaneWidth": "bodyScroll.width + unit",
+        "detailScrollTarget": "Math.max(0, Math.min(body.contentHeight - body.height, detailActions.y - unit))",
+        "deviceControls": "Flow wraps at available logical width.",
+        "mapInsets": "QGCToolInsets inherits native insets and contributes the dock to left/center bottom avoidance; native right-side instruments remain authoritative."
       },
+      "componentBindings": {
+        "buttonEmergencyFill": "flat destructive: Qt.tint(surface, Qt.rgba(danger.r, danger.g, danger.b, hovered ? 0.28 : 0.14))",
+        "completedStepFill": "Qt.tint(surface, Qt.rgba(good.r, good.g, good.b, 0.22))",
+        "stepMarkerDiameter": "line * 1.5",
+        "headerStatusDotDiameter": "unit * 0.65",
+        "collapseFocus": "expanded is toggled; expandButton.forceActiveFocus(Qt.OtherFocusReason); body.enabled = expanded.",
+        "collapsedVisibility": "Title, readiness, alert, feedback, emergency and expand controls stay outside the disabled body."
+      },
+      "nativeIntegration": "custom/custom.qrc no longer overrides FlyViewToolBar or FlyViewBottomRightRowLayout; USVOptions.showInstrumentPanel returns true. The production surface reuses official top status/confirmation and overlay navigation instruments.",
+      "telemetryPresentation": [
+        "Signal, baseline, sampling status, steps and loops come from Facts; invalid signal hides past voltage values; absorbance also requires a set baseline.",
+        "Pump X/Y/Z/A values are angles only; no running state is inferred from them.",
+        "Sending, ACK accepted and telemetry state update are distinct feedback stages; pending or awaited commands prevent duplicate start actions, while stop commands retain their allowed conditions.",
+        "Emergency stop opens the existing confirmation path; an accepted command is not proof of actual device stop."
+      ],
       "viewportTargets": [
         "1280×720",
         "1920×1080"
       ],
-      "previewTranslation": "HTML/CSS snippets are static, self-contained design-panel samples. Colors resolve the native enabled Dark palette and Qt QColor transforms, not screenshot sampling. CSS ch/lh/mm approximate native font and touch metrics for this panel only; original ScreenTools/QML formulas remain authoritative. Samples do not connect to a vehicle or execute commands.",
+      "previewTranslation": "HTML/CSS snippets are self-contained static design-panel samples, not the product implementation. Literal colors resolve the enabled Dark palette and Qt QColor transforms. CSS ch/lh/mm approximate native metrics for this panel only; ScreenTools/QML bindings stay authoritative. Samples do not connect to a vehicle or execute commands.",
       "tonalRampStatus": "Eight-step OKLCH ramps are synthesized only for swatch inspection. They are not additional QML colors or production scales.",
       "evidenceLimits": [
-        "已有截图使用生产作业 QML 组件与 mock Facts；数值与测量不可提升为设备事实。",
-        "截图顶部覆盖系统状态组件，未包含完整原生工具栏与确认条。",
-        "原始地图背景中的旧 GPS 文字不属于新 UI。",
-        "完整 QGC 工具栏集成与实船行为由主任务验证，不能由侧栏样式样本证明。"
-      ]
+        "Qt offscreen evidence uses the production workflow QML with mock Facts; sample values and measurements are not device facts.",
+        "Screenshot top bars are explicitly marked validation placeholders; they do not define a custom product toolbar.",
+        "The map background is a schematic verification surface, not a production map design.",
+        "Official top bar and navigation instruments are restored from native resources; the design-panel snippets do not reproduce them.",
+        "Physical viewport sizes and simulated fontWidth values are QA inputs, not production breakpoints or pixel tokens."
+      ],
+      "deliberatelyNotCanonized": "验证占位顶栏、示意地图、mock 遥测、原型 hex 与模拟 fontWidth；它们属于预览或测试夹具，不是原生产品视觉与设备事实。"
     }
   },
   "components": [
@@ -191,79 +264,89 @@
       "name": "主要按钮",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "开始或继续任务、开始点采样等主要动作；颜色也用于已选模式。样本不发送命令。",
-      "html": "<button class=\"ds-button-primary\" type=\"button\">开始任务</button>",
-      "css": ".ds-button-primary { --ds-unit: 1ch; background: #20567a; color: #ffffff; border: 1px solid #4a4a4a; border-radius: calc(var(--ds-unit) * .5); padding: var(--ds-unit); min-height: max(5mm, 2.7lh); font-family: \"Open Sans\", sans-serif; font-size: 1rem; font-weight: 700; text-align: center; cursor: pointer; } .ds-button-primary:hover:not(:disabled) { background: #20567a; } .ds-button-primary:active:not(:disabled) { background: #276793; } .ds-button-primary:focus-visible { border: 2px solid #43b2fd; outline: none; } .ds-button-primary:disabled { background: #1d1d1d; color: #c0c0c0; cursor: default; }"
+      "description": "当前可执行的准备或采样动作；文字随条件变化。样本不发送命令。",
+      "html": "<button class=\"ds-button-primary\" type=\"button\">启动信号采集</button>",
+      "css": ".ds-button-primary { --ds-unit: 1ch; color: #ffffff; border: 1px solid #4a4a4a; border-radius: calc(var(--ds-unit) * .5); padding: var(--ds-unit); min-height: max(5mm, 2.7lh); font-family: \"Open Sans\", sans-serif; font-size: 1rem; font-weight: 700; text-align: center; cursor: pointer; } .ds-button-primary:focus-visible { border: 2px solid #43b2fd; outline: none; } .ds-button-primary:disabled { background: #1d1d1d; color: #c0c0c0; cursor: default; } .ds-button-primary { background: #20567a; } .ds-button-primary:hover:not(:disabled) { background: #20567a; } .ds-button-primary:active:not(:disabled) { background: #276793; }"
     },
     {
       "name": "常规按钮",
       "kind": "button",
       "refersTo": "button-secondary",
-      "description": "暂停、返航和一般载荷操作的共用文字按钮。样本不发送命令。",
-      "html": "<button class=\"ds-button-secondary\" type=\"button\">暂停</button>",
-      "css": ".ds-button-secondary { --ds-unit: 1ch; background: #2a2a2a; color: #ffffff; border: 1px solid #4a4a4a; border-radius: calc(var(--ds-unit) * .5); padding: var(--ds-unit); min-height: max(5mm, 2.7lh); font-family: \"Open Sans\", sans-serif; font-size: 1rem; font-weight: 700; text-align: center; cursor: pointer; } .ds-button-secondary:hover:not(:disabled) { background: #323232; } .ds-button-secondary:active:not(:disabled) { background: #276793; } .ds-button-secondary:focus-visible { border: 2px solid #43b2fd; outline: none; } .ds-button-secondary:disabled { background: #1d1d1d; color: #c0c0c0; cursor: default; }"
+      "description": "收起、设备控制和通信诊断等一般文字动作，使用共用按钮。",
+      "html": "<button class=\"ds-button-secondary\" type=\"button\">设备控制</button>",
+      "css": ".ds-button-secondary { --ds-unit: 1ch; color: #ffffff; border: 1px solid #4a4a4a; border-radius: calc(var(--ds-unit) * .5); padding: var(--ds-unit); min-height: max(5mm, 2.7lh); font-family: \"Open Sans\", sans-serif; font-size: 1rem; font-weight: 700; text-align: center; cursor: pointer; } .ds-button-secondary:focus-visible { border: 2px solid #43b2fd; outline: none; } .ds-button-secondary:disabled { background: #1d1d1d; color: #c0c0c0; cursor: default; } .ds-button-secondary { background: #2a2a2a; } .ds-button-secondary:hover:not(:disabled) { background: #323232; } .ds-button-secondary:active:not(:disabled) { background: #276793; }"
     },
     {
-      "name": "危险按钮",
+      "name": "急停入口",
+      "kind": "button",
+      "refersTo": "button-emergency",
+      "description": "流程带标题区始终保留的 flat 危险变体；点击正式控件会进入确认。样本不发送命令。",
+      "html": "<button class=\"ds-button-emergency\" type=\"button\">紧急停止</button>",
+      "css": ".ds-button-emergency { --ds-unit: 1ch; color: #ffffff; border: 1px solid #4a4a4a; border-radius: calc(var(--ds-unit) * .5); padding: var(--ds-unit); min-height: max(5mm, 2.7lh); font-family: \"Open Sans\", sans-serif; font-size: 1rem; font-weight: 700; text-align: center; cursor: pointer; } .ds-button-emergency:focus-visible { border: 2px solid #43b2fd; outline: none; } .ds-button-emergency:disabled { background: #1d1d1d; color: #c0c0c0; cursor: default; } .ds-button-emergency { background: #3d2627; border-color: #ff5b66; } .ds-button-emergency:hover:not(:disabled) { background: #5c2e31; } .ds-button-emergency:active:not(:disabled) { background: #e02532; } .ds-button-emergency:focus-visible { border-color: #43b2fd; }"
+    },
+    {
+      "name": "危险确认按钮",
       "kind": "button",
       "refersTo": "button-destructive",
-      "description": "急停及危险确认动作。正式界面先确认，设备接受之后仍提示核对实际停止；样本不发送命令。",
-      "html": "<button class=\"ds-button-destructive\" type=\"button\">紧急停止</button>",
-      "css": ".ds-button-destructive { --ds-unit: 1ch; background: #bb1f2a; color: #ffffff; border: 1px solid #ff5b66; border-radius: calc(var(--ds-unit) * .5); padding: var(--ds-unit); min-height: max(5mm, 2.7lh); font-family: \"Open Sans\", sans-serif; font-size: 1rem; font-weight: 700; text-align: center; cursor: pointer; } .ds-button-destructive:hover:not(:disabled) { background: #bb1f2a; } .ds-button-destructive:active:not(:disabled) { background: #e02532; } .ds-button-destructive:focus-visible { border: 2px solid #43b2fd; outline: none; } .ds-button-destructive:disabled { background: #1d1d1d; color: #c0c0c0; cursor: default; }"
+      "description": "急停确认框中的发送动作，使用完整危险底色。接受提示仍要求核对实际停止；样本不发送命令。",
+      "html": "<button class=\"ds-button-destructive\" type=\"button\">发出紧急停止</button>",
+      "css": ".ds-button-destructive { --ds-unit: 1ch; color: #ffffff; border: 1px solid #4a4a4a; border-radius: calc(var(--ds-unit) * .5); padding: var(--ds-unit); min-height: max(5mm, 2.7lh); font-family: \"Open Sans\", sans-serif; font-size: 1rem; font-weight: 700; text-align: center; cursor: pointer; } .ds-button-destructive:focus-visible { border: 2px solid #43b2fd; outline: none; } .ds-button-destructive:disabled { background: #1d1d1d; color: #c0c0c0; cursor: default; } .ds-button-destructive { background: #bb1f2a; border-color: #ff5b66; } .ds-button-destructive:hover:not(:disabled) { background: #bb1f2a; } .ds-button-destructive:active:not(:disabled) { background: #e02532; } .ds-button-destructive:focus-visible { border-color: #43b2fd; }"
     },
     {
-      "name": "四项作业导航",
+      "name": "按需详情入口",
       "kind": "nav",
-      "refersTo": "navigation",
-      "description": "等宽文字 Tab；选中底面与底部蓝线共同表示当前页。此样本展示状态，不切换实际页面。",
-      "html": "<div class=\"ds-navigation\" role=\"tablist\" aria-label=\"作业监控\"><button class=\"ds-nav-button\" role=\"tab\" aria-selected=\"true\">系统状态</button><button class=\"ds-nav-button\" role=\"tab\" aria-selected=\"false\">传感器数据</button><button class=\"ds-nav-button\" role=\"tab\" aria-selected=\"false\">自动任务</button><button class=\"ds-nav-button\" role=\"tab\" aria-selected=\"false\">调试信息</button></div>",
-      "css": ".ds-navigation { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: #1d1d1d; font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-nav-button { position: relative; padding: 1ch .5ch; min-height: max(5mm, 2.7lh); border: 1px solid #4a4a4a; background: #1d1d1d; color: #c0c0c0; font: inherit; font-size: .9em; text-align: center; cursor: pointer; } .ds-nav-button:hover { background: #1d1d1d; } .ds-nav-button[aria-selected=\"true\"] { background: #2a2a2a; color: #ffffff; font-weight: 700; } .ds-nav-button[aria-selected=\"true\"]:hover { background: #2a2a2a; } .ds-nav-button[aria-selected=\"true\"]::after { content: \"\"; position: absolute; inset-inline: 0; bottom: 0; height: 2px; background: #43b2fd; } .ds-nav-button:focus-visible { border: 2px solid #43b2fd; outline: none; }"
+      "refersTo": "detail-navigation",
+      "description": "两个共用文字按钮分别打开设备或诊断，选中项蓝底；再次点击收回。此样本仅显示选中状态。",
+      "html": "<nav class=\"ds-details\" aria-label=\"采样详情\"><button class=\"ds-detail-button\" type=\"button\" aria-expanded=\"true\">设备控制</button><button class=\"ds-detail-button\" type=\"button\" aria-expanded=\"false\">通信诊断</button></nav>",
+      "css": ".ds-details { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 1ch; background: #1d1d1d; font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-detail-button { padding: 1ch; min-height: max(5mm, 2.7lh); border: 1px solid #4a4a4a; border-radius: .5ch; background: #2a2a2a; color: #ffffff; font: inherit; font-weight: 700; cursor: pointer; } .ds-detail-button:hover { background: #323232; } .ds-detail-button[aria-expanded=\"true\"], .ds-detail-button[aria-expanded=\"true\"]:hover { background: #20567a; } .ds-detail-button:active, .ds-detail-button[aria-expanded=\"true\"]:active { background: #276793; } .ds-detail-button:focus-visible { border: 2px solid #43b2fd; outline: none; }"
     },
     {
-      "name": "工具容器",
+      "name": "实色停靠容器",
       "kind": "card",
-      "description": "实色表面、细边界、轻微圆角与行式内容；仅描述本次作业组件的容器。",
-      "html": "<section class=\"ds-panel\"><h3 class=\"ds-panel-title\">作业监控</h3><div class=\"ds-panel-row\"><span>采样状态</span><strong>—</strong></div></section>",
-      "css": ".ds-panel { --ds-unit: 1ch; background: #1d1d1d; color: #ffffff; border: 1px solid #4a4a4a; border-radius: calc(var(--ds-unit) * .5); padding: calc(var(--ds-unit) * 1.5); font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-panel-title { margin: 0 0 1ch; font-size: 1.3em; font-weight: 700; } .ds-panel-row { display: flex; justify-content: space-between; gap: 1ch; color: #c0c0c0; } .ds-panel-row strong { color: #ffffff; font-weight: 700; }"
+      "refersTo": "workflow-dock",
+      "description": "无外边框的圆角流程带底面，标题与状态留在滚动内容之外；样本中的状态为未知。",
+      "html": "<section class=\"ds-workflow\"><div class=\"ds-workflow-header\"><h3 class=\"ds-workflow-title\">采样准备</h3><i class=\"ds-workflow-dot\" aria-hidden=\"true\"></i><span class=\"ds-workflow-state\">等待连接</span></div><p class=\"ds-workflow-copy\">通过 QGC 连接飞控，确认通信链路正常。</p></section>",
+      "css": ".ds-workflow { background: #1d1d1d; color: #ffffff; border-radius: 1.5ch; padding: 1ch 1.5ch; font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-workflow-header { display: flex; align-items: center; gap: 1ch; } .ds-workflow-title { margin: 0; font-size: 1.15em; font-weight: 700; } .ds-workflow-dot { width: .65ch; height: .65ch; border-radius: 50%; background: #ffa216; } .ds-workflow-state { color: #ffa216; } .ds-workflow-copy { margin: 1.5ch 0 0; color: #c0c0c0; }"
     },
     {
-      "name": "系统栏状态片段",
+      "name": "准备条件步骤",
       "kind": "custom",
-      "refersTo": "status-segment",
-      "description": "次要标签、圆形状态点与粗体文字重复构成系统栏；圆点颜色不替代状态名称。",
-      "html": "<div class=\"ds-status\"><span class=\"ds-status-label\">飞控连接</span><div class=\"ds-status-value\"><i class=\"ds-status-dot\" aria-hidden=\"true\"></i><strong>未连接</strong></div></div>",
-      "css": ".ds-status { background: #1d1d1d; color: #ffffff; padding: .6ch 1ch .6ch 1.5ch; font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-status-label { color: #c0c0c0; font-size: .9em; } .ds-status-value { display: flex; gap: .6ch; align-items: center; margin-top: .25ch; font-size: 1.08em; font-weight: 700; } .ds-status-dot { display: inline-block; width: .8ch; height: .8ch; border-radius: 50%; background: #ffa216; }"
+      "refersTo": "preparation-step",
+      "description": "已满足条件、当前项与后续项的视觉状态；编号和文字承载语义。静态样本不代表设备事实。",
+      "html": "<ol class=\"ds-steps\" aria-label=\"采样准备条件（样式示例）\"><li class=\"ds-step ds-step-complete\"><span class=\"ds-step-marker\"><svg viewBox=\"0 0 100 100\" aria-hidden=\"true\"><path d=\"M28 51 L44 66 L73 35\" vector-effect=\"non-scaling-stroke\"/></svg></span><span>连接设备</span></li><li class=\"ds-step ds-step-current\"><span class=\"ds-step-marker\">2</span><strong>获取信号</strong></li><li class=\"ds-step\"><span class=\"ds-step-marker\">3</span><span>设置基线</span></li><li class=\"ds-step\"><span class=\"ds-step-marker\">4</span><span>手动点采样</span></li></ol>",
+      "css": ".ds-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1ch; margin: 0; padding: 1.5ch; list-style: none; background: #1d1d1d; color: #ffffff; font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-step { display: flex; align-items: center; gap: 1ch; } .ds-step-marker { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 1.5lh; height: 1.5lh; border-radius: 50%; background: #2a2a2a; } .ds-step-current .ds-step-marker { background: #20567a; } .ds-step-complete .ds-step-marker { background: #174827; } .ds-step-marker svg { width: 100%; height: 100%; } .ds-step-marker path { fill: none; stroke: #00e04b; stroke-width: 1.8; }"
+    },
+    {
+      "name": "有效测量块",
+      "kind": "custom",
+      "refersTo": "measurement-value",
+      "description": "检测电压与吸光度并排呈现；条件无效显示破折号，基线单独以文字表达。",
+      "html": "<div class=\"ds-measurements\"><div class=\"ds-measurement\"><span class=\"ds-measurement-label\">检测电压</span><strong class=\"ds-measurement-value\">— V</strong></div><div class=\"ds-measurement\"><span class=\"ds-measurement-label\">吸光度</span><strong class=\"ds-measurement-value\">— Abs</strong></div><span class=\"ds-measurement-baseline\">基线 未设置</span></div>",
+      "css": ".ds-measurements { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 3ch; row-gap: 1ch; background: #1d1d1d; padding: 1.5ch; font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-measurement { display: flex; flex-direction: column; gap: .5ch; } .ds-measurement-label { color: #c0c0c0; } .ds-measurement-value { color: #ffffff; font-size: 1.45em; font-weight: 700; } .ds-measurement-baseline { grid-column: 1 / -1; color: #ffa216; }"
     },
     {
       "name": "遥测数据行",
       "kind": "custom",
       "refersTo": "data-row",
-      "description": "标签与数据值共享同一行；无有效数据时显示破折号。",
-      "html": "<div class=\"ds-data-row\"><span class=\"ds-data-label\">距返航点</span><strong class=\"ds-data-value\">—</strong></div>",
-      "css": ".ds-data-row { display: flex; justify-content: space-between; gap: 1ch; background: #1d1d1d; padding: .5ch 0; font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-data-label { color: #c0c0c0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-data-value { color: #ffffff; font-weight: 700; }"
-    },
-    {
-      "name": "航线进度轨道",
-      "kind": "custom",
-      "description": "线性填充表示当前任务项位置，不代表采样已经完成。样本填充仅用于展示样式。",
-      "html": "<div class=\"ds-progress-sample\"><span class=\"ds-progress-caption\">任务项位置（样式示例）</span><div class=\"ds-progress\" role=\"progressbar\" aria-label=\"样式示例\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"50\"><div class=\"ds-progress-fill\"></div></div></div>",
-      "css": ".ds-progress-sample { background: #1d1d1d; padding: 1ch; font-family: \"Open Sans\", sans-serif; font-size: 1rem; } .ds-progress-caption { display: block; margin-bottom: 1ch; color: #c0c0c0; } .ds-progress { overflow: hidden; background: #2a2a2a; height: .75ch; border-radius: .375ch; } .ds-progress-fill { width: 50%; height: 100%; border-radius: inherit; background: #43b2fd; }"
+      "description": "设备详情使用可换行的标签与真实返回数值；泵组只记录角度，无遥测显示破折号。",
+      "html": "<div class=\"ds-data-row\">泵组角度 X —° Y —° Z —° A —°</div>",
+      "css": ".ds-data-row { background: #1d1d1d; color: #c0c0c0; padding: 1ch 1.5ch; font-family: \"Open Sans\", sans-serif; font-size: 1rem; overflow-wrap: anywhere; }"
     }
   ],
   "narrative": {
     "northStar": "工业作业台",
-    "overview": "地图是驾驶与任务判断的工作底面。实色深色工具面板承载连接、船态、采样和操作反馈；清晰中文与稳定的状态语义服务于户外使用 Windows 笔记本的驾驶员和采样操作员。信息紧凑，重要数值与可执行动作有明确的视觉层级。\n\n本系统只描述 `custom/res/` 中本次完成的作业主界面组件，不定义上游 QGC 的全部页面。视觉事实来自 `USVOperationsTheme.qml`、`USVOperationsButton.qml`、`USVOperationsPanel.qml`、`USVSystemStatusBar.qml`、`USVActionBar.qml` 和 `USVFlyViewToolBar.qml`。颜色与字体度量继续继承 QGC；不新增字体或外部视觉依赖。",
+    "overview": "地图是驾驶与任务判断的工作底面。官方 QGC 顶栏和 overlay 航行仪表继续承担航行信息，新增工具表面使用实色深色、清晰中文和稳定的状态语义。信息紧凑，当前条件、有效测量与可执行动作有明确层级，服务于户外使用 Windows 笔记本的驾驶员和采样操作员。\n\n本系统记录当前生产作业组件的视觉规则，不定义上游 QGC 的全部页面。视觉事实来自 `custom/res/USVOperationsTheme.qml`、`USVOperationsButton.qml`、`USVSamplingWorkflow.qml`、`USVFlyViewCustomLayer.qml` 和 `USVActionBar.qml` 的急停确认。颜色、字体与逻辑尺寸继续继承 QGC；原生顶栏及仪表的形态由上游资源负责。",
     "keyCharacteristics": [
       "不透明的工业深色表面，依靠明度与细边界分层。",
       "蓝色操作与选中状态，绿色就绪，橙色警示，红色故障与急停。",
-      "大号航行数值、常规状态文字和次要标签组成可扫读的层级。",
+      "当前步骤、测量数值、常规状态文字和次要标签组成可扫读的层级。",
       "尺寸随 QGC 字体度量与可用逻辑空间变化。",
       "操作提示区分发送、设备接受和遥测确认的实际状态。"
     ],
     "rules": [
       {
         "name": "The 状态语义 Rule",
-        "body": "蓝色指向操作、选中与进度，绿色指向就绪，橙色指向等待与警示，红色指向故障与急停；每种状态都同时提供可读文字。",
+        "body": "蓝色指向操作、当前步骤与选中入口，绿色指向已满足条件，橙色指向等待与警示，红色指向故障与急停；颜色始终配合可读状态文字。",
         "section": "colors"
       },
       {
@@ -273,7 +356,7 @@
       },
       {
         "name": "The 实色分层 Rule",
-        "body": "作业面板、控制栏和危险确认面使用实色底面；通过明度与边界分层，使地图内容不影响文字与控制的阅读。",
+        "body": "新增作业工具表面和危险确认面使用实色底面；通过明度与必要边界分层，使地图内容不影响文字与控制的阅读。",
         "section": "elevation"
       }
     ],
@@ -283,12 +366,15 @@
       "**Do** 按运行时字体度量安排间距、圆角和控件高度，按可用逻辑宽度适配。",
       "**Do** 为长告警、操作反馈和确认正文保留换行空间，为诊断内容保留滚动通道。",
       "**Do** 使用可见的键盘焦点，并以设备条件控制按钮启用状态。",
-      "**Do** 分开表达命令发送、设备接受与遥测确认的实际作业状态。"
+      "**Do** 分开表达命令发送、设备接受与遥测确认的实际作业状态。",
+      "**Do** 保留官方顶栏、航行仪表及任务确认交互，让新工具表面遵守原生 inset。",
+      "**Do** 让详情入口、收起状态和急停入口在字体放大及内容滚动后仍可达。"
     ],
     "donts": [
       "**Don't** 用预览夹具的字体、数值或固定像素尺寸替代 QGC 的运行时来源。",
       "**Don't** 让未知或离线数据看起来像有效的零值，或让命令接受看起来像设备已经完成动作。",
       "**Don't** 把航线进度与采样完成状态混为同一个指标。",
+      "**Don't** 从泵组角度推断或伪造泵的运行状态。",
       "**Don't** 将本次作业界面的构图、演示地图标注或验证视口推广成全部上游 QGC 的视觉规则。"
     ]
   }

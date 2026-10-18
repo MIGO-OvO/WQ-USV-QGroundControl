@@ -15,6 +15,8 @@ Item {
         }
     }
     property int commandCalls: 0
+    property int defaultComponentId: 1
+    property bool usvSafetyLocked: false
     property var distanceToHome: ({
             rawValue: 86
         })
@@ -44,12 +46,15 @@ Item {
     property var headingToNextWP: ({rawValue: 145})
     property int id: 1
     property int lastCommand: 0
+    function isMavCommandPending(component, command) { return false; }
     property int lastComponent: 0
     property string missionFlightMode: "Auto"
     property int pauseCalls: 0
     property string pauseFlightMode: "Hold"
     property bool pauseVehicleSupported: true
     property QtObject payload: QtObject {
+        property var freshFields: ["voltage", "absorbance", "pumpX", "pumpY", "pumpZ", "pumpA", "status", "packetCount", "stepCurrent", "stepTotal", "loopCurrent", "loopTotal", "sampleCount", "pidError", "pidMode", "baselineSet", "referenceVoltage", "baselineVoltage", "spectrometerValid", "jetsonTemp", "detectorTemp", "jetsonCpu", "jetsonMemory", "detectorHeap"]
+        property double telemetryAgeMs: 0
         property var absorbance: ({
                 rawValue: 0.1157
             })

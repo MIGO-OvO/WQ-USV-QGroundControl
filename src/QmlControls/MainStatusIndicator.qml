@@ -17,6 +17,9 @@ RowLayout {
     id:         control
     spacing:    ScreenTools.defaultFontPixelWidth
 
+    property bool armingAllowed: true
+    property bool compact: false
+
     property var    _activeVehicle:     QGroundControl.multiVehicleManager.activeVehicle
     property bool   _armed:             _activeVehicle ? _activeVehicle.armed : false
     property real   _margins:           ScreenTools.defaultFontPixelWidth
@@ -32,6 +35,16 @@ RowLayout {
         mainWindow.showIndicatorDrawer(overallStatusComponent, control)
     }
 
+    function requestArm(force) {
+        if (!_activeVehicle || !armingAllowed) return
+        if (force) {
+            _allowForceArm = false
+            _activeVehicle.forceArm()
+        } else {
+            _activeVehicle.armed = true
+        }
+    }
+
     QGCPalette { id: qgcPal }
 
     QGCLabel {
@@ -39,9 +52,9 @@ RowLayout {
         Layout.fillHeight:  true
         Layout.preferredWidth: contentWidth + (vehicleMessagesIcon.visible ? vehicleMessagesIcon.width + control.spacing : 0)
         verticalAlignment:  Text.AlignVCenter
-        text:               mainStatusText()
+        text:               control.compact && !_activeVehicle ? qsTr("未连接") : mainStatusText()
         color:              qgcPal.windowTransparentText
-        font.pointSize:     ScreenTools.largeFontPointSize
+        font.pointSize:     control.compact ? ScreenTools.defaultFontPointSize : ScreenTools.largeFontPointSize
 
         property string _commLostText:      qsTr("Comms Lost")
         property string _readyToFlyText:    qsTr("Ready")
@@ -194,19 +207,14 @@ RowLayout {
                 spacing: ScreenTools.defaultFontPixelWidth
 
                 QGCDelayButton {
-                    enabled:    _armed || !_healthAndArmingChecksSupported || _activeVehicle.healthAndArmingCheckReport.canArm
+                    enabled:    _armed || (control.armingAllowed && (!_healthAndArmingChecksSupported || _activeVehicle.healthAndArmingCheckReport.canArm))
                     text:       _armed ? qsTr("Disarm") : (control._allowForceArm ? qsTr("Force Arm") : qsTr("Arm"))
 
                     onActivated: {
                         if (_armed) {
                             _activeVehicle.armed = false
                         } else {
-                            if (_allowForceArm) {
-                                _allowForceArm = false
-                                _activeVehicle.forceArm()
-                            } else {
-                                _activeVehicle.armed = true
-                            }
+                            control.requestArm(control._allowForceArm)
                         }
                         mainWindow.closeIndicatorDrawer()
                     }

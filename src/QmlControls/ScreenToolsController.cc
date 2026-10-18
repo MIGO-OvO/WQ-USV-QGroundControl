@@ -79,6 +79,17 @@ QString ScreenToolsController::normalFontFamily()
 {
     //-- See App.SettinsGroup.json for index
     const int langID = SettingsManager::instance()->appSettings()->qLocaleLanguage()->rawValue().toInt();
+#ifdef Q_OS_WIN
+    if (langID == QLocale::Chinese || (langID == QLocale::AnyLanguage && QLocale::system().language() == QLocale::Chinese)) {
+        const QStringList families = QFontDatabase::families();
+        for (const auto &family : {QStringLiteral("Microsoft YaHei UI"), QStringLiteral("Microsoft YaHei")}) {
+            if (families.contains(family)) {
+                return family;
+            }
+        }
+        return QFontDatabase::systemFont(QFontDatabase::GeneralFont).family();
+    }
+#endif
     if (langID == QLocale::Korean) {
         return QStringLiteral("NanumGothic");
     }

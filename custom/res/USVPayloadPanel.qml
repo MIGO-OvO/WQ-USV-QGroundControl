@@ -108,7 +108,8 @@ Rectangle {
         target: Qt.application
         function onStateChanged() {
             if (Qt.application.state === Qt.ApplicationActive && root._hasPendingCommand
-                    && Date.now() - root._pendingSince >= root._commandTimeoutFor(root._pendingCommand)) {
+                    && Date.now() - root._pendingSince >= root._commandTimeoutFor(root._pendingCommand)
+                    && !(root.vehicle && root.vehicle.isMavCommandPending(root._payloadCompId, root._pendingCommand))) {
                 root._lastCommandWarning = true
                 root._lastCommandMessage = root._commandName(root._pendingCommand) + qsTr("响应超时，请核对载荷状态")
                 root._clearPendingCommand(root._pendingCommand)
@@ -210,6 +211,10 @@ Rectangle {
         repeat: false
         onTriggered: {
             if (_hasPendingCommand) {
+                if (vehicle && vehicle.isMavCommandPending(_payloadCompId, _pendingCommand)) {
+                    commandTimeoutTimer.restart()
+                    return
+                }
                 _lastCommandWarning = true
                 _lastCommandMessage = _commandName(_pendingCommand) + qsTr("响应超时")
                 _pendingCommand = 0

@@ -1,105 +1,93 @@
 import QtQuick
 import QtQuick.Layouts
 
-import QGroundControl
 import QGroundControl.Controls
 
 RowLayout {
     id: root
 
     required property var operations
-    property var theme: _theme
+    required property var theme
+    readonly property bool compact: width < theme.unit * 150
 
     spacing: 0
 
-    USVOperationsTheme {
-        id: _theme
-
+    USVSystemStatusCell {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.preferredWidth: 1
+        theme: root.theme
+        compact: root.compact
+        separator: false
+        title: qsTr("GPS")
+        symbol: "gps"
+        healthy: root.operations.gpsReady
+        stateText: root.operations.gpsText
+        detail: qsTr("%1 星 · HDOP %2").arg(root.operations.gpsCountText).arg(root.operations.metric(root.operations.gps ? root.operations.gps.hdop : null, 1, "", root.operations.connected))
     }
-    Repeater {
-        model: [
-            {
-                title: qsTr("GPS"),
-                value: operations.gpsText,
-                ok: operations.gpsReady,
-                warning: !operations.gpsReady
-            },
-            {
-                title: qsTr("飞控连接"),
-                value: operations.connected ? qsTr("在线") : operations.vehicle ? qsTr("连接中断") : qsTr("未连接"),
-                ok: operations.connected,
-                warning: !operations.connected
-            },
-            {
-                title: qsTr("电池"),
-                value: operations.batteryText,
-                ok: operations.batteryPercent > 20,
-                warning: operations.lowBattery
-            },
-            {
-                title: qsTr("网络 / 船载链路"),
-                value: operations.payloadOnline ? qsTr("遥测在线") : operations.connected ? qsTr("无载荷遥测") : qsTr("未连接"),
-                ok: operations.payloadOnline,
-                warning: operations.connected && !operations.payloadOnline
-            },
-            {
-                title: qsTr("任务状态"),
-                value: operations.taskText,
-                ok: operations.taskExecuting,
-                warning: operations.holdMode || (operations.autoMode && !operations.taskExecuting)
-            }
-        ]
 
-        delegate: Item {
-            required property int index
-            required property var modelData
+    USVSystemStatusCell {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.preferredWidth: 1
+        theme: root.theme
+        compact: root.compact
+        title: qsTr("通信")
+        symbol: "link"
+        healthy: root.operations.connected
+        stateText: root.operations.connected ? qsTr("MAVLink 在线") : qsTr("飞控离线")
+        detail: root.operations.vehicle && root.operations.connected ? root.operations.vehicle.vehicleLinkManager.primaryLinkName : qsTr("等待连接")
+    }
 
-            Layout.fillHeight: true
-            Layout.fillWidth: true
-            Layout.minimumWidth: root.theme.unit * 10
+    USVSystemStatusCell {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.preferredWidth: 1
+        theme: root.theme
+        compact: root.compact
+        title: qsTr("ROS")
+        symbol: "ros"
+        healthy: false
+        stateText: root.operations.payloadOnline ? qsTr("节点待核验") : qsTr("载荷遥测离线")
+        detail: root.operations.payloadOnline ? qsTr("载荷遥测在线") : qsTr("检查船载链路")
+    }
 
-            Rectangle {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                color: root.theme.divider
-                height: parent.height * 0.55
-                visible: index > 0
-                width: 1
-            }
-            ColumnLayout {
-                anchors.bottomMargin: root.theme.unit * 0.6
-                anchors.fill: parent
-                anchors.leftMargin: root.theme.unit * 1.5
-                anchors.rightMargin: root.theme.unit
-                anchors.topMargin: root.theme.unit * 0.6
-                spacing: root.theme.unit * 0.25
+    USVSystemStatusCell {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.preferredWidth: 1
+        theme: root.theme
+        compact: root.compact
+        title: qsTr("ADS")
+        symbol: "signal"
+        healthy: root.operations.validSignal
+        stateText: root.operations.validSignal ? qsTr("信号有效") : qsTr("无有效信号")
+        detail: qsTr("硬件自检未接入")
+    }
 
-                QGCLabel {
-                    Layout.fillWidth: true
-                    color: root.theme.secondary
-                    elide: Text.ElideRight
-                    font.pointSize: ScreenTools.defaultFontPointSize * 0.9
-                    text: modelData.title
-                }
-                RowLayout {
-                    spacing: root.theme.unit * 0.6
+    USVSystemStatusCell {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.preferredWidth: 1
+        theme: root.theme
+        compact: root.compact
+        title: qsTr("泵组")
+        symbol: "pump"
+        healthy: false
+        stateText: qsTr("运行待核验")
+        detail: root.operations.pumpFeedbackValid ? qsTr("角度遥测有效") : qsTr("角度遥测不可用")
+    }
 
-                    Rectangle {
-                        color: modelData.ok ? root.theme.good : modelData.warning ? root.theme.warning : root.theme.secondary
-                        height: width
-                        radius: width / 2
-                        width: root.theme.unit * 0.8
-                    }
-                    QGCLabel {
-                        Layout.fillWidth: true
-                        color: root.theme.text
-                        elide: Text.ElideRight
-                        font.bold: true
-                        font.pointSize: ScreenTools.defaultFontPointSize * 1.08
-                        text: modelData.value
-                    }
-                }
-            }
-        }
+    USVSystemStatusCell {
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.preferredWidth: 1
+        theme: root.theme
+        compact: root.compact
+        title: qsTr("电源")
+        symbol: "battery"
+        healthy: root.operations.batteryPercent > 20
+        stateText: root.operations.batteryPercent >= 0 ? qsTr("%1 · %2").arg(root.operations.batteryText).arg(root.operations.batteryVoltageText) : qsTr("数据不可用")
+        detail: root.operations.lowBattery ? qsTr("电量低，请安排返航") : qsTr("飞控电池遥测")
     }
 }

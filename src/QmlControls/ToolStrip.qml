@@ -15,7 +15,7 @@ import QGroundControl.Controls
 
 Rectangle {
     id:         _root
-    color:      qgcPal.windowTransparent
+    color:      Qt.rgba(qgcPal.window.r, qgcPal.window.g, qgcPal.window.b, ScreenTools.panelOpacity)
     width:      ScreenTools.defaultFontPixelWidth * 7
     height:     Math.min(maxHeight, toolStripColumn.height + (flickable.anchors.margins * 2))
     radius:     ScreenTools.defaultFontPixelWidth / 2

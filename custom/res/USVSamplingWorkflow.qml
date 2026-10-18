@@ -48,8 +48,6 @@ Rectangle {
             Qt.callLater(function() { body.returnToBounds(); });
     }
     function send(command) {
-        if (emergencyController)
-            emergencyController.feedback = "";
         commands.send(command, 0);
     }
     function progressText() {
@@ -78,6 +76,7 @@ Rectangle {
     USVPayloadCommandController {
         id: commands
         operations: root.operations
+        safetyLocked: !!root.emergencyController && !!root.emergencyController.safetyLocked
     }
     Timer {
         id: detailReveal

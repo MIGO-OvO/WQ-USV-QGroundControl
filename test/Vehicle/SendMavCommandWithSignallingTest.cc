@@ -38,7 +38,7 @@ void SendMavCommandWithSignallingTest::_testCaseWorker(TestCase_t& testCase)
 
     vehicle->sendMavCommand(MAV_COMP_ID_AUTOPILOT1, testCase.command, true /* showError */);
 
-    QCOMPARE(spyResult.wait(10000), true);
+    QCOMPARE(spyResult.wait(15000), true);
     QList<QVariant> arguments = spyResult.takeFirst();
 
     // Gimbal controler requests MAVLINK_MSG_ID_GIMBAL_MANAGER_INFORMATION on vehicle connection,
@@ -95,4 +95,36 @@ void SendMavCommandWithSignallingTest::_duplicateCommand(void)
     QCOMPARE(arguments.at(4).value<Vehicle::MavCmdResultFailureCode_t>(),               Vehicle::MavCmdResultFailureDuplicateCommand);
     QCOMPARE(_mockLink->receivedMavCommandCount(MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE),    1);
     QVERIFY(vehicle->_findMavCommandListEntryIndex(MAV_COMP_ID_AUTOPILOT1, MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE) != -1);
+}
+
+void SendMavCommandWithSignallingTest::_retryRestartsAckDeadline(void)
+{
+    _connectMockLinkNoInitialConnectSequence();
+    auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+    const auto command = MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE;
+    vehicle->sendMavCommand(MAV_COMP_ID_AUTOPILOT1, command, false);
+    const int index = vehicle->_findMavCommandListEntryIndex(MAV_COMP_ID_AUTOPILOT1, command);
+    QVERIFY(index >= 0);
+    QTest::qWait(80);
+    vehicle->_sendMavCommandFromList(index);
+    QCOMPARE(vehicle->_mavCommandList[index].tryCount, 2);
+    QVERIFY(vehicle->_mavCommandList[index].elapsedTimer.elapsed() < 60);
+    _disconnectMockLink();
+}
+
+void SendMavCommandWithSignallingTest::_payloadRetryPolicy(void)
+{
+    _connectMockLinkNoInitialConnectSequence();
+    auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+    // Inspect immediately, before MockLink can answer these custom commands.
+    for (int command = 31010; command <= 31019; ++command) {
+        vehicle->sendMavCommand(191, static_cast<MAV_CMD>(command), false);
+        const int index = vehicle->_findMavCommandListEntryIndex(191, static_cast<MAV_CMD>(command));
+        QVERIFY(index >= 0);
+        const auto& entry = vehicle->_mavCommandList[index];
+        const bool stopping = command == 31011 || command == 31016 || command == 31019;
+        QCOMPARE(entry.maxTries, stopping ? 3 : 1);
+        QVERIFY(entry.ackTimeoutMSecs >= (command == 31018 ? 40000 : stopping ? 15000 : 5000));
+    }
+    _disconnectMockLink();
 }

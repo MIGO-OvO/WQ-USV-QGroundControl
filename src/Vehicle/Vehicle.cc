@@ -67,8 +67,15 @@
 #endif
 
 #include <QtCore/QDateTime>
+#include <QtCore/QMutex>
+#include <QtCore/QSet>
 
 QGC_LOGGING_CATEGORY(VehicleLog, "Vehicle.Vehicle")
+
+// Retain the local stop latch across reconnects for the lifetime of this GCS.
+// The cockpit releases it only after telemetry and on-site stop verification.
+static QMutex usvSafetyMutex;
+static QSet<int> usvSafetyLockedVehicleIds;
 
 #define UPDATE_TIMER 50
 #define DEFAULT_LAT  38.965767f
@@ -1583,6 +1590,28 @@ void Vehicle::setArmed(bool armed, bool showError)
                    armed ? 1.0f : 0.0f);
 }
 
+bool Vehicle::usvSafetyLocked() const
+{
+    const QMutexLocker locker(&usvSafetyMutex);
+    return usvSafetyLockedVehicleIds.contains(_id);
+}
+
+void Vehicle::setUsvSafetyLocked(bool locked)
+{
+    {
+        const QMutexLocker locker(&usvSafetyMutex);
+        if (usvSafetyLockedVehicleIds.contains(_id) == locked) {
+            return;
+        }
+        if (locked) {
+            usvSafetyLockedVehicleIds.insert(_id);
+        } else {
+            usvSafetyLockedVehicleIds.remove(_id);
+        }
+    }
+    emit usvSafetyLockedChanged();
+}
+
 void Vehicle::forceArm(void)
 {
     sendMavCommand(_defaultComponentId,
@@ -1615,6 +1644,10 @@ bool Vehicle::setFlightModeCustom(const QString& flightMode, uint8_t* base_mode,
 
 void Vehicle::setFlightMode(const QString& flightMode)
 {
+    if (usvSafetyLocked()) {
+        qgcApp()->showAppMessage(tr("Emergency stop is awaiting verification. Mode changes are locked."));
+        return;
+    }
     uint8_t     base_mode;
     uint32_t    custom_mode;
 
@@ -2530,9 +2563,9 @@ void Vehicle::sendMavCommandWithLambdaFallback(std::function<void()> lambda, int
     }
 }
 
-bool Vehicle::isMavCommandPending(int targetCompId, MAV_CMD command)
+bool Vehicle::isMavCommandPending(int targetCompId, int command)
 {
-    bool pending = ((-1) < _findMavCommandListEntryIndex(targetCompId, command));
+    bool pending = ((-1) < _findMavCommandListEntryIndex(targetCompId, static_cast<MAV_CMD>(command)));
     // qDebug() << "Pending target: " << targetCompId << ", command: " << (int)command << ", pending: " << (pending ? "yes" : "no");
     return pending;
 }
@@ -2595,6 +2628,45 @@ bool Vehicle::_commandCanBeDuplicated(MAV_CMD command)
     }
 }
 
+bool Vehicle::_usvSafetyCommandAllowed(int compId, MAV_CMD command, float param1) const
+{
+    if (!usvSafetyLocked()) {
+        return true;
+    }
+    if (compId == 191 && command >= 31010 && command <= 31019) {
+        return command == 31011 || command == 31016 || command == 31019;
+    }
+    switch (command) {
+    case MAV_CMD_COMPONENT_ARM_DISARM:
+    case MAV_CMD_DO_PAUSE_CONTINUE:
+        return param1 == 0.0f;
+    case MAV_CMD_DO_SET_MODE:
+    case MAV_CMD_MISSION_START:
+    case MAV_CMD_DO_REPOSITION:
+    case MAV_CMD_NAV_RETURN_TO_LAUNCH:
+    case MAV_CMD_DO_CHANGE_SPEED:
+    case MAV_CMD_DO_SET_MISSION_CURRENT:
+        return false;
+    default:
+        return true;
+    }
+}
+
+void Vehicle::_rejectUsvSafetyCommand(int compId, MAV_CMD command, const MavCmdAckHandlerInfo_t* handler, bool showError)
+{
+    mavlink_command_ack_t ack = {};
+    ack.command = command;
+    ack.result = MAV_RESULT_DENIED;
+    if (handler && handler->resultHandler) {
+        (*handler->resultHandler)(handler->resultHandlerData, compId, ack, MavCmdResultCommandResultOnly);
+    } else {
+        emit mavCommandResult(_id, compId, command, MAV_RESULT_DENIED, MavCmdResultCommandResultOnly);
+    }
+    if (showError) {
+        qgcApp()->showAppMessage(tr("Emergency stop is awaiting verification. This operation is locked."));
+    }
+}
+
 void Vehicle::_sendMavCommandWorker(
     bool        commandInt,
     bool        showError,
@@ -2604,6 +2676,10 @@ void Vehicle::_sendMavCommandWorker(
     MAV_FRAME   frame,
     float param1, float param2, float param3, float param4, double param5, double param6, float param7)
 {
+    if (!_usvSafetyCommandAllowed(targetCompId, command, param1)) {
+        _rejectUsvSafetyCommand(targetCompId, command, ackHandlerInfo, showError);
+        return;
+    }
     // We can't send commands to compIdAll using this method. The reason being that we would get responses back possibly from multiple components
     // which this code can't handle.
     // We also can't send the majority of commands again if we are already waiting for a response from that same command. If we did that we would not be able to discern
@@ -2661,6 +2737,11 @@ void Vehicle::_sendMavCommandWorker(
         entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 40000);
     } else if (targetCompId == 191 && (command == 31011 || command == 31016 || command == 31019)) {
         entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 15000);
+        // Repeating a stop is safe. Never automatically repeat acquisition,
+        // calibration or baseline changes without receiver-side deduplication.
+        entry.maxTries = _mavCommandMaxRetryCount;
+    } else if (targetCompId == 191 && command >= 31010 && command <= 31019) {
+        entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 5000);
     }
     entry.elapsedTimer.start();
 
@@ -2673,6 +2754,12 @@ void Vehicle::_sendMavCommandWorker(
 void Vehicle::_sendMavCommandFromList(int index)
 {
     MavCommandListEntry_t commandEntry = _mavCommandList[index];
+
+    if (!_usvSafetyCommandAllowed(commandEntry.targetCompId, commandEntry.command, commandEntry.rgParam1)) {
+        _mavCommandList.removeAt(index);
+        _rejectUsvSafetyCommand(commandEntry.targetCompId, commandEntry.command, &commandEntry.ackHandlerInfo, commandEntry.showError);
+        return;
+    }
 
     QString rawCommandName = MissionCommandTree::instance()->rawName(commandEntry.command);
     QString friendlyName = MissionCommandTree::instance()->friendlyName(commandEntry.command);
@@ -2736,7 +2823,7 @@ void Vehicle::_sendMavCommandFromList(int index)
         cmd.target_system =     _id;
         cmd.target_component =  commandEntry.targetCompId;
         cmd.command =           commandEntry.command;
-        cmd.confirmation =      0;
+        cmd.confirmation =      static_cast<uint8_t>(_mavCommandList[index].tryCount - 1);
         cmd.param1 =            commandEntry.rgParam1;
         cmd.param2 =            commandEntry.rgParam2;
         cmd.param3 =            commandEntry.rgParam3;
@@ -2751,6 +2838,8 @@ void Vehicle::_sendMavCommandFromList(int index)
                                              &cmd);
     }
 
+    // Each actual transmission gets a full ACK window, including the last retry.
+    _mavCommandList[index].elapsedTimer.restart();
     sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
 }
 
@@ -3842,6 +3931,9 @@ void Vehicle::clearAllParamMapRC(void)
 
 void Vehicle::sendJoystickDataThreadSafe(float roll, float pitch, float yaw, float thrust, quint16 buttons, quint16 buttons2, float gimbalPitch, float gimbalYaw)
 {
+    if (usvSafetyLocked()) {
+        return;
+    }
     SharedLinkInterfacePtr sharedLink = vehicleLinkManager()->primaryLink().lock();
     if (!sharedLink) {
         qCDebug(VehicleLog)<< "sendJoystickDataThreadSafe: primary link gone!";

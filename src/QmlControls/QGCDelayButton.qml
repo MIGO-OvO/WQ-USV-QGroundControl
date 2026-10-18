@@ -22,6 +22,7 @@ DelayButton {
     property real   fontWeight:     Font.Normal // default for qml Text
     property real   pointSize:      ScreenTools.defaultFontPointSize
     property int    defaultDelay:   500
+    property real   backgroundOpacity: 1
 
     property alias wrapMode:            text.wrapMode
     property alias horizontalAlignment: text.horizontalAlignment
@@ -67,7 +68,8 @@ DelayButton {
         implicitHeight: ScreenTools.implicitButtonHeight
         border.width:   showBorder ? 1 : 0
         border.color:   qgcPal.buttonBorder
-        color:          control._showHighlight ? qgcPal.buttonHighlight : qgcPal.button
+        readonly property color fillColor: control._showHighlight ? qgcPal.buttonHighlight : qgcPal.button
+        color:          Qt.rgba(fillColor.r, fillColor.g, fillColor.b, control.backgroundOpacity)
 
         QGCColoredImage {
             anchors.topMargin:      _sliderIndicatorMargin

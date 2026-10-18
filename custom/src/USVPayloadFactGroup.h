@@ -12,6 +12,8 @@
 #include "FactSystem/FactGroup.h"
 #include <QtCore/QTimer>
 #include <QtCore/QElapsedTimer>
+#include <QtCore/QHash>
+#include <QtCore/QStringList>
 
 class USVPayloadFactGroup : public FactGroup
 {
@@ -50,6 +52,8 @@ class USVPayloadFactGroup : public FactGroup
     Q_PROPERTY(int lastCompid     READ lastCompid     NOTIFY diagnosticsChanged)
     Q_PROPERTY(double latencyMs   READ latencyMs      NOTIFY diagnosticsChanged)
     Q_PROPERTY(QString diagSummary READ diagSummary   NOTIFY diagnosticsChanged)
+    Q_PROPERTY(QStringList freshFields READ freshFields NOTIFY freshnessChanged)
+    Q_PROPERTY(double telemetryAgeMs READ telemetryAgeMs NOTIFY freshnessChanged)
 
 public:
     explicit USVPayloadFactGroup(QObject *parent = nullptr);
@@ -88,12 +92,16 @@ public:
     int lastCompid()   const { return _lastCompid; }
     double latencyMs() const { return _latencyMs; }
     QString diagSummary() const;
+    QStringList freshFields() const;
+    double telemetryAgeMs() const;
+    void setVehicleId(int vehicleId) { _vehicleId = vehicleId; }
 
     // Overrides from FactGroup
     void handleMessage(Vehicle *vehicle, const mavlink_message_t &message) final;
 
 signals:
     void diagnosticsChanged();
+    void freshnessChanged();
 
 private slots:
     void _telemetryTimeout();
@@ -103,6 +111,7 @@ private:
     void _handleDebugVect(const mavlink_message_t &message);
     void _handleDebug(const mavlink_message_t &message);
     void _markFactsCppOwned();
+    void _recordTelemetry(const QStringList &fields);
 
     Fact _voltageFact;
     Fact _absorbanceFact;
@@ -130,6 +139,11 @@ private:
     Fact _jetsonMemoryFact;
     Fact _detectorHeapFact;
     QTimer _timeoutTimer;
+    QTimer _freshnessTimer;
+    QElapsedTimer _freshnessClock;
+    QHash<QString, qint64> _fieldUpdates;
+    qint64 _lastTelemetryMsecs = -1;
+    int _vehicleId = 0;
     static constexpr int _timeoutMsecs = 5000;
 
     static constexpr const char *_stepCurrentName  = "stepCurrent";

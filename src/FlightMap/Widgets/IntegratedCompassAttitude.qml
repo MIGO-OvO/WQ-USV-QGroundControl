@@ -24,7 +24,7 @@ Item {
     property real extraInset:                   attitudeSize + attitudeSpacing
     property real extraValuesWidth:             compassRadius
     property real defaultCompassRadius:         (mainWindow.width * 0.15) / 2
-    property real maxCompassRadius:             ScreenTools.defaultFontPixelHeight * 7 / 2
+    property real maxCompassRadius:             ScreenTools.defaultFontPixelHeight * (mainWindow.width < ScreenTools.defaultFontPixelWidth * 150 ? 2.2 : 3.5)
     property real compassRadius:                Math.min(defaultCompassRadius, maxCompassRadius)
     property real compassBorder:                ScreenTools.defaultFontPixelHeight / 2
     property var  vehicle:                      globals.activeVehicle
@@ -55,9 +55,10 @@ Item {
         width:  compassRadius * 2
         height: width
         radius: width / 2
-        color:  qgcPal.window
+        color:  Qt.rgba(qgcPal.window.r, qgcPal.window.g, qgcPal.window.b, ScreenTools.panelOpacity)
 
         QGCCompassWidget {
+            color:                      "transparent"
             size:                       parent.width - compassBorder
             vehicle:                    control.vehicle
             usedByMultipleVehicleList:  control.usedByMultipleVehicleList

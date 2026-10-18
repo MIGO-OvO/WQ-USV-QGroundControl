@@ -15,18 +15,21 @@ Item {
     property double pendingSince: 0
     readonly property bool ready: operations.payloadOnline && operations.validSignal && operations.baselineSet
     property bool warning: false
+    property bool safetyLocked: false
 
     function allowed(command) {
         if (!operations.connected || !operations.hasPayload)
             return false;
         if (command === 31011 || command === 31016 || command === 31019)
             return pendingCommand !== command;
-        if (pendingCommand || awaitedCommand || !operations.payloadOnline || operations.payloadFault)
+        if (safetyLocked)
+            return false;
+        if (pendingCommand || awaitedCommand || !operations.payloadOnline || operations.payloadFault || operations.payloadStatus < 0 || operations.payloadStatus > USVLayout.StatusSurveying)
             return false;
         if (command === 31018 || command === 31014)
-            return !operations.payloadWorking;
+            return !operations.payloadWorking && operations.payloadStatus !== USVLayout.StatusPaused;
         if (command === 31017)
-            return operations.validSignal && !operations.payloadWorking;
+            return operations.validSignal && !operations.payloadWorking && operations.payloadStatus !== USVLayout.StatusPaused;
         if (command === 31010)
             return ready && canStartPointSample;
         if (command === 31015)
@@ -73,6 +76,11 @@ Item {
     function expire() {
         if (!pendingCommand)
             return;
+        // The transport owns retries and high-latency deadlines.
+        if (operations.vehicle && operations.vehicle.isMavCommandPending(_payloadCompId, pendingCommand)) {
+            timeout.restart();
+            return;
+        }
         warning = true;
         feedback = commandName(pendingCommand) + qsTr("响应超时，请核对实际状态");
         pendingCommand = 0;
@@ -98,14 +106,14 @@ Item {
         switch (command) {
         case 31018: return operations.validSignal;
         case 31017: return operations.baselineSet;
-        case 31010: return status !== USVLayout.StatusIdle && status !== USVLayout.StatusSamplingDone && status !== USVLayout.StatusHoldNoMission;
+        case 31010: return [USVLayout.StatusSampling, USVLayout.StatusDetecting, USVLayout.StatusWaitingStable].indexOf(status) >= 0;
         case 31012: return status === USVLayout.StatusPaused;
-        case 31013: return status !== USVLayout.StatusPaused;
+        case 31013: return status === USVLayout.StatusSampling || status === USVLayout.StatusDetecting;
         case 31014: return status === USVLayout.StatusCalibrating;
         case 31015: return status === USVLayout.StatusSurveying;
         case 31011: return status === USVLayout.StatusIdle || status === USVLayout.StatusAborted || status === USVLayout.StatusHoldNoMission || status === USVLayout.StatusSamplingDone;
-        case 31016: return status !== USVLayout.StatusSurveying;
-        case 31019: return !operations.validSignal;
+        case 31016: return [USVLayout.StatusIdle, USVLayout.StatusSamplingDone, USVLayout.StatusAborted, USVLayout.StatusHoldNoMission].indexOf(status) >= 0;
+        case 31019: return operations.fresh("spectrometerValid") && operations.factNumber(operations.payload.spectrometerValid, -1) === 0;
         default: return true;
         }
     }

@@ -129,6 +129,7 @@ Button {
 
     background: Rectangle {
         id:     buttonBkRect
+        opacity: ScreenTools.panelOpacity
         color:  (control.checked || control.pressed) ?
                     qgcPal.buttonHighlight :
                     ((control.enabled && control.hovered) ? qgcPal.toolStripHoverColor : "transparent")

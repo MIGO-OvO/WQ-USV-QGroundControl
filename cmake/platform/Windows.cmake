@@ -54,4 +54,31 @@ if(MSVC)
     # qt_add_win_app_sdk(${CMAKE_PROJECT_NAME} PRIVATE)
 endif()
 
+# Qt Creator runs from the build tree, without executing the install rules.
+# Deploy plugins and QML alongside the DLLs so that run does not need SDK paths.
+if(TARGET Qt6::windeployqt)
+    add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+        COMMAND $<TARGET_FILE:Qt6::windeployqt>
+            $<IF:$<CONFIG:Debug>,--debug,--release>
+            --no-compiler-runtime
+            --qmldir "${CMAKE_SOURCE_DIR}/src"
+            --qmlimport "${QT_QML_OUTPUT_DIRECTORY}"
+            "$<TARGET_FILE:${CMAKE_PROJECT_NAME}>"
+        COMMENT "Deploying Qt Windows runtime and QML imports to the build directory"
+        VERBATIM
+    )
+    if(EXISTS "${CMAKE_SOURCE_DIR}/custom/res")
+        add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+            COMMAND $<TARGET_FILE:Qt6::windeployqt>
+                $<IF:$<CONFIG:Debug>,--debug,--release>
+                --no-compiler-runtime
+                --qmldir "${CMAKE_SOURCE_DIR}/custom/res"
+                --qmlimport "${QT_QML_OUTPUT_DIRECTORY}"
+                "$<TARGET_FILE:${CMAKE_PROJECT_NAME}>"
+            COMMENT "Deploying custom QML runtime imports"
+            VERBATIM
+        )
+    endif()
+endif()
+
 message(STATUS "QGC: Windows platform configuration applied")

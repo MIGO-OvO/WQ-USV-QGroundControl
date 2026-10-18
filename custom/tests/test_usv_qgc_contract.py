@@ -38,12 +38,27 @@ PAYLOAD_NAMED_VALUE_FIELDS = {
 
 
 class USVQGCContractTests(unittest.TestCase):
-    def test_workflow_keeps_official_toolbar_and_instruments(self):
+    def test_single_mission_entry_and_background_setting(self):
+        toolbar = (REPO_ROOT / "custom/res/USVFlyViewToolBar.qml").read_text(encoding="utf-8")
+        navigation = (REPO_ROOT / "custom/res/USVCockpitNavigationControls.qml").read_text(encoding="utf-8")
+        self.assertEqual(toolbar.count("onClicked: control.cockpitController.startMission()"), 1)
+        self.assertNotIn("startMission()", navigation)
+        for title in ("航行", "规划", "数据", "设置", "QGroundControl | 无人船作业"):
+            self.assertNotIn(f'qsTr("{title}")', toolbar)
+        settings = json.loads((REPO_ROOT / "src/Settings/App.SettingsGroup.json").read_text(encoding="utf-8"))
+        fact = next(item for item in settings["QGC.MetaData.Facts"] if item["name"] == "usvBackgroundTransparency")
+        self.assertEqual((fact["min"], fact["max"], fact["default"]), (0, 100, 50))
+
+    def test_cockpit_toolbar_is_connected_and_native_instruments_are_kept(self):
         mappings = {entry.attrib.get("alias") for entry in ET.parse(REPO_ROOT / "custom/custom.qrc").iter("file")}
-        self.assertNotIn("FlyViewToolBar.qml", mappings)
+        self.assertIn("FlyViewToolBar.qml", mappings)
         self.assertNotIn("FlyViewBottomRightRowLayout.qml", mappings)
         options = (REPO_ROOT / "custom/src/USVOptions.h").read_text(encoding="utf-8")
         self.assertIn("bool showInstrumentPanel() const override { return true; }", options)
+        toolbar = (REPO_ROOT / "custom/res/USVFlyViewToolBar.qml").read_text(encoding="utf-8")
+        self.assertIn("GuidedActionConfirm", toolbar)
+        self.assertIn("MainStatusIndicator", toolbar)
+        self.assertIn("USVSystemStatusBar", toolbar)
 
     def test_workflow_dock_geometry_respects_native_controls(self):
         self._run_qml_functions("USVFlyViewLayout.js", ["workflowDock"], '''
@@ -474,12 +489,17 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertNotIn("31010", action_bar)
         self._run_qml_functions("USVPayloadCommandController.qml", ["allowed"], '''
             const assert = require('node:assert/strict');
-            var USVLayout = {StatusSampling: 1, StatusPaused: 11};
+            var USVLayout = {StatusSampling: 1, StatusPaused: 11, StatusSurveying: 14};
             var operations = {connected: true, hasPayload: true, payloadOnline: true,
                               payloadFault: false, payloadWorking: false, validSignal: true,
                               payloadStatus: 0};
             var pendingCommand = 0, awaitedCommand = 0, ready = true, canStartPointSample = true;
+            var safetyLocked = false;
             assert.equal(allowed(31010), true);
+            safetyLocked = true;
+            assert.equal(allowed(31010), false);
+            for (const stop of [31011, 31016, 31019]) assert.equal(allowed(stop), true);
+            safetyLocked = false;
             ready = false;
             assert.equal(allowed(31010), false);
             assert.equal(allowed(31015), false);
@@ -513,8 +533,11 @@ class USVQGCContractTests(unittest.TestCase):
         actions = json.loads((REPO_ROOT / "custom/res/actions/usv_actions.json").read_text(encoding="utf-8"))
         for action in actions["actions"]:
             self.assertEqual(action["compId"], 191)
-        for name in ("USVPayloadPanel.qml", "USVActionBar.qml", "USVFlyViewCustomLayer.qml"):
+        for name in ("USVPayloadPanel.qml", "USVActionBar.qml"):
             self.assertIn("_payloadCompId: 191", (REPO_ROOT / "custom/res" / name).read_text(encoding="utf-8"))
+        cockpit = (REPO_ROOT / "custom/res/USVCockpitController.qml").read_text(encoding="utf-8")
+        self.assertIn("targetVehicle.sendCommand(191, 31011, true)", cockpit)
+        self.assertIn("targetComponent === 191", cockpit)
 
     def test_android_custom_build_contract(self):
         workflow = (REPO_ROOT / ".github/workflows/android.yml").read_text(encoding="utf-8")
@@ -561,6 +584,33 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("isHighLatency() ? _mavCommandAckTimeoutMSecsHighLatency : _mavCommandAckTimeoutMSecs", source)
         self.assertIn("_sendMavCommandShouldRetry(command) ? _mavCommandMaxRetryCount : 1", source)
 
+    def test_retry_restarts_deadline_and_payload_wait_is_transport_owned(self):
+        source = (REPO_ROOT / "src/Vehicle/Vehicle.cc").read_text(encoding="utf-8")
+        sender = source.split("void Vehicle::_sendMavCommandFromList(int index)", 1)[1].split("void Vehicle::_sendMavCommandResponseTimeoutCheck", 1)[0]
+        self.assertIn("_mavCommandList[index].elapsedTimer.restart();", sender)
+        self.assertIn("entry.maxTries = _mavCommandMaxRetryCount;", source)
+        self.assertIn("qMax(entry.ackTimeoutMSecs, 5000)", source)
+        for name in ("USVPayloadCommandController.qml", "USVPayloadPanel.qml"):
+            qml = (REPO_ROOT / "custom/res" / name).read_text(encoding="utf-8")
+            self.assertIn("isMavCommandPending(", qml)
+
+    def test_controller_does_not_expire_a_pending_transport_command(self):
+        self._run_qml_functions('USVPayloadCommandController.qml', ['expire'], '''
+            const assert = require('node:assert/strict');
+            var pendingCommand = 31019, warning = false, feedback = '';
+            var _payloadCompId = 191, waiting = true, restarted = 0;
+            var operations = {vehicle: {isMavCommandPending: (comp, cmd) => {
+                assert.equal(comp, 191); assert.equal(cmd, 31019); return waiting;
+            }}};
+            var timeout = {restart: () => restarted++, stop: () => {}};
+            var commandName = () => 'stop', qsTr = text => text;
+            expire();
+            assert.equal(pendingCommand, 31019); assert.equal(warning, false);
+            assert.equal(restarted, 1);
+            waiting = false; expire();
+            assert.equal(pendingCommand, 0); assert.equal(warning, true);
+            ''')
+
     def test_stop_deadlines_and_completed_hold_state_execute_controller_functions(self):
         self._run_qml_functions('USVPayloadCommandController.qml', ['commandTimeoutFor', 'telemetryMatches'], '''
             const assert = require('node:assert/strict');
@@ -574,6 +624,16 @@ class USVQGCContractTests(unittest.TestCase):
             operations.payloadStatus = 1;
             assert.equal(telemetryMatches(31011), false);
             ''')
+
+    def test_realtime_strip_keeps_values_inline_without_freshness_tile(self):
+        source = (REPO_ROOT / "custom/res/USVRealtimeDataStrip.qml").read_text(encoding="utf-8")
+        self.assertEqual(source.count("USVCockpitMetric {"), 5)
+        self.assertNotIn("telemetryText", source)
+        self.assertNotIn(r"\n", source)
+        for field in ("pumpX", "pumpY", "pumpZ", "pumpA", "jetsonTemp", "detectorTemp"):
+            self.assertIn(f'root.operations.payloadMetric("{field}",', source)
+        self.assertIn("contentWidth: Math.max(width, content.implicitWidth)", source)
+        self.assertIn("Flickable.HorizontalFlick", source)
 
     def test_android_keeps_native_logcat_sink(self):
         source = (REPO_ROOT / "src/Utilities/Platform.cc").read_text(encoding="utf-8")
