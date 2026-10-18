@@ -14,6 +14,7 @@
 #include <QtCore/QElapsedTimer>
 #include <QtCore/QHash>
 #include <QtCore/QStringList>
+#include "StatusTextHandler.h"
 
 class USVPayloadFactGroup : public FactGroup
 {
@@ -38,6 +39,8 @@ class USVPayloadFactGroup : public FactGroup
     Q_PROPERTY(Fact *referenceVoltage READ referenceVoltage CONSTANT)
     Q_PROPERTY(Fact *baselineVoltage  READ baselineVoltage  CONSTANT)
     Q_PROPERTY(Fact *spectrometerValid READ spectrometerValid CONSTANT)
+    Q_PROPERTY(Fact *adsState READ adsState CONSTANT)
+    Q_PROPERTY(Fact *protocolVersion READ protocolVersion CONSTANT)
     Q_PROPERTY(Fact *jetsonTemp READ jetsonTemp CONSTANT)
     Q_PROPERTY(Fact *detectorTemp READ detectorTemp CONSTANT)
     Q_PROPERTY(Fact *jetsonCpu READ jetsonCpu CONSTANT)
@@ -78,6 +81,8 @@ public:
     Fact *referenceVoltage() { return &_referenceVoltageFact; }
     Fact *baselineVoltage()  { return &_baselineVoltageFact; }
     Fact *spectrometerValid() { return &_spectrometerValidFact; }
+    Fact *adsState() { return &_adsStateFact; }
+    Fact *protocolVersion() { return &_protocolVersionFact; }
     Fact *jetsonTemp() { return &_jetsonTempFact; }
     Fact *detectorTemp() { return &_detectorTempFact; }
     Fact *jetsonCpu() { return &_jetsonCpuFact; }
@@ -95,6 +100,9 @@ public:
     QStringList freshFields() const;
     double telemetryAgeMs() const;
     void setVehicleId(int vehicleId) { _vehicleId = vehicleId; }
+    Q_INVOKABLE QVariantMap allocateRequest();
+    Q_INVOKABLE double monotonicMs() const { return _freshnessClock.elapsed(); }
+    Q_INVOKABLE double fieldSequence(const QString &field) const { return _fieldSequences.value(field, 0); }
 
     // Overrides from FactGroup
     void handleMessage(Vehicle *vehicle, const mavlink_message_t &message) final;
@@ -102,6 +110,7 @@ public:
 signals:
     void diagnosticsChanged();
     void freshnessChanged();
+    void payloadEventReceived(QVariantMap event);
 
 private slots:
     void _telemetryTimeout();
@@ -112,6 +121,7 @@ private:
     void _handleDebug(const mavlink_message_t &message);
     void _markFactsCppOwned();
     void _recordTelemetry(const QStringList &fields);
+    void _handlePayloadEvent(const QString &text);
 
     Fact _voltageFact;
     Fact _absorbanceFact;
@@ -138,6 +148,12 @@ private:
     Fact _jetsonCpuFact;
     Fact _jetsonMemoryFact;
     Fact _detectorHeapFact;
+    Fact _adsStateFact;
+    Fact _protocolVersionFact;
+    StatusTextHandler _eventText;
+    uint32_t _requestSession = 0;
+    uint32_t _requestSequence = 0;
+    QHash<QString, quint64> _fieldSequences;
     QTimer _timeoutTimer;
     QTimer _freshnessTimer;
     QElapsedTimer _freshnessClock;

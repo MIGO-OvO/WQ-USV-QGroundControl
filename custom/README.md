@@ -1,8 +1,18 @@
 # QGroundControl USV (无人船) 定制构建
 
+## 2026-10 跨端协议与安全门禁
+
+当前协议为 `USV_PROTO=1`，26 个显示遥测字段。新增 `USV_ADS` 区分未知/停止确认/启动中/采集中/错误/停止未确认；源数据与单字段新鲜度分别校验，同值重发也记录接收序号。旧协议或能力过期时只保留停止入口。
+
+载荷请求使用持久 session + request（24-bit，耗尽不回绕），`COMMAND_LONG.param3/4` 传递身份。标准 ACK 只是证据；`USVE1:` 关联事件证明请求与任务结果，缺片、身份不符或过期事件不完成请求。STOP 未清退前禁止新动作；启动/校准/恢复不自动重试，STOP 每 5 秒重试且总等待 15 秒，启动信号总等待 40 秒。等待期限不是物理停止时间。
+
+驾驶舱独立急停通过同一载荷停止入口，断线/切船保留未知结果与核验锁；仍须人工现场确认执行器已停止。部署请退出旧进程后运行新产物，不能把旧窗口当本次构建。匹配 ROS、飞控和检测板成套更新，勿删除 `payload-request-identity.ini` 来绕过请求身份错误。
+
+验证：`qmltestrunner -input custom/tests`（控制器/布局逻辑，不加载地图）；Debug 应用 `--allow-multiple --unittest:StatusTextHandlerTest`、`--unittest:SendMavCommandWithSignallingTest`、`--unittest:SendMavCommandWithHandlerTest`。所有结果必须包含实际测试数，零用例退出不算通过。没有设备或实船验收。
+
 ## safety1 匹配固件
 
-Plan 中定点采样的超时说明已改为 HOLD，须配套 safety1 ArduRover 与 ROS；UI 文案不会让旧固件自动获得安全行为。22 个显示遥测字段、component 191、手动命令 31010..31019 保持不变。链路整体超时会清除分光有效位，源测量过期由 ROS 的 `USV_VLD=0` 传递。完整验收仍需要实际构建与端到端链路测试。
+Plan 中定点采样的超时说明已改为 HOLD，须配套 safety1 ArduRover 与 ROS；UI 文案不会让旧固件自动获得安全行为。当前 26 个显示遥测字段，component 191、手动命令 31010..31019 保持不变。链路整体超时会清除分光有效位，源测量过期由 ROS 的 `USV_VLD=0` 传递。完整验收仍需要端到端链路与台架测试。
 
 静态契约：`python -m unittest discover -s custom/tests -p test_usv_qgc_contract.py`。协议与现场步骤见总仓库 `docs/current/40_interfaces.md`、`70_verification.md`。
 

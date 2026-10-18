@@ -14,7 +14,7 @@ Item {
     readonly property var vehicle: operations.vehicle
     readonly property bool safetyLocked: emergencyPhase !== "idle"
     readonly property bool emergencyPending: propulsionPending || payloadPending
-    readonly property bool canVerifyStop: operations.connected && !emergencyPending && safetyLocked && !vehicle.armed && operations.payloadOnline && [0, 9, 12, 13].indexOf(operations.payloadStatus) >= 0
+    readonly property bool canVerifyStop: operations.connected && !emergencyPending && (!commandController || !commandController.stopsPending) && safetyLocked && !vehicle.armed && operations.payloadOnline && [0, 9, 12, 13].indexOf(operations.payloadStatus) >= 0
     property string emergencyPhase: "idle"
     property string propulsionReceipt: ""
     property string payloadReceipt: ""
@@ -82,8 +82,12 @@ Item {
             operations.guidedController.confirmDialog.confirmCancelled();
         emergencyTimeout.restart();
         targetVehicle.emergencyStop();
-        if (operations.hasPayload)
-            targetVehicle.sendCommand(191, 31011, true);
+        if (operations.hasPayload) {
+            if (commandController)
+                commandController.send(31011);
+            else
+                targetVehicle.sendCommand(191, 31011, true);
+        }
     }
     function emergencyResult(vehicleId, targetComponent, command, ackResult, failureCode) {
         if (!emergencyTarget || emergencyTarget !== vehicle || vehicleId !== emergencyTarget.id)
@@ -212,6 +216,10 @@ Item {
     Connections {
         target: root.vehicle
         ignoreUnknownSignals: true
+        function onUsvSafetyLockedChanged() {
+            if (root.vehicle && root.vehicle.usvSafetyLocked && root.emergencyPhase === "idle")
+                root.emergencyPhase = "failed";
+        }
         function onMavCommandResult(vehicleId, targetComponent, command, ackResult, failureCode) {
             root.emergencyResult(vehicleId, targetComponent, command, ackResult, failureCode);
         }

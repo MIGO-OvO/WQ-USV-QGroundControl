@@ -43,8 +43,7 @@ StatusTextHandler::StatusTextHandler(QObject *parent)
 {
     // qCDebug(StatusTextHandlerLog) << Q_FUNC_INFO << this;
 
-    m_chunkedStatusTextTimer->setSingleShot(true);
-    m_chunkedStatusTextTimer->setInterval(1000);
+    m_chunkedStatusTextTimer->setInterval(250);
     (void) connect(m_chunkedStatusTextTimer, &QTimer::timeout, this, &StatusTextHandler::_chunkedStatusTextTimeout);
 }
 
@@ -262,82 +261,93 @@ void StatusTextHandler::mavlinkMessageReceived(const mavlink_message_t &message)
 
 void StatusTextHandler::_handleStatusText(const mavlink_message_t &message)
 {
-    mavlink_statustext_t statustext;
+    mavlink_statustext_t statustext{};
     mavlink_msg_statustext_decode(&message, &statustext);
-
-    const QString messageText = getMessageText(message);
-    const bool includesNullTerminator = messageText.length() < MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN;
-
+    QByteArray bytes(statustext.text, MAVLINK_MSG_STATUSTEXT_FIELD_TEXT_LEN);
+    const int terminator = bytes.indexOf('\0');
+    if (terminator >= 0) {
+        bytes.truncate(terminator);
+    }
     const MAV_COMPONENT compId = static_cast<MAV_COMPONENT>(message.compid);
-    if (m_chunkedStatusTextInfoMap.contains(compId) && (m_chunkedStatusTextInfoMap.value(compId).chunkId != statustext.id)) {
-        // We have an incomplete chunked status still pending
-        (void) m_chunkedStatusTextInfoMap.value(compId).rgMessageChunks.append(QString());
+    if (m_chunkedStatusTextInfoMap.contains(compId)
+            && (m_chunkedStatusTextInfoMap.value(compId).chunkId != statustext.id
+                || m_chunkedStatusTextInfoMap.value(compId).age.elapsed() >= 1000)) {
         _chunkedStatusTextCompleted(compId);
     }
-
     if (statustext.id == 0) {
-        // Non-chunked status text. We still use common chunked text output mechanism.
-        ChunkedStatusTextInfo_t chunkedInfo;
-        chunkedInfo.chunkId = 0;
-        chunkedInfo.severity = static_cast<MAV_SEVERITY>(statustext.severity);
-        (void) chunkedInfo.rgMessageChunks.append(messageText);
-        (void) m_chunkedStatusTextInfoMap.insert(compId, chunkedInfo);
-    } else {
-        if (m_chunkedStatusTextInfoMap.contains(compId)) {
-            // A chunk sequence is in progress
-            QStringList& chunks = m_chunkedStatusTextInfoMap[compId].rgMessageChunks;
-            if (statustext.chunk_seq > chunks.size()) {
-                // We are missing some chunks in between, fill them in as missing
-                for (size_t i = chunks.size(); i < statustext.chunk_seq; i++) {
-                    (void) chunks.append(QString());
-                }
-            }
-
-            (void) chunks.append(messageText);
-        } else {
-            // Starting a new chunk sequence
-            ChunkedStatusTextInfo_t chunkedInfo;
-            chunkedInfo.chunkId = statustext.id;
-            chunkedInfo.severity = static_cast<MAV_SEVERITY>(statustext.severity);
-            (void) chunkedInfo.rgMessageChunks.append(messageText);
-            (void) m_chunkedStatusTextInfoMap.insert(compId, chunkedInfo);
+        const QString text = QString::fromUtf8(bytes);
+        emit textMessageReceived(compId, static_cast<MAV_SEVERITY>(statustext.severity), text, "");
+        if (statustext.chunk_seq == 0) {
+            emit completeTextMessageReceived(compId, static_cast<MAV_SEVERITY>(statustext.severity), text);
         }
-
+        return;
+    }
+    if (!m_chunkedStatusTextInfoMap.contains(compId)) {
+        ChunkedStatusTextInfo_t info;
+        info.chunkId = statustext.id;
+        info.severity = static_cast<MAV_SEVERITY>(statustext.severity);
+        info.age.start();
+        m_chunkedStatusTextInfoMap.insert(compId, info);
+    }
+    auto &info = m_chunkedStatusTextInfoMap[compId];
+    const int sequence = statustext.chunk_seq; // uint8_t: at most 256 chunks
+    info.invalid |= info.severity != statustext.severity;
+    if (info.received.contains(sequence)) {
+        info.invalid |= info.chunks[sequence] != bytes;
+    } else {
+        while (info.chunks.size() <= sequence) {
+            info.chunks.append(QByteArray());
+        }
+        info.chunks[sequence] = bytes;
+        info.received.insert(sequence);
+    }
+    if (terminator >= 0) {
+        info.invalid |= info.lastSequence >= 0 && info.lastSequence != sequence;
+        info.lastSequence = sequence;
+    }
+    if (!m_chunkedStatusTextTimer->isActive()) {
         m_chunkedStatusTextTimer->start();
     }
-
-    if ((statustext.id == 0) || includesNullTerminator) {
-        m_chunkedStatusTextTimer->stop();
-        _chunkedStatusTextCompleted(compId);
+    if (info.lastSequence >= 0 && info.received.size() == info.lastSequence + 1
+            && info.chunks.size() == info.lastSequence + 1) {
+        _chunkedStatusTextCompleted(compId, !info.invalid);
     }
 }
 
 void StatusTextHandler::_chunkedStatusTextTimeout()
 {
     for (auto compId : m_chunkedStatusTextInfoMap.keys()) {
-        auto& chunkedInfo = m_chunkedStatusTextInfoMap[compId];
-        (void) chunkedInfo.rgMessageChunks.append(QString());
-        _chunkedStatusTextCompleted(compId);
+        if (m_chunkedStatusTextInfoMap[compId].age.elapsed() >= 1000) {
+            _chunkedStatusTextCompleted(compId);
+        }
     }
 }
 
-void StatusTextHandler::_chunkedStatusTextCompleted(MAV_COMPONENT compId)
+void StatusTextHandler::_chunkedStatusTextCompleted(MAV_COMPONENT compId, bool complete)
 {
     const ChunkedStatusTextInfo_t& chunkedInfo = m_chunkedStatusTextInfoMap.value(compId);
     const MAV_SEVERITY severity = chunkedInfo.severity;
 
-    QString messageText;
-    for (const QString& chunk : std::as_const(chunkedInfo.rgMessageChunks)) {
-        if (chunk.isEmpty()) {
-            (void) messageText.append(tr(" ... ", "Indicates missing chunk from chunked STATUS_TEXT"));
+    QByteArray joined;
+    for (int index = 0; index < chunkedInfo.chunks.size(); ++index) {
+        if (!chunkedInfo.received.contains(index)) {
+            joined.append(" ... ");
         } else {
-            (void) messageText.append(chunk);
+            joined.append(chunkedInfo.chunks[index]);
         }
     }
-
+    if (!complete && chunkedInfo.lastSequence < 0) {
+        joined.append(" ... ");
+    }
+    const QString messageText = QString::fromUtf8(joined);
     (void) m_chunkedStatusTextInfoMap.remove(compId);
-
+    if (m_chunkedStatusTextInfoMap.isEmpty()) {
+        m_chunkedStatusTextTimer->stop();
+    }
     emit textMessageReceived(compId, severity, messageText, "");
+    if (complete) {
+        emit completeTextMessageReceived(compId, severity, messageText);
+    }
 }
 
 void StatusTextHandler::_handleTextMessage(uint32_t newCount, MessageType messageType)

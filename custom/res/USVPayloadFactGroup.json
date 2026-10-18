@@ -104,7 +104,7 @@
 },
 {
     "name":             "sampleCount",
-    "shortDesc":        "采样计数",
+    "shortDesc":        "启动次数",
     "type":             "float",
     "decimalPlaces":    0,
     "default":          0
@@ -187,6 +187,18 @@
     "units":            "%",
     "decimalPlaces":    1,
     "default":          -1
+},
+{
+    "name":             "adsState",
+    "shortDesc":        "Spectrometer acquisition state",
+    "type":             "uint32",
+    "default":          0
+},
+{
+    "name":             "protocolVersion",
+    "shortDesc":        "Payload transaction protocol",
+    "type":             "uint32",
+    "default":          0
 },
 {
     "name":             "detectorHeap",

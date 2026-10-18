@@ -416,7 +416,7 @@ Rectangle {
                 QGCLabel {
                     Layout.fillWidth: true
                     color: root.theme.secondary
-                    text: root.operations.payloadOnline ? qsTr("载荷报文 %1  ·  数据龄期 %2 ms").arg(root.operations.payloadMetric("packetCount", 0, "")).arg(root.operations.payload.latencyMs) : qsTr("载荷遥测不可用，请检查通信链路")
+                    text: root.operations.payloadOnline ? qsTr("载荷报文 %1  ·  心跳到达间隔 %2 ms").arg(root.operations.payloadMetric("packetCount", 0, "")).arg(root.operations.payload.latencyMs) : qsTr("载荷遥测不可用，请检查通信链路")
                     wrapMode: Text.WordWrap
                 }
                 QGCLabel {

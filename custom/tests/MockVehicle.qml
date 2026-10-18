@@ -53,6 +53,16 @@ Item {
     property string pauseFlightMode: "Hold"
     property bool pauseVehicleSupported: true
     property QtObject payload: QtObject {
+        property var protocolVersion: ({rawValue: 1})
+        property var adsState: ({rawValue: 3})
+        property var sequences: ({})
+        property int nextRequest: 0
+        signal freshnessChanged()
+        signal payloadEventReceived(var event)
+        function monotonicMs() { return Date.now(); }
+        function fieldSequence(field) { return sequences[field] || 0; }
+        function receive(field) { sequences[field] = fieldSequence(field) + 1; freshnessChanged(); }
+        function allocateRequest() { return {session: 1, request: ++nextRequest, sender_system: 255, sender_component: 190}; }
         property var freshFields: ["voltage", "absorbance", "pumpX", "pumpY", "pumpZ", "pumpA", "status", "packetCount", "stepCurrent", "stepTotal", "loopCurrent", "loopTotal", "sampleCount", "pidError", "pidMode", "baselineSet", "referenceVoltage", "baselineVoltage", "spectrometerValid", "jetsonTemp", "detectorTemp", "jetsonCpu", "jetsonMemory", "detectorHeap"]
         property double telemetryAgeMs: 0
         property var absorbance: ({

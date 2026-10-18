@@ -2630,6 +2630,14 @@ bool Vehicle::_commandCanBeDuplicated(MAV_CMD command)
 
 bool Vehicle::_usvSafetyCommandAllowed(int compId, MAV_CMD command, float param1) const
 {
+    if (compId == 191 && command >= 31010 && command <= 31019
+            && command != 31011 && command != 31016 && command != 31019) {
+        for (const auto &pending : _mavCommandList) {
+            if (pending.targetCompId == 191 && (pending.command == 31011 || pending.command == 31016 || pending.command == 31019)) {
+                return false; // A delayed STOP retry must retire before new motion.
+            }
+        }
+    }
     if (!usvSafetyLocked()) {
         return true;
     }
@@ -2679,6 +2687,24 @@ void Vehicle::_sendMavCommandWorker(
     if (!_usvSafetyCommandAllowed(targetCompId, command, param1)) {
         _rejectUsvSafetyCommand(targetCompId, command, ackHandlerInfo, showError);
         return;
+    }
+    // Cover custom action JSON and emergency callers as well as the QML
+    // controller. Keep the optional custom FactGroup out of the core ABI.
+    if (targetCompId == 191 && command >= 31010 && command <= 31019 && param3 == 0 && param4 == 0) {
+        FactGroup *payload = factGroupNames().contains(QStringLiteral("usvPayload")) ? getFactGroup(QStringLiteral("usvPayload")) : nullptr;
+        const bool capable = payload && payload->property("freshFields").toStringList().contains(QStringLiteral("protocolVersion"))
+                && payload->getFact(QStringLiteral("protocolVersion"))
+                && payload->getFact(QStringLiteral("protocolVersion"))->rawValue().toUInt() == 1;
+        QVariantMap identity;
+        if (capable) {
+            QMetaObject::invokeMethod(payload, "allocateRequest", Qt::DirectConnection, Q_RETURN_ARG(QVariantMap, identity));
+        }
+        param3 = identity.value(QStringLiteral("request")).toFloat();
+        param4 = identity.value(QStringLiteral("session")).toFloat();
+        if ((param3 == 0 || param4 == 0) && command != 31011 && command != 31016 && command != 31019) {
+            _rejectUsvSafetyCommand(targetCompId, command, ackHandlerInfo, showError);
+            return;
+        }
     }
     // We can't send commands to compIdAll using this method. The reason being that we would get responses back possibly from multiple components
     // which this code can't handle.
@@ -2734,16 +2760,22 @@ void Vehicle::_sendMavCommandWorker(
     // Payload startup includes bounded configuration retries and the first frame.
     // Stop verifies firmware ACKs after cleanup; keep UI and transport aligned.
     if (targetCompId == 191 && command == 31018) {
+        entry.maxTries = 1;
         entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 40000);
+        entry.usvTotalTimeoutMSecs = 40000;
     } else if (targetCompId == 191 && (command == 31011 || command == 31016 || command == 31019)) {
-        entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 15000);
+        entry.ackTimeoutMSecs = 5000;
+        entry.usvTotalTimeoutMSecs = 15000;
         // Repeating a stop is safe. Never automatically repeat acquisition,
         // calibration or baseline changes without receiver-side deduplication.
         entry.maxTries = _mavCommandMaxRetryCount;
     } else if (targetCompId == 191 && command >= 31010 && command <= 31019) {
+        entry.maxTries = 1;
         entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 5000);
+        entry.usvTotalTimeoutMSecs = 5000;
     }
     entry.elapsedTimer.start();
+    entry.usvTotalTimer.start();
 
     qCDebug(VehicleLog) << Q_FUNC_INFO << "command:param1-7" << command << param1 << param2 << param3 << param4 << param5 << param6 << param7;
 
@@ -2852,6 +2884,11 @@ void Vehicle::_sendMavCommandResponseTimeoutCheck(void)
     // Walk the list backwards since _sendMavCommandFromList can remove entries
     for (int i=_mavCommandList.count()-1; i>=0; i--) {
         MavCommandListEntry_t& commandEntry = _mavCommandList[i];
+        if (commandEntry.usvTotalTimeoutMSecs > 0 && commandEntry.usvTotalTimer.elapsed() >= commandEntry.usvTotalTimeoutMSecs) {
+            commandEntry.tryCount = commandEntry.maxTries;
+            _sendMavCommandFromList(i);
+            continue;
+        }
         if (commandEntry.elapsedTimer.elapsed() > commandEntry.ackTimeoutMSecs) {
             // Try sending command again
             _sendMavCommandFromList(i);

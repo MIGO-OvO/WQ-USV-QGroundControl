@@ -26,7 +26,7 @@ ApplicationWindow {
         mock.vehicleLinkManager.communicationLost = false;
         mock.gps.lock = {rawValue: name === "offline" ? 1 : 3};
         mock.payload.linkActive = {rawValue: name === "offline" ? 0 : 1};
-        mock.payload.freshFields = allFields;
+        mock.payload.freshFields = allFields.concat(["adsState", "protocolVersion"]);
         mock.payload.status = {rawValue: name === "ready" || name === "signal" || name === "baseline" ? 0 : name === "paused" ? 11 : name === "fault" ? 3 : 1};
         mock.payload.spectrometerValid = {rawValue: name === "signal" ? 0 : 1};
         mock.payload.baselineSet = {rawValue: name === "signal" || name === "baseline" ? 0 : 1};
@@ -72,6 +72,12 @@ ApplicationWindow {
     function verifyBehavior() {
         const checks = [];
         function check(value, description) { if (!value) throw new Error(description); checks.push(description); }
+        function accepted() {
+            const request = layer.commands.request;
+            mock.payload.payloadEventReceived(Object.assign({}, request, {
+                seq: 1, phase: "request", outcome: "accepted", reason: "", attempt_id: "", preflight_phase: ""
+            }));
+        }
         scenario("ready");
         const commands = layer.commands, controller = layer.controller, ops = layer.operations;
         check(commands.allowed(31010), "ready telemetry allows manual sampling");
@@ -91,25 +97,35 @@ ApplicationWindow {
         mock.mavCommandResult(1, 191, 31018, 5, 0);
         check(commands.pendingCommand === 31018, "in-progress is not completion");
         mock.mavCommandResult(1, 191, 31018, 0, 0);
+        check(commands.pendingCommand === 31018, "standard ACK alone does not confirm request identity");
+        accepted();
         check(commands.awaitedCommand === 31018 && !commands.allowed(31010), "accepted ACK waits for measurement telemetry");
         mock.payload.spectrometerValid = {rawValue: 1};
+        mock.payload.receive("spectrometerValid");
+        mock.payload.receive("voltage");
         check(!commands.busy, "valid signal completes telemetry wait");
         commands.send(31017, 0);
         mock.mavCommandResult(1, 191, 31017, 0, 0);
+        accepted();
         check(commands.awaitedCommand === 31017 && !commands.allowed(31010), "baseline ACK cannot authorize sampling");
         mock.payload.baselineSet = {rawValue: 1};
+        mock.payload.receive("baselineSet");
         mock.payload.status = {rawValue: 0};
         check(commands.allowed(31010), "baseline fact enables ready state");
         commands.send(31010, 0);
         mock.mavCommandResult(1, 191, 31010, 0, 0);
+        accepted();
         const calls = mock.commandCalls;
         commands.send(31010, 0);
         check(mock.commandCalls === calls, "duplicate sampling is blocked while waiting");
         mock.payload.status = {rawValue: 1};
+        mock.payload.receive("status");
         commands.send(31012, 0);
         mock.mavCommandResult(1, 191, 31012, 0, 0);
+        accepted();
         check(commands.awaitedCommand === 31012, "pause waits for actual paused status");
         mock.payload.status = {rawValue: 11};
+        mock.payload.receive("status");
         check(commands.allowed(31013), "paused telemetry permits resume");
         scenario("ready");
         guided.confirming = true;
@@ -125,6 +141,7 @@ ApplicationWindow {
         mock.mavCommandResult(1, 1, 400, 0, 0);
         check(controller.emergencyPhase === "partial" && controller.payloadPending, "partial ACK remains visible and locked");
         mock.mavCommandResult(1, 191, 31011, 0, 0);
+        accepted();
         check(controller.emergencyPhase === "accepted" && controller.safetyLocked && !controller.canVerifyStop, "accepted stops do not imply actual stop");
         check(!controller.customActionAllowed({command: 31010, targetComponent: 191}, mock), "native action menu cannot bypass sampling safety latch");
         check(controller.customActionAllowed({command: 31011, targetComponent: 191}, mock), "native action menu retains safe payload stop");

@@ -1190,6 +1190,8 @@ private:
         int                     maxTries            = _mavCommandMaxRetryCount;
         int                     tryCount            = 0;
         QElapsedTimer           elapsedTimer;
+        QElapsedTimer           usvTotalTimer;
+        int                     usvTotalTimeoutMSecs = 0;
         int                     ackTimeoutMSecs     = _mavCommandAckTimeoutMSecs;
     } MavCommandListEntry_t;
 

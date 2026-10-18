@@ -7,11 +7,19 @@
 
 #include "USVPayloadFactGroup.h"
 #include "QGCMAVLink.h"
+#include "Comms/MAVLinkProtocol.h"
 
 #include <array>
 #include <cstring>
 #include <cmath>
 #include <QtCore/QLoggingCategory>
+#include <QtCore/QDir>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
+#include <QtCore/QLockFile>
+#include <QtCore/QSettings>
+#include <QtCore/QStandardPaths>
+#include <QtCore/QRegularExpression>
 #include <QtQml/QQmlEngine>
 
 Q_LOGGING_CATEGORY(USVPayloadLog, "USV.Payload")
@@ -43,6 +51,8 @@ USVPayloadFactGroup::USVPayloadFactGroup(QObject *parent)
     , _jetsonCpuFact(0, QStringLiteral("jetsonCpu"), FactMetaData::valueTypeFloat)
     , _jetsonMemoryFact(0, QStringLiteral("jetsonMemory"), FactMetaData::valueTypeFloat)
     , _detectorHeapFact(0, QStringLiteral("detectorHeap"), FactMetaData::valueTypeFloat)
+    , _adsStateFact(0, QStringLiteral("adsState"), FactMetaData::valueTypeUint32)
+    , _protocolVersionFact(0, QStringLiteral("protocolVersion"), FactMetaData::valueTypeUint32)
 {
     QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
     _addFact(&_voltageFact);
@@ -70,6 +80,8 @@ USVPayloadFactGroup::USVPayloadFactGroup(QObject *parent)
     _addFact(&_jetsonCpuFact, _jetsonCpuName);
     _addFact(&_jetsonMemoryFact, _jetsonMemoryName);
     _addFact(&_detectorHeapFact, _detectorHeapName);
+    _addFact(&_adsStateFact);
+    _addFact(&_protocolVersionFact);
     _markFactsCppOwned();
 
     _timeoutTimer.setSingleShot(true);
@@ -80,6 +92,83 @@ USVPayloadFactGroup::USVPayloadFactGroup(QObject *parent)
     _freshnessClock.start();
     _freshnessTimer.setInterval(1000);
     connect(&_freshnessTimer, &QTimer::timeout, this, &USVPayloadFactGroup::freshnessChanged);
+    connect(&_eventText, &StatusTextHandler::completeTextMessageReceived, this,
+            [this](MAV_COMPONENT, MAV_SEVERITY, const QString &text) { _handlePayloadEvent(text); });
+}
+
+QVariantMap USVPayloadFactGroup::allocateRequest()
+{
+    constexpr uint32_t maxId = 0xFFFFFF;
+    if (_requestSession == 0) {
+        const QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        if (directory.isEmpty() || !QDir().mkpath(directory)) {
+            return {};
+        }
+        const QString path = directory + QStringLiteral("/payload-request-identity.ini");
+        QLockFile lock(path + QStringLiteral(".allocation-lock"));
+        if (!lock.tryLock()) {
+            return {};
+        }
+        QSettings settings(path, QSettings::IniFormat);
+        settings.sync();
+        bool ok = false;
+        const uint32_t previous = settings.value(QStringLiteral("session"), 0).toUInt(&ok);
+        if (!ok || settings.status() != QSettings::NoError || previous >= maxId) {
+            return {};
+        }
+        settings.setValue(QStringLiteral("session"), previous + 1);
+        settings.sync();
+        if (settings.status() != QSettings::NoError) {
+            return {};
+        }
+        _requestSession = previous + 1;
+    }
+    if (_requestSequence >= maxId) {
+        return {};
+    }
+    return {{"session", _requestSession}, {"request", ++_requestSequence},
+            {"sender_system", MAVLinkProtocol::instance()->getSystemId()},
+            {"sender_component", MAVLinkProtocol::getComponentId()}};
+}
+
+void USVPayloadFactGroup::_handlePayloadEvent(const QString &text)
+{
+    if (!text.startsWith(QLatin1String("USVE1:")) || text.size() > 750) {
+        return;
+    }
+    const QJsonDocument document = QJsonDocument::fromJson(text.mid(6).toUtf8());
+    if (!document.isObject()) {
+        return;
+    }
+    const QJsonObject event = document.object();
+    const auto integer = [&event](const char *key, int low, int high) {
+        const QJsonValue value = event.value(QLatin1String(key));
+        const double number = value.toDouble(-1);
+        return value.isDouble() && std::isfinite(number) && std::floor(number) == number && number >= low && number <= high;
+    };
+    if (!integer("v", 1, 1) || !integer("session", 1, 0xFFFFFF) || !integer("request", 1, 0xFFFFFF)
+            || !integer("seq", 1, 0xFFFFFF) || !integer("command", 31010, 31019)
+            || !integer("sender_system", 1, 255) || !integer("sender_component", 0, 255)
+            || !integer("tcp_session", 1, 0xFFFFFF)) {
+        return;
+    }
+    for (const auto *key : {"phase", "outcome", "reason", "attempt_id", "preflight_phase"}) {
+        if (!event.value(QLatin1String(key)).isString() || event.value(QLatin1String(key)).toString().size() > 80) {
+            return;
+        }
+    }
+    const QString phase = event.value("phase").toString();
+    const QString outcome = event.value("outcome").toString();
+    const QString attempt = event.value("attempt_id").toString();
+    static const QRegularExpression uuid(QStringLiteral("^(?:[0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$"));
+    if ((phase != "request" && phase != "progress" && phase != "terminal")
+            || !QStringList({"", "accepted", "rejected", "unknown", "succeeded", "failed", "cancelled", "skipped"}).contains(outcome)
+            || (phase == "terminal" && !QStringList({"succeeded", "failed", "cancelled", "skipped"}).contains(outcome))
+            || (event.contains("cleanup_failed") && !event.value("cleanup_failed").isBool())
+            || (!attempt.isEmpty() && !uuid.match(attempt).hasMatch()) || (phase == "terminal" && attempt.isEmpty())) {
+        return;
+    }
+    emit payloadEventReceived(event.toVariantMap());
 }
 
 QStringList USVPayloadFactGroup::freshFields() const
@@ -104,6 +193,7 @@ void USVPayloadFactGroup::_recordTelemetry(const QStringList &fields)
     _lastTelemetryMsecs = _freshnessClock.elapsed();
     for (const QString &field : fields) {
         _fieldUpdates.insert(field, _lastTelemetryMsecs);
+        ++_fieldSequences[field];
     }
     if (!_freshnessTimer.isActive()) {
         _freshnessTimer.start();
@@ -113,7 +203,7 @@ void USVPayloadFactGroup::_recordTelemetry(const QStringList &fields)
 
 void USVPayloadFactGroup::_markFactsCppOwned()
 {
-    const std::array<Fact*, 25> facts = {
+    const std::array<Fact*, 27> facts = {
         &_voltageFact,
         &_absorbanceFact,
         &_pumpXFact,
@@ -139,6 +229,8 @@ void USVPayloadFactGroup::_markFactsCppOwned()
         &_jetsonCpuFact,
         &_jetsonMemoryFact,
         &_detectorHeapFact,
+        &_adsStateFact,
+        &_protocolVersionFact,
     };
 
     for (Fact *fact : facts) {
@@ -158,15 +250,24 @@ void USVPayloadFactGroup::handleMessage(Vehicle *vehicle, const mavlink_message_
     _lastCompid = message.compid;
 
     switch (message.msgid) {
+    case MAVLINK_MSG_ID_STATUSTEXT:
+        if (message.compid == 191) {
+            _eventText.mavlinkMessageReceived(message);
+        }
+        break;
     case MAVLINK_MSG_ID_NAMED_VALUE_FLOAT:
         _rxNamedValue++;
         _handleNamedValueFloat(message);
         break;
     case MAVLINK_MSG_ID_DEBUG_VECT:
-        _handleDebugVect(message);
+        if (message.compid == 1 || message.compid == 191) {
+            _handleDebugVect(message);
+        }
         break;
     case MAVLINK_MSG_ID_DEBUG:
-        _handleDebug(message);
+        if (message.compid == 1 || message.compid == 191) {
+            _handleDebug(message);
+        }
         break;
     case MAVLINK_MSG_ID_HEARTBEAT:
         // 伴随计算机心跳: compid=191 (MAV_COMP_ID_ONBOARD_COMPUTER)
@@ -188,6 +289,9 @@ void USVPayloadFactGroup::handleMessage(Vehicle *vehicle, const mavlink_message_
 
 void USVPayloadFactGroup::_handleNamedValueFloat(const mavlink_message_t &message)
 {
+    if (message.compid != 1 && message.compid != 191) {
+        return;
+    }
     mavlink_named_value_float_t namedValue{};
     mavlink_msg_named_value_float_decode(&message, &namedValue);
     if (!std::isfinite(namedValue.value)) {
@@ -262,6 +366,14 @@ void USVPayloadFactGroup::_handleNamedValueFloat(const mavlink_message_t &messag
     } else if (name == QLatin1String("USV_VLD")) {
         _spectrometerValidFact.setRawValue(QVariant::fromValue(static_cast<uint32_t>(namedValue.value))); handled = true;
         _recordTelemetry({QStringLiteral("spectrometerValid")});
+    } else if (name == QLatin1String("USV_ADS") && namedValue.value >= 0 && namedValue.value <= 5
+               && std::floor(namedValue.value) == namedValue.value) {
+        _adsStateFact.setRawValue(static_cast<uint32_t>(namedValue.value)); handled = true;
+        _recordTelemetry({QStringLiteral("adsState")});
+    } else if (name == QLatin1String("USV_PROTO") && namedValue.value >= 0 && namedValue.value <= 0xFFFFFF
+               && std::floor(namedValue.value) == namedValue.value) {
+        _protocolVersionFact.setRawValue(static_cast<uint32_t>(namedValue.value)); handled = true;
+        _recordTelemetry({QStringLiteral("protocolVersion")});
     } else if (name == QLatin1String("USV_JTMP")) {
         _jetsonTempFact.setRawValue(namedValue.value); handled = true;
         _recordTelemetry({QStringLiteral("jetsonTemp")});
@@ -294,6 +406,9 @@ void USVPayloadFactGroup::_handleDebugVect(const mavlink_message_t &message)
 {
     mavlink_debug_vect_t dv{};
     mavlink_msg_debug_vect_decode(&message, &dv);
+    if (!std::isfinite(dv.x) || !std::isfinite(dv.y) || !std::isfinite(dv.z)) {
+        return;
+    }
 
     char nameBuf[11];
     memcpy(nameBuf, dv.name, sizeof(dv.name));
@@ -324,6 +439,9 @@ void USVPayloadFactGroup::_handleDebug(const mavlink_message_t &message)
 {
     mavlink_debug_t dbg{};
     mavlink_msg_debug_decode(&message, &dbg);
+    if (!std::isfinite(dbg.value)) {
+        return;
+    }
 
     // ind=0 -> 包计数
     if (dbg.ind == 0) {

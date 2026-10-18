@@ -247,7 +247,7 @@ Rectangle {
                 valueText: root.operations.payloadOnline && root.operations.factNumber(root.operations.payload ? root.operations.payload.stepTotal : null, 0) > 0 ? root.operations.payloadMetric("stepCurrent", 0, "") + " / " + root.operations.payloadMetric("stepTotal", 0, "") : "—"
             }
             DataRow {
-                labelText: qsTr("已采样次数")
+                labelText: qsTr("启动次数")
                 valueText: root.operations.payloadMetric("sampleCount", 0, "")
             }
             DataRow {
@@ -374,7 +374,7 @@ Rectangle {
                 valueText: !root.operations.payloadOnline ? "—" : root.operations.payloadMetric("loopCurrent", 0, "") + " / " + (root.operations.factNumber(root.operations.payload.loopTotal, 0) > 0 ? root.operations.payloadMetric("loopTotal", 0, "") : "∞")
             }
             DataRow {
-                labelText: qsTr("已采样次数")
+                labelText: qsTr("启动次数")
                 valueText: root.operations.payloadMetric("sampleCount", 0, "")
             }
             Divider {
@@ -458,7 +458,7 @@ Rectangle {
                 valueText: root.operations.payload ? String(root.operations.payload.rxHeartbeat) : "—"
             }
             DataRow {
-                labelText: qsTr("心跳间隔")
+                labelText: qsTr("心跳到达间隔")
                 valueText: root.operations.payloadOnline && root.operations.payload.rxHeartbeat > 1 ? Number(root.operations.payload.latencyMs).toFixed(0) + " ms" : "—"
             }
             DataRow {

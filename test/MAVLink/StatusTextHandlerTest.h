@@ -21,4 +21,7 @@ public:
 private slots:
     void _testGetMessageText();
     void _testHandleTextMessage();
+    void _testCompleteChunks();
+    void _testIncompleteAndConflictingChunks();
+    void _testAbsoluteChunkDeadline();
 };

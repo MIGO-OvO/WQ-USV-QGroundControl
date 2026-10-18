@@ -98,7 +98,7 @@ USVCockpitSurface {
                         Layout.fillWidth: true
                         Layout.preferredWidth: 1
                         spacing: root.theme.unit * 0.5
-                        QGCLabel { text: [qsTr("流程步骤"), qsTr("当前循环"), qsTr("采样计数")][parent.index]; color: root.theme.secondary; font.pointSize: root.theme.captionPointSize }
+                        QGCLabel { text: [qsTr("流程步骤"), qsTr("当前循环"), qsTr("启动次数")][parent.index]; color: root.theme.secondary; font.pointSize: root.theme.captionPointSize }
                         QGCLabel { font.pointSize: root.theme.bodyPointSize; text: [root.operations.stepText, root.operations.loopText, root.operations.sampleCountText][parent.index]; color: root.theme.text; font.bold: true }
                     }
                 }
@@ -141,7 +141,7 @@ USVCockpitSurface {
             Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: root.theme.divider; visible: !root.diagnostics }
             USVCockpitValueRow { Layout.fillWidth: true; theme: root.theme; label: qsTr("流程步骤"); value: root.operations.stepText; visible: !root.diagnostics && !root.compact }
             USVCockpitValueRow { Layout.fillWidth: true; theme: root.theme; label: qsTr("当前循环"); value: root.operations.loopText; visible: !root.diagnostics && !root.compact }
-            USVCockpitValueRow { Layout.fillWidth: true; theme: root.theme; label: qsTr("采样计数"); value: root.operations.sampleCountText; visible: !root.diagnostics && !root.compact }
+            USVCockpitValueRow { Layout.fillWidth: true; theme: root.theme; label: qsTr("启动次数"); value: root.operations.sampleCountText; visible: !root.diagnostics && !root.compact }
             Loader {
                 Layout.fillWidth: true
                 active: root.diagnostics

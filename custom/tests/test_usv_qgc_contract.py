@@ -22,6 +22,10 @@ PAYLOAD_NAMED_VALUE_FIELDS = {
     "USV_PKT": ("pkt_count", "packetCount"),
     "USV_STEP": ("automation_step", "stepCurrent"),
     "USV_STOT": ("automation_total", "stepTotal"),
+    "USV_LOOP": ("loop_current", "loopCurrent"),
+    "USV_LTOT": ("loop_total", "loopTotal"),
+    "USV_ADS": ("ads_state", "adsState"),
+    "USV_PROTO": ("protocol_version", "protocolVersion"),
     "USV_SCNT": ("sample_count", "sampleCount"),
     "USV_PERR": ("pid_error", "pidError"),
     "USV_PMOD": ("pid_mode", "pidMode"),
@@ -271,9 +275,12 @@ class USVQGCContractTests(unittest.TestCase):
         for mav_name, (firmware_member, qgc_fact) in PAYLOAD_NAMED_VALUE_FIELDS.items():
             with self.subTest(mav_name=mav_name):
                 self.assertIn(mav_name, bridge)
-                self.assertIn(mav_name, firmware_cache)
-                self.assertIn(mav_name, firmware_forward)
-                self.assertIn(firmware_member, rover_header)
+                cache_header = (WORKSPACE_ROOT / 'ardupilot-usv/Rover/USVPayload.h').read_text(encoding='utf-8')
+                self.assertIn(mav_name, cache_header)
+                self.assertIn('usv_payload.update(', firmware_cache)
+                self.assertIn('USVPayload::name(', firmware_cache)
+                self.assertIn('link->send_usv_payload()', firmware_forward)
+                self.assertIn('USVPayload usv_payload', rover_header)
                 self.assertIn(mav_name, qgc_source)
                 self.assertIn(qgc_fact, fact_names)
 
@@ -337,7 +344,7 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("#include <QtQml/QQmlEngine>", source)
         self.assertIn("USVPayloadFactGroup::_markFactsCppOwned()", source)
         self.assertIn("_markFactsCppOwned();", source)
-        self.assertIn("const std::array<Fact*, 25> facts", source)
+        self.assertIn("const std::array<Fact*, 27> facts", source)
         self.assertIn("QQmlEngine::setObjectOwnership", source)
         self.assertIn("QQmlEngine::CppOwnership", source)
 
@@ -495,6 +502,8 @@ class USVQGCContractTests(unittest.TestCase):
                               payloadStatus: 0};
             var pendingCommand = 0, awaitedCommand = 0, ready = true, canStartPointSample = true;
             var safetyLocked = false;
+            var protocolReady = true, stopsPending = false, request = null, _payloadCompId = 191;
+            operations.vehicle = {usvSafetyLocked: false, isMavCommandPending: () => false};
             assert.equal(allowed(31010), true);
             safetyLocked = true;
             assert.equal(allowed(31010), false);
@@ -580,7 +589,7 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("if (targetCompId == 191 && command == 31018)", source)
         self.assertIn("qMax(entry.ackTimeoutMSecs, 40000)", source)
         self.assertIn("command == 31011 || command == 31016 || command == 31019", source)
-        self.assertIn("qMax(entry.ackTimeoutMSecs, 15000)", source)
+        self.assertIn("entry.usvTotalTimeoutMSecs = 15000", source)
         self.assertIn("isHighLatency() ? _mavCommandAckTimeoutMSecsHighLatency : _mavCommandAckTimeoutMSecs", source)
         self.assertIn("_sendMavCommandShouldRetry(command) ? _mavCommandMaxRetryCount : 1", source)
 
@@ -594,10 +603,11 @@ class USVQGCContractTests(unittest.TestCase):
             qml = (REPO_ROOT / "custom/res" / name).read_text(encoding="utf-8")
             self.assertIn("isMavCommandPending(", qml)
 
-    def test_controller_does_not_expire_a_pending_transport_command(self):
+    def test_controller_absolute_deadline_expires_even_with_pending_transport(self):
         self._run_qml_functions('USVPayloadCommandController.qml', ['expire'], '''
             const assert = require('node:assert/strict');
-            var pendingCommand = 31019, warning = false, feedback = '';
+            var pendingCommand = 31019, awaitedCommand = 0, warning = false, feedback = '';
+            var request = {command: 31019}, locked = false, lockUnknown = () => locked = true;
             var _payloadCompId = 191, waiting = true, restarted = 0;
             var operations = {vehicle: {isMavCommandPending: (comp, cmd) => {
                 assert.equal(comp, 191); assert.equal(cmd, 31019); return waiting;
@@ -605,10 +615,8 @@ class USVQGCContractTests(unittest.TestCase):
             var timeout = {restart: () => restarted++, stop: () => {}};
             var commandName = () => 'stop', qsTr = text => text;
             expire();
-            assert.equal(pendingCommand, 31019); assert.equal(warning, false);
-            assert.equal(restarted, 1);
-            waiting = false; expire();
             assert.equal(pendingCommand, 0); assert.equal(warning, true);
+            assert.equal(restarted, 0); assert.equal(locked, true); assert.equal(request.unknown, true);
             ''')
 
     def test_stop_deadlines_and_completed_hold_state_execute_controller_functions(self):
@@ -616,6 +624,9 @@ class USVQGCContractTests(unittest.TestCase):
             const assert = require('node:assert/strict');
             var USVLayout = {StatusIdle: 0, StatusSamplingDone: 9, StatusAborted: 12, StatusHoldNoMission: 13};
             var operations = {payloadOnline: true, payloadStatus: 13};
+            var request = {baseline: {status: 0}};
+            operations.fresh = () => true;
+            operations.payload = {fieldSequence: () => 1};
             assert.equal(commandTimeoutFor(31018), 40000);
             assert.equal(commandTimeoutFor(31010), 5000);
             for (const command of [31011, 31016, 31019])
