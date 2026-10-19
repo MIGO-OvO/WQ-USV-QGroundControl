@@ -276,7 +276,7 @@ void SendMavCommandWithSignallingTest::_payloadRequestIdentity()
     QCOMPARE(blocked.allocateRequest().value("session").toUInt(), 3U);
 
     QSettings settings(path, QSettings::IniFormat);
-    for (const QVariant &invalid : {QVariant("corrupt"), QVariant(0xFFFFFF)}) {
+    for (const QVariant& invalid : {QVariant("corrupt"), QVariant(0xFFFFFF)}) {
         settings.setValue("session", invalid);
         settings.sync();
         USVPayloadFactGroup exhausted;
@@ -290,7 +290,7 @@ void SendMavCommandWithSignallingTest::_payloadRequestIdentity()
     QVERIFY(noWrap.allocateRequest().isEmpty());
 
     QVERIFY(QFile::remove(path));
-    QVERIFY(QDir().mkdir(path)); // An unusable store must not fall back to volatile IDs.
+    QVERIFY(QDir().mkdir(path));  // An unusable store must not fall back to volatile IDs.
     USVPayloadFactGroup unwritable;
     QVERIFY(unwritable.allocateRequest().isEmpty());
 }
@@ -298,10 +298,10 @@ void SendMavCommandWithSignallingTest::_payloadRequestIdentity()
 void SendMavCommandWithSignallingTest::_payloadFactsFreshnessAndEvents()
 {
     _connectMockLinkNoInitialConnectSequence();
-    Vehicle *vehicle = MultiVehicleManager::instance()->activeVehicle();
+    Vehicle* vehicle = MultiVehicleManager::instance()->activeVehicle();
     USVPayloadFactGroup group;
     group.setVehicleId(vehicle->id());
-    auto value = [&](int component, const char *name, float number) {
+    auto value = [&](int component, const char* name, float number) {
         mavlink_message_t message{};
         char field[10]{};
         memcpy(field, name, qMin(size_t(10), strlen(name)));
@@ -320,17 +320,26 @@ void SendMavCommandWithSignallingTest::_payloadFactsFreshnessAndEvents()
     QVERIFY(!group.freshFields().contains("spectrometerValid"));
 
     QSignalSpy events(&group, &USVPayloadFactGroup::payloadEventReceived);
-    QJsonObject event{{"v", 1}, {"session", 12}, {"request", 3}, {"tcp_session", 4},
-                      {"command", 31010}, {"sender_system", 255}, {"sender_component", 190},
-                      {"seq", 2}, {"phase", "terminal"}, {"outcome", "failed"},
-                      {"reason", QStringLiteral("测量过期")}, {"preflight_phase", "settling"},
+    QJsonObject event{{"v", 1},
+                      {"session", 12},
+                      {"request", 3},
+                      {"tcp_session", 4},
+                      {"command", 31010},
+                      {"sender_system", 255},
+                      {"sender_component", 190},
+                      {"seq", 2},
+                      {"phase", "terminal"},
+                      {"outcome", "failed"},
+                      {"reason", QStringLiteral("测量过期")},
+                      {"preflight_phase", "settling"},
                       {"attempt_id", "1234567890abcdef1234567890abcdef"}};
     int chunkId = 100;
     auto send = [&](int system, int component, bool missing) {
         const QByteArray bytes = "USVE1:" + QJsonDocument(event).toJson(QJsonDocument::Compact) + '\0';
         ++chunkId;
         for (int offset = 0; offset < bytes.size(); offset += 50) {
-            if (missing && offset == 50) continue;
+            if (missing && offset == 50)
+                continue;
             char chunk[50]{};
             memcpy(chunk, bytes.constData() + offset, qMin(qsizetype(50), bytes.size() - offset));
             mavlink_message_t message{};
@@ -356,24 +365,31 @@ void SendMavCommandWithSignallingTest::_payloadFactsFreshnessAndEvents()
 }
 
 SendMavCommandWithSignallingTest::TestCase_t SendMavCommandWithSignallingTest::_rgTestCases[] = {
-    {  MockLink::MAV_CMD_MOCKLINK_ALWAYS_RESULT_ACCEPTED,           MAV_RESULT_ACCEPTED,    Vehicle::MavCmdResultCommandResultOnly,             1 },
-    {  MockLink::MAV_CMD_MOCKLINK_ALWAYS_RESULT_FAILED,             MAV_RESULT_FAILED,      Vehicle::MavCmdResultCommandResultOnly,             1 },
-    {  MockLink::MAV_CMD_MOCKLINK_SECOND_ATTEMPT_RESULT_ACCEPTED,   MAV_RESULT_ACCEPTED,    Vehicle::MavCmdResultCommandResultOnly,             2 },
-    {  MockLink::MAV_CMD_MOCKLINK_SECOND_ATTEMPT_RESULT_FAILED,     MAV_RESULT_FAILED,      Vehicle::MavCmdResultCommandResultOnly,             2 },
-    {  MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE,                      MAV_RESULT_FAILED,      Vehicle::MavCmdResultFailureNoResponseToCommand,    Vehicle::_mavCommandMaxRetryCount },
-    {  MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE_NO_RETRY,             MAV_RESULT_FAILED,      Vehicle::MavCmdResultFailureNoResponseToCommand,    1 },
-    {  MockLink::MAV_CMD_MOCKLINK_RESULT_IN_PROGRESS_ACCEPTED,      MAV_RESULT_ACCEPTED,    Vehicle::MavCmdResultCommandResultOnly,             1 },
-    {  MockLink::MAV_CMD_MOCKLINK_RESULT_IN_PROGRESS_FAILED,        MAV_RESULT_FAILED,      Vehicle::MavCmdResultCommandResultOnly,             1 },
-    {  MockLink::MAV_CMD_MOCKLINK_RESULT_IN_PROGRESS_NO_ACK,        MAV_RESULT_FAILED,      Vehicle::MavCmdResultFailureNoResponseToCommand,    1 },
+    {MockLink::MAV_CMD_MOCKLINK_ALWAYS_RESULT_ACCEPTED, MAV_RESULT_ACCEPTED, Vehicle::MavCmdResultCommandResultOnly, 1},
+    {MockLink::MAV_CMD_MOCKLINK_ALWAYS_RESULT_FAILED, MAV_RESULT_FAILED, Vehicle::MavCmdResultCommandResultOnly, 1},
+    {MockLink::MAV_CMD_MOCKLINK_SECOND_ATTEMPT_RESULT_ACCEPTED, MAV_RESULT_ACCEPTED,
+     Vehicle::MavCmdResultCommandResultOnly, 2},
+    {MockLink::MAV_CMD_MOCKLINK_SECOND_ATTEMPT_RESULT_FAILED, MAV_RESULT_FAILED, Vehicle::MavCmdResultCommandResultOnly,
+     2},
+    {MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE, MAV_RESULT_FAILED, Vehicle::MavCmdResultFailureNoResponseToCommand,
+     Vehicle::_mavCommandMaxRetryCount},
+    {MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE_NO_RETRY, MAV_RESULT_FAILED,
+     Vehicle::MavCmdResultFailureNoResponseToCommand, 1},
+    {MockLink::MAV_CMD_MOCKLINK_RESULT_IN_PROGRESS_ACCEPTED, MAV_RESULT_ACCEPTED,
+     Vehicle::MavCmdResultCommandResultOnly, 1},
+    {MockLink::MAV_CMD_MOCKLINK_RESULT_IN_PROGRESS_FAILED, MAV_RESULT_FAILED, Vehicle::MavCmdResultCommandResultOnly,
+     1},
+    {MockLink::MAV_CMD_MOCKLINK_RESULT_IN_PROGRESS_NO_ACK, MAV_RESULT_FAILED,
+     Vehicle::MavCmdResultFailureNoResponseToCommand, 1},
 };
 
 void SendMavCommandWithSignallingTest::_testCaseWorker(TestCase_t& testCase)
 {
     _connectMockLinkNoInitialConnectSequence();
 
-    MultiVehicleManager*    vehicleMgr  = MultiVehicleManager::instance();
-    Vehicle*                vehicle     = vehicleMgr->activeVehicle();
-    QSignalSpy              spyResult(vehicle, &Vehicle::mavCommandResult);
+    MultiVehicleManager* vehicleMgr = MultiVehicleManager::instance();
+    Vehicle* vehicle = vehicleMgr->activeVehicle();
+    QSignalSpy spyResult(vehicle, &Vehicle::mavCommandResult);
 
     _mockLink->clearReceivedMavCommandCounts();
 
@@ -387,20 +403,23 @@ void SendMavCommandWithSignallingTest::_testCaseWorker(TestCase_t& testCase)
     // are taking the response to that MAV_CMD_REQUEST_MESSAGE, we discard it and take the next
     // Also, the camera manager requests MAVLINK_MSG_ID_CAMERA_INFORMATION on vehicle connection,
     // so we need to ignore that as well.
-    while (arguments.at(2).toInt() == MAV_CMD_REQUEST_MESSAGE || arguments.at(2).toInt() == MAV_CMD_REQUEST_CAMERA_INFORMATION) {
+    while (arguments.at(2).toInt() == MAV_CMD_REQUEST_MESSAGE ||
+           arguments.at(2).toInt() == MAV_CMD_REQUEST_CAMERA_INFORMATION) {
         qDebug() << "Received response to MAV_CMD_REQUEST_MESSAGE(512), ignoring, waiting for: " << testCase.command;
         QCOMPARE(spyResult.wait(10000), true);
         arguments = spyResult.takeFirst();
     }
 
-    QCOMPARE(arguments.count(),                                             5);
-    QCOMPARE(arguments.at(0).toInt(),                                       vehicle->id());
-    QCOMPARE(arguments.at(1).toInt(),                                       MAV_COMP_ID_AUTOPILOT1);
-    QCOMPARE(arguments.at(2).toInt(),                                       testCase.command);
-    QCOMPARE(arguments.at(3).toInt(),                                       testCase.expectedCommandResult);
-    QCOMPARE(arguments.at(4).value<Vehicle::MavCmdResultFailureCode_t>(),   testCase.expectedFailureCode);
-    QCOMPARE(vehicle->_findMavCommandListEntryIndex(MAV_COMP_ID_AUTOPILOT1, MockLink::MAV_CMD_MOCKLINK_ALWAYS_RESULT_ACCEPTED), -1);
-    QCOMPARE(_mockLink->receivedMavCommandCount(testCase.command),          testCase.expectedSendCount);
+    QCOMPARE(arguments.count(), 5);
+    QCOMPARE(arguments.at(0).toInt(), vehicle->id());
+    QCOMPARE(arguments.at(1).toInt(), MAV_COMP_ID_AUTOPILOT1);
+    QCOMPARE(arguments.at(2).toInt(), testCase.command);
+    QCOMPARE(arguments.at(3).toInt(), testCase.expectedCommandResult);
+    QCOMPARE(arguments.at(4).value<Vehicle::MavCmdResultFailureCode_t>(), testCase.expectedFailureCode);
+    QCOMPARE(vehicle->_findMavCommandListEntryIndex(MAV_COMP_ID_AUTOPILOT1,
+                                                    MockLink::MAV_CMD_MOCKLINK_ALWAYS_RESULT_ACCEPTED),
+             -1);
+    QCOMPARE(_mockLink->receivedMavCommandCount(testCase.command), testCase.expectedSendCount);
 
     _disconnectMockLink();
 }
@@ -408,7 +427,7 @@ void SendMavCommandWithSignallingTest::_testCaseWorker(TestCase_t& testCase)
 void SendMavCommandWithSignallingTest::_performTestCases(void)
 {
     int index = 0;
-    for (TestCase_t& testCase: _rgTestCases) {
+    for (TestCase_t& testCase : _rgTestCases) {
         qDebug() << "Testing case" << index++;
         _testCaseWorker(testCase);
     }
@@ -418,24 +437,26 @@ void SendMavCommandWithSignallingTest::_duplicateCommand(void)
 {
     _connectMockLinkNoInitialConnectSequence();
 
-    MultiVehicleManager*    vehicleMgr  = MultiVehicleManager::instance();
-    Vehicle*                vehicle     = vehicleMgr->activeVehicle();
+    MultiVehicleManager* vehicleMgr = MultiVehicleManager::instance();
+    Vehicle* vehicle = vehicleMgr->activeVehicle();
 
     vehicle->sendMavCommand(MAV_COMP_ID_AUTOPILOT1, MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE, true /* showError */);
-    QVERIFY(QTest::qWaitFor([&]() { return _mockLink->receivedMavCommandCount(MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE) == 1; }, 10));
+    QVERIFY(QTest::qWaitFor(
+        [&]() { return _mockLink->receivedMavCommandCount(MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE) == 1; }, 10));
     QSignalSpy spyResult(vehicle, &Vehicle::mavCommandResult);
     vehicle->sendMavCommand(MAV_COMP_ID_AUTOPILOT1, MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE, true /* showError */);
 
     // Duplicate command returns immediately
-    QCOMPARE(spyResult.count(),                                                         1);
+    QCOMPARE(spyResult.count(), 1);
     QList<QVariant> arguments = spyResult.takeFirst();
-    QCOMPARE(arguments.count(),                                                         5);
-    QCOMPARE(arguments.at(0).toInt(),                                                   vehicle->id());
-    QCOMPARE(arguments.at(2).toInt(),                                                   (int)MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE);
-    QCOMPARE(arguments.at(3).toInt(),                                                   (int)MAV_RESULT_FAILED);
-    QCOMPARE(arguments.at(4).value<Vehicle::MavCmdResultFailureCode_t>(),               Vehicle::MavCmdResultFailureDuplicateCommand);
-    QCOMPARE(_mockLink->receivedMavCommandCount(MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE),    1);
-    QVERIFY(vehicle->_findMavCommandListEntryIndex(MAV_COMP_ID_AUTOPILOT1, MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE) != -1);
+    QCOMPARE(arguments.count(), 5);
+    QCOMPARE(arguments.at(0).toInt(), vehicle->id());
+    QCOMPARE(arguments.at(2).toInt(), (int)MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE);
+    QCOMPARE(arguments.at(3).toInt(), (int)MAV_RESULT_FAILED);
+    QCOMPARE(arguments.at(4).value<Vehicle::MavCmdResultFailureCode_t>(), Vehicle::MavCmdResultFailureDuplicateCommand);
+    QCOMPARE(_mockLink->receivedMavCommandCount(MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE), 1);
+    QVERIFY(vehicle->_findMavCommandListEntryIndex(MAV_COMP_ID_AUTOPILOT1, MockLink::MAV_CMD_MOCKLINK_NO_RESPONSE) !=
+            -1);
 }
 
 void SendMavCommandWithSignallingTest::_retryRestartsAckDeadline(void)
