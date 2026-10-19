@@ -137,11 +137,13 @@ public:
     Q_ENUM(CheckList)
 
     Q_PROPERTY(int                  id                          READ id                                                             CONSTANT)
+    Q_PROPERTY(int                  defaultComponentId          READ defaultComponentId                                             CONSTANT)
     Q_PROPERTY(AutoPilotPlugin*     autopilotPlugin             MEMBER _autopilotPlugin                                             CONSTANT)
     Q_PROPERTY(QGeoCoordinate       coordinate                  READ coordinate                                                     NOTIFY coordinateChanged)
     Q_PROPERTY(QGeoCoordinate       homePosition                READ homePosition                                                   NOTIFY homePositionChanged)
     Q_PROPERTY(QGeoCoordinate       armedPosition               READ armedPosition                                                  NOTIFY armedPositionChanged)
     Q_PROPERTY(bool                 armed                       READ armed                      WRITE setArmedShowError             NOTIFY armedChanged)
+    Q_PROPERTY(bool                 usvSafetyLocked             READ usvSafetyLocked            WRITE setUsvSafetyLocked            NOTIFY usvSafetyLockedChanged)
     Q_PROPERTY(bool                 autoDisarm                  READ autoDisarm                                                     NOTIFY autoDisarmChanged)
     Q_PROPERTY(bool                 flightModeSetAvailable      READ flightModeSetAvailable                                         CONSTANT)
     Q_PROPERTY(QStringList          flightModes                 READ flightModes                                                    NOTIFY flightModesChanged)
@@ -476,6 +478,9 @@ public:
     void setArmed           (bool armed, bool showError);
     void setArmedShowError  (bool armed) { setArmed(armed, true); }
 
+    bool usvSafetyLocked() const;
+    void setUsvSafetyLocked(bool locked);
+
     bool flightModeSetAvailable             ();
     QStringList flightModes                 ();
     QString flightMode                      () const;
@@ -641,7 +646,7 @@ public:
     /// \param command
     /// \return
     ///
-    bool isMavCommandPending(int targetCompId, MAV_CMD command);
+    Q_INVOKABLE bool isMavCommandPending(int targetCompId, int command);
 
     /// Same as sendMavCommand but available from Qml.
     Q_INVOKABLE void sendCommand(int compId, int command, bool showError, double param1 = 0.0, double param2 = 0.0, double param3 = 0.0, double param4 = 0.0, double param5 = 0.0, double param6 = 0.0, double param7 = 0.0);
@@ -818,6 +823,7 @@ signals:
     void homePositionChanged            (const QGeoCoordinate& homePosition);
     void armedPositionChanged();
     void armedChanged                   (bool armed);
+    void usvSafetyLockedChanged();
     void flightModeChanged              (const QString& flightMode);
     void flyingChanged                  (bool flying);
     void landingChanged                 (bool landing);
@@ -1184,6 +1190,8 @@ private:
         int                     maxTries            = _mavCommandMaxRetryCount;
         int                     tryCount            = 0;
         QElapsedTimer           elapsedTimer;
+        QElapsedTimer           usvTotalTimer;
+        int                     usvTotalTimeoutMSecs = 0;
         int                     ackTimeoutMSecs     = _mavCommandAckTimeoutMSecs;
     } MavCommandListEntry_t;
 
@@ -1199,6 +1207,8 @@ private:
             const MavCmdAckHandlerInfo_t* ackHandlerInfo,   ///> nullptr to signale no handlers
             int compId, MAV_CMD command, MAV_FRAME frame,
             float param1, float param2, float param3, float param4, double param5, double param6, float param7);
+    bool _usvSafetyCommandAllowed(int compId, MAV_CMD command, float param1) const;
+    void _rejectUsvSafetyCommand(int compId, MAV_CMD command, const MavCmdAckHandlerInfo_t* handler, bool showError);
     void _sendMavCommandFromList(int index);
     int  _findMavCommandListEntryIndex(int targetCompId, MAV_CMD command);
     bool _sendMavCommandShouldRetry(MAV_CMD command);

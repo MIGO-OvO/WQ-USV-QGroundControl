@@ -12,6 +12,8 @@
 #include <QtCore/QList>
 #include <QtCore/QObject>
 #include <QtCore/QLoggingCategory>
+#include <QtCore/QElapsedTimer>
+#include <QtCore/QSet>
 
 #include "MAVLinkLib.h"
 
@@ -82,6 +84,8 @@ public:
 signals:
     void newFormattedMessage(QString message);
     void textMessageReceived(MAV_COMPONENT componentid, MAV_SEVERITY severity, QString text, QString description);
+    // Only complete, consistent byte sequences are suitable for machine events.
+    void completeTextMessageReceived(MAV_COMPONENT componentid, MAV_SEVERITY severity, QString text);
     void messageCountChanged(uint32_t newCount);
     void messageTypeChanged();
     void newErrorMessage(QString message);
@@ -92,7 +96,7 @@ private slots:
 private:
     void _handleStatusText(const mavlink_message_t &message);
     void _handleTextMessage(uint32_t newCount, MessageType messageType = MessageType::MessageNone);
-    void _chunkedStatusTextCompleted(MAV_COMPONENT compId);
+    void _chunkedStatusTextCompleted(MAV_COMPONENT compId, bool complete = false);
 
     QTimer *m_chunkedStatusTextTimer = nullptr;
 
@@ -109,9 +113,13 @@ private:
     MessageType m_messageType = MessageType::MessageNone;
 
     typedef struct __ChunkedStatusTextInfo {
-        uint16_t chunkId;
-        MAV_SEVERITY severity;
-        QStringList rgMessageChunks;
+        uint16_t chunkId = 0;
+        MAV_SEVERITY severity = MAV_SEVERITY_INFO;
+        QList<QByteArray> chunks;
+        QSet<int> received;
+        int lastSequence = -1;
+        bool invalid = false;
+        QElapsedTimer age;
     } ChunkedStatusTextInfo_t;
 
     QMap<MAV_COMPONENT, ChunkedStatusTextInfo_t> m_chunkedStatusTextInfoMap;

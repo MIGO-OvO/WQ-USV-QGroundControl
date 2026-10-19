@@ -381,6 +381,8 @@ USVQmlOverrideInterceptor::USVQmlOverrideInterceptor()
     // 启动时检查关键覆盖资源是否存在
     QStringList checkPaths = {
         QStringLiteral(":/USV/qml/QGroundControl/FlyView/FlyViewCustomLayer.qml"),
+        QStringLiteral(":/USV/qml/QGroundControl/FlyView/USVFlyViewLayout.js"),
+        QStringLiteral(":/USV/qml/QGroundControl/Controls/FlyViewToolBar.qml"),
     };
 
     for (const QString &path : checkPaths) {
@@ -392,9 +394,10 @@ USVQmlOverrideInterceptor::USVQmlOverrideInterceptor()
 QUrl USVQmlOverrideInterceptor::intercept(const QUrl &url,
                                            QQmlAbstractUrlInterceptor::DataType type)
 {
-    // 仅拦截 QML 文件和 URL 字符串（包括资源文件路径）
+    // Relative scripts in overridden QML retain the original module URL.
     switch (type) {
     case QQmlAbstractUrlInterceptor::QmlFile:
+    case QQmlAbstractUrlInterceptor::JavaScriptFile:
     case QQmlAbstractUrlInterceptor::UrlString:
         if (url.scheme() == QStringLiteral("qrc")) {
             const QString origPath = url.path();

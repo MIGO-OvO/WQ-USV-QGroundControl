@@ -1,166 +1,116 @@
-/****************************************************************************
- *
- * USV Fly View Custom Layer
- *
- ****************************************************************************/
-
 import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
 
 import QGroundControl
 import QGroundControl.Controls
-import QGroundControl.FlightMap
 
 import USV
+import "USVFlyViewLayout.js" as USVLayout
 
 Item {
-    id: _root
+    id: root
 
-    property var parentToolInsets
-    property var totalToolInsets: _toolInsets
-    property var mapControl
-
+    property var _guidedController: globals.guidedControllerFlyView
     property var activeVehicle: QGroundControl.multiVehicleManager.activeVehicle
-    property real _toolsMargin: ScreenTools.defaultFontPixelWidth * 0.75
-
-    property real roll: (activeVehicle && activeVehicle.roll && activeVehicle.roll.rawValue !== undefined) ? activeVehicle.roll.rawValue : 0
-    property real pitch: (activeVehicle && activeVehicle.pitch && activeVehicle.pitch.rawValue !== undefined) ? activeVehicle.pitch.rawValue : 0
-    property bool isAttitudeCritical: Math.abs(roll) > 25 || Math.abs(pitch) > 20
-
-    property bool _hasCapsulePayload: activeVehicle && activeVehicle.factGroupNames.indexOf("usvPayload") >= 0
-    property var _capsuleStatusFact: _hasCapsulePayload ? activeVehicle.getFact("usvPayload.status") : null
-    property var _capsuleLinkFact: _hasCapsulePayload ? activeVehicle.getFact("usvPayload.linkActive") : null
-    property int _capsuleStatus: _capsuleStatusFact ? _capsuleStatusFact.value : 0
-    property bool _linkOk: _capsuleLinkFact ? _capsuleLinkFact.value === 1 : true
-
-    readonly property int _cmdStop: 31011
-    readonly property int _cmdPause: 31012
-    readonly property int _cmdResume: 31013
-    readonly property int _cmdCalibrate: 31014
-    readonly property int _payloadCompId: 191
-
-    property var _taskActions: {
-        const actions = []
-        if (!activeVehicle) {
-            return actions
-        }
-
-        switch (_capsuleStatus) {
-        case 1:
-            actions.push({ text: qsTr("暂停"), cmd: _cmdPause, warn: false })
-            actions.push({ text: qsTr("停止"), cmd: _cmdStop, warn: true })
-            break
-        case 2:
-        case 4:
-            actions.push({ text: qsTr("停止"), cmd: _cmdStop, warn: true })
-            break
-        case 3:
-            actions.push({ text: qsTr("重新校准"), cmd: _cmdCalibrate, warn: false })
-            break
-        default:
-            break
-        }
-
-        return actions
+    property var mapControl
+    property var parentToolInsets
+    readonly property var totalToolInsets: toolInsets
+    readonly property point mapOrigin: {
+        const positionX = x;
+        const positionY = y;
+        return mapControl ? mapToItem(mapControl, positionX - x, positionY - y) : Qt.point(positionX, positionY);
     }
+    readonly property real mapWidth: mapControl ? mapControl.width : width
+    readonly property real mapHeight: mapControl ? mapControl.height : height
+    readonly property var geometry: USVLayout.cockpitLayout(width, height, theme.unit, theme.line, parentToolInsets, mapOrigin.y)
+    readonly property alias operations: operationsState
+    readonly property alias controller: cockpitController
+    readonly property alias commands: payloadCommands
 
-    function _sendPayloadCommand(cmdId) {
-        if (activeVehicle) {
-            activeVehicle.sendCommand(_payloadCompId, cmdId, false)
-        }
+    USVOperationsTheme { id: theme }
+    USVOperationsState {
+        id: operationsState
+        guidedController: root._guidedController
+        missionController: root._guidedController ? root._guidedController.missionController : null
+        vehicle: root.activeVehicle
     }
-
-    QGCPalette { id: qgcPal; colorGroupEnabled: true }
-
+    USVCockpitController {
+        id: cockpitController
+        operations: operationsState
+        theme: theme
+        commandController: payloadCommands
+        onEmergencyIssued: payloadCommands.reset()
+    }
+    USVPayloadCommandController {
+        id: payloadCommands
+        operations: operationsState
+        safetyLocked: cockpitController.safetyLocked
+    }
+    Binding {
+        target: root._guidedController
+        property: "safetyController"
+        value: cockpitController
+        when: !!root._guidedController
+    }
+    USVCurrentTaskPanel {
+        id: taskPanel
+        visible: root.geometry.taskVisible
+        x: root.geometry.leftX
+        y: root.geometry.top
+        width: root.geometry.leftWidth
+        maxHeight: root.geometry.leftMaxHeight
+        compact: root.geometry.compact
+        operations: operationsState
+        controller: cockpitController
+        theme: theme
+    }
+    USVEmergencyStopPanel {
+        id: emergencyPanel
+        x: root.geometry.rightX
+        y: root.geometry.top
+        width: root.geometry.rightWidth
+        height: implicitHeight
+        compact: root.geometry.compact
+        operations: operationsState
+        controller: cockpitController
+        theme: theme
+    }
+    USVCockpitControlPanel {
+        id: controlPanel
+        x: root.geometry.rightX
+        y: emergencyPanel.y + emergencyPanel.height + root.geometry.gap
+        width: root.geometry.rightWidth
+        maxHeight: Math.max(0, root.geometry.rightMaxHeight - emergencyPanel.height - root.geometry.gap)
+        operations: operationsState
+        controller: cockpitController
+        commands: payloadCommands
+        compact: root.geometry.compact
+        theme: theme
+        diagnosticsShown: taskPanel.diagnostics
+        onDiagnosticsRequested: { taskPanel.diagnostics = !taskPanel.diagnostics; taskPanel.expanded = true; }
+    }
+    USVRealtimeDataStrip {
+        id: dataStrip
+        x: root.geometry.dataX
+        y: root.geometry.dataY
+        width: root.geometry.dataWidth
+        height: root.geometry.dataHeight
+        operations: operationsState
+        theme: theme
+    }
     QGCToolInsets {
-        id: _toolInsets
-        leftEdgeTopInset: parentToolInsets.leftEdgeTopInset
-        leftEdgeCenterInset: parentToolInsets.leftEdgeCenterInset
-        leftEdgeBottomInset: parentToolInsets.leftEdgeBottomInset
-        rightEdgeTopInset: Math.max(parentToolInsets.rightEdgeTopInset, summaryStrip.visible ? summaryStrip.width + _toolsMargin : 0)
-        rightEdgeCenterInset: Math.max(parentToolInsets.rightEdgeCenterInset, detailDrawer.visible ? detailDrawer.width + _toolsMargin : 0)
-        rightEdgeBottomInset: Math.max(parentToolInsets.rightEdgeBottomInset, instrumentPanel.width + _toolsMargin)
-        topEdgeLeftInset: parentToolInsets.topEdgeLeftInset
-        topEdgeCenterInset: parentToolInsets.topEdgeCenterInset
-        topEdgeRightInset: Math.max(parentToolInsets.topEdgeRightInset, summaryStrip.visible ? summaryStrip.y + summaryStrip.height + _toolsMargin : 0)
-        bottomEdgeLeftInset: parentToolInsets.bottomEdgeLeftInset
-        bottomEdgeCenterInset: Math.max(parentToolInsets.bottomEdgeCenterInset, actionBar.visible ? _root.height - actionBar.y + _toolsMargin : 0)
-        bottomEdgeRightInset: Math.max(parentToolInsets.bottomEdgeRightInset, _root.height - instrumentPanel.y + _toolsMargin)
-    }
+        id: toolInsets
 
-    // 1. 顶部警告横幅 (仅致命级)
-    Rectangle {
-        id: warningBanner
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        anchors.topMargin: parentToolInsets.topEdgeCenterInset + ScreenTools.defaultFontPixelHeight * 0.6
-        width: warningLabel.implicitWidth + ScreenTools.defaultFontPixelWidth * 4
-        height: warningLabel.implicitHeight + ScreenTools.defaultFontPixelHeight * 0.75
-        color: qgcPal.colorRed
-        radius: ScreenTools.defaultFontPixelWidth * 0.5
-        visible: isAttitudeCritical || _capsuleStatus === 3
-        opacity: 0.95
-        z: 1000
-
-        QGCLabel {
-            id: warningLabel
-            anchors.centerIn: parent
-            text: _capsuleStatus === 3
-                  ? qsTr("采样任务失败，请检查流程前置条件")
-                  : qsTr("姿态异常  R:%1°  P:%2°").arg(Number(roll).toFixed(1)).arg(Number(pitch).toFixed(1))
-            color: "white"
-            font.bold: true
-        }
-    }
-
-    // 2. 右上角：载荷摘要条
-    USVPayloadSummaryStrip {
-        id: summaryStrip
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.topMargin: parentToolInsets.topEdgeRightInset + _toolsMargin
-        anchors.rightMargin: _toolsMargin
-        vehicle: activeVehicle
-        visible: !!activeVehicle
-        z: 999
-        onClicked: {
-            detailDrawer.isExpanded = !detailDrawer.isExpanded
-            summaryStrip.isExpanded = detailDrawer.isExpanded
-        }
-    }
-
-    // 3. 右侧抽屉：载荷详情
-    USVPayloadDetailPanel {
-        id: detailDrawer
-        anchors.top: summaryStrip.bottom
-        anchors.right: parent.right
-        anchors.topMargin: _toolsMargin * 0.5
-        anchors.rightMargin: _toolsMargin
-        vehicle: activeVehicle
-        maxHeight: Math.max(0, instrumentPanel.y > 0 ? (instrumentPanel.y - summaryStrip.y - summaryStrip.height - _toolsMargin * 1.5) : (parent.height - instrumentPanel.height - summaryStrip.y - summaryStrip.height - _toolsMargin * 3))
-        z: 998
-    }
-
-    // 4. 右下角：航行仪表 (解除隐式拦截，显式重构)
-    USVInstrumentPanel {
-        id: instrumentPanel
-        anchors.bottom: parent.bottom
-        anchors.right: parent.right
-        anchors.bottomMargin: parentToolInsets.bottomEdgeRightInset + _toolsMargin
-        anchors.rightMargin: _toolsMargin
-        vehicle: activeVehicle
-    }
-
-    // 5. 底部居中：操作栏
-    USVActionBar {
-        id: actionBar
-        x: parentToolInsets.leftEdgeBottomInset + _toolsMargin
-        availableWidth: Math.max(ScreenTools.defaultFontPixelWidth * 16, instrumentPanel.x - x - _toolsMargin)
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: parentToolInsets.bottomEdgeCenterInset + _toolsMargin
-        vehicle: activeVehicle
-        payloadStatus: _capsuleStatus
-        z: 500
+        leftEdgeTopInset: Math.max(root.parentToolInsets ? root.parentToolInsets.leftEdgeTopInset : 0, taskPanel.visible ? root.mapOrigin.x + taskPanel.x + taskPanel.width + root.geometry.gap : 0)
+        leftEdgeCenterInset: leftEdgeTopInset
+        leftEdgeBottomInset: Math.max(root.parentToolInsets ? root.parentToolInsets.leftEdgeBottomInset : 0, root.mapOrigin.x + dataStrip.x + dataStrip.width)
+        rightEdgeTopInset: Math.max(root.parentToolInsets ? root.parentToolInsets.rightEdgeTopInset : 0, root.mapWidth - root.mapOrigin.x - emergencyPanel.x + root.geometry.gap)
+        rightEdgeCenterInset: rightEdgeTopInset
+        rightEdgeBottomInset: root.parentToolInsets ? root.parentToolInsets.rightEdgeBottomInset : 0
+        topEdgeLeftInset: Math.max(root.parentToolInsets ? root.parentToolInsets.topEdgeLeftInset : 0, taskPanel.visible ? root.mapOrigin.y + taskPanel.y + taskPanel.height : 0)
+        topEdgeCenterInset: Math.max(root.parentToolInsets ? root.parentToolInsets.topEdgeCenterInset : 0, root.mapOrigin.y)
+        topEdgeRightInset: Math.max(root.parentToolInsets ? root.parentToolInsets.topEdgeRightInset : 0, root.mapOrigin.y + (controlPanel.visible ? controlPanel.y + controlPanel.height : emergencyPanel.y + emergencyPanel.height))
+        bottomEdgeLeftInset: Math.max(root.parentToolInsets ? root.parentToolInsets.bottomEdgeLeftInset : 0, root.mapHeight - root.mapOrigin.y - dataStrip.y + root.geometry.gap)
+        bottomEdgeCenterInset: Math.max(root.parentToolInsets ? root.parentToolInsets.bottomEdgeCenterInset : 0, root.mapHeight - root.mapOrigin.y - dataStrip.y + root.geometry.gap)
+        bottomEdgeRightInset: root.parentToolInsets ? root.parentToolInsets.bottomEdgeRightInset : 0
     }
 }

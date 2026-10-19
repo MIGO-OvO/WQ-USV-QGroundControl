@@ -25,6 +25,7 @@ Item {
 
     property var missionController
     property var confirmDialog
+    property var safetyController: null
     property var guidedValueSlider
     property var fwdFlightGotoMapCircle
     property var orbitMapCircle
@@ -243,7 +244,10 @@ Item {
         }
     }
 
-    on_ActiveVehicleChanged: _outputState()
+    on_ActiveVehicleChanged: {
+        if (confirmDialog) confirmDialog.confirmCancelled()
+        _outputState()
+    }
 
     Component.onCompleted:              _outputState()
     on_VehicleArmedChanged:             _outputState()
@@ -273,12 +277,14 @@ Item {
         }
         _outputState()
     }
+    // Custom cockpit owns the entry, but still uses the native confirmation.
+    property bool singleMissionEntry: false
     onShowStartMissionChanged: {
         if (_isGuidedActionsControllerLogEnabled()) {
             console.log("showStartMission", showStartMission)
         }
         _outputState()
-        if (showStartMission &&
+        if (showStartMission && !singleMissionEntry &&
             _flyViewSettings.enableAutomaticMissionPopups.rawValue) {
             confirmAction(actionStartMission)
         }
@@ -288,7 +294,7 @@ Item {
             console.log("showContinueMission", showContinueMission)
         }
         _outputState()
-        if (showContinueMission &&
+        if (showContinueMission && !singleMissionEntry &&
             _flyViewSettings.enableAutomaticMissionPopups.rawValue) {
             confirmAction(actionContinueMission)
         }
@@ -376,6 +382,19 @@ Item {
 
     }
 
+    function safetyActionAllowed(actionCode) {
+        if (!safetyController) return true
+        if (actionCode === actionEmergencyStop || actionCode === actionDisarm || actionCode === actionMVDisarm) return true
+        if (safetyController.isVehicleLocked(_activeVehicle)) return false
+        const selected = QGroundControl.multiVehicleManager.selectedVehicles
+        if (actionCode === actionMVArm || actionCode === actionMVStartMission || actionCode === actionMVPause) {
+            for (let index = 0; selected && index < selected.count; index++) {
+                if (safetyController.isVehicleLocked(selected.get(index))) return false
+            }
+        }
+        return true
+    }
+
     function closeAll() {
         confirmDialog.visible = false
         guidedValueSlider.visible = false
@@ -383,6 +402,9 @@ Item {
 
     // Called when an action is about to be executed in order to confirm
     function confirmAction(actionCode, actionData, mapIndicator) {
+        if (!safetyActionAllowed(actionCode)) {
+            return
+        }
         var showImmediate = true
         closeAll()
         confirmDialog.action = actionCode
@@ -554,11 +576,15 @@ Item {
                 return
             }
         }
+        confirmDialog.targetVehicle = _activeVehicle
         confirmDialog.show(showImmediate)
     }
 
     // Executes the specified action
-    function executeAction(actionCode, actionData, sliderOutputValue, optionChecked) {
+    function executeAction(actionCode, actionData, sliderOutputValue, optionChecked, confirmationVehicle) {
+        if ((confirmationVehicle !== undefined && confirmationVehicle !== _activeVehicle) || !safetyActionAllowed(actionCode)) {
+            return
+        }
         var i;
         var selectedVehicles;
         switch (actionCode) {
@@ -615,7 +641,11 @@ Item {
             }
             break
         case actionEmergencyStop:
-            _activeVehicle.emergencyStop()
+            if (safetyController) {
+                safetyController.emergencyStop(_activeVehicle)
+            } else {
+                _activeVehicle.emergencyStop()
+            }
             break
         case actionChangeAlt:
             var valueInMeters = _unitsConversion.appSettingsVerticalDistanceUnitsToMeters(sliderOutputValue)

@@ -26,13 +26,13 @@ QtObject {
             title:      guidedController.startMissionTitle,
             text:       guidedController.startMissionMessage,
             action:     guidedController.actionStartMission,
-            visible:    guidedController.showStartMission
+            visible:    guidedController.showStartMission && !guidedController.singleMissionEntry
         },
         {
             title:      guidedController.continueMissionTitle,
             text:       guidedController.continueMissionMessage,
             action:     guidedController.actionContinueMission,
-            visible:    guidedController.showContinueMission
+            visible:    guidedController.showContinueMission && !guidedController.singleMissionEntry
         },
         {
             title:      guidedController.changeAltTitle,

@@ -5,6 +5,92 @@ function compactSamplingLayout(viewportWidth, fontWidth) {
     return viewportWidth < fontWidth * 130
 }
 
+function operationsPanelWidth(viewportWidth, fontWidth) {
+    return Math.min(fontWidth * 44, viewportWidth * 0.32)
+}
+
+// The overlay already starts below the toolbar. Prefer the space beside bottom
+// controls; lift the dock only when it cannot fit there, so the compass height
+// is not counted twice. All breakpoints follow logical font units.
+function workflowDock(viewportWidth, viewportHeight, fontWidth, insets) {
+    const w = Math.max(0, viewportWidth)
+    const h = Math.max(0, viewportHeight)
+    const unit = Math.max(1, fontWidth)
+    const gap = unit * 1.5
+    function inset(name) {
+        const value = insets ? Number(insets[name]) : 0
+        return isFinite(value) ? Math.max(0, value) : 0
+    }
+    const sideLeft = Math.max(inset("leftEdgeTopInset"), inset("leftEdgeCenterInset"))
+    const sideRight = Math.max(inset("rightEdgeTopInset"), inset("rightEdgeCenterInset"))
+    const besideLeft = Math.max(sideLeft, inset("leftEdgeBottomInset")) + gap
+    const besideRight = Math.max(sideRight, inset("rightEdgeBottomInset")) + gap
+    const besideWidth = Math.max(0, w - besideLeft - besideRight)
+    const lifted = besideWidth < unit * 62
+    const left = lifted ? sideLeft + gap : besideLeft
+    const right = lifted ? sideRight + gap : besideRight
+    const bottom = lifted ? Math.max(inset("bottomEdgeLeftInset"), inset("bottomEdgeCenterInset"), inset("bottomEdgeRightInset")) + gap : gap
+    return {
+        x: Math.min(left, w),
+        width: Math.max(0, Math.min(unit * 110, w - left - right)),
+        bottom: Math.min(bottom, h),
+        maxHeight: Math.max(0, h - bottom - gap),
+        lifted: lifted
+    }
+}
+
+function missionPosition(index, count) {
+    if (!isFinite(index) || !isFinite(count) || count <= 0) return 0
+    return Math.max(0, Math.min(1, index / count))
+}
+
+function cockpitLayout(viewportWidth, viewportHeight, fontWidth, lineHeight, insets, originY) {
+    const w = Math.max(0, viewportWidth)
+    const h = Math.max(0, viewportHeight)
+    const unit = Math.max(1, fontWidth)
+    const line = Math.max(1, lineHeight)
+    const gap = unit * 1.2
+    function inset(name) {
+        const value = insets ? Number(insets[name]) : 0
+        return isFinite(value) ? Math.max(0, value) : 0
+    }
+    const compact = w < unit * 155 || h < line * 32
+    const leftWidth = Math.min(unit * (compact ? 28 : 32), w * 0.235)
+    const rightWidth = Math.min(unit * (compact ? 30 : 34), w * 0.235)
+    const left = Math.min(w, Math.max(inset("leftEdgeTopInset"), inset("leftEdgeCenterInset")) + gap)
+    const right = Math.max(inset("rightEdgeTopInset"), inset("rightEdgeCenterInset")) + gap
+    // This overlay is already below the toolbar; the central scale must not
+    // reserve an empty row above both edge panels.
+    const top = Math.min(h, gap)
+    const dataHeight = Math.min(h, line * 4.2)
+    const besideLeft = inset("leftEdgeBottomInset") + gap
+    const besideRight = inset("rightEdgeBottomInset") + gap
+    const lifted = w - besideLeft - besideRight < unit * 68
+    const dataLeft = lifted ? gap : besideLeft
+    const dataRight = lifted ? gap : besideRight
+    const dataBottom = lifted ? Math.max(inset("bottomEdgeLeftInset"), inset("bottomEdgeCenterInset"), inset("bottomEdgeRightInset")) + gap : gap
+    const dataY = Math.max(0, h - dataBottom - dataHeight)
+    const leftBottom = Math.max(h - dataY, inset("bottomEdgeLeftInset")) + gap
+    const rightBottom = Math.max(h - dataY, inset("bottomEdgeRightInset")) + gap
+    return {
+        compact: compact,
+        taskVisible: left + leftWidth + gap <= w - right - rightWidth,
+        leftX: left,
+        leftWidth: Math.max(0, Math.min(leftWidth, w - left)),
+        rightX: Math.max(0, w - right - rightWidth),
+        rightWidth: Math.max(0, Math.min(rightWidth, w - right)),
+        top: top,
+        leftMaxHeight: Math.max(0, h - top - leftBottom),
+        rightMaxHeight: Math.max(0, h - top - rightBottom),
+        dataX: Math.min(w, dataLeft),
+        dataY: dataY,
+        dataWidth: Math.max(0, w - dataLeft - dataRight),
+        dataHeight: dataHeight,
+        gap: gap,
+        lifted: lifted
+    }
+}
+
 // Status constants — extended for auto-sampling mission stages
 var StatusIdle = 0
 var StatusSampling = 1

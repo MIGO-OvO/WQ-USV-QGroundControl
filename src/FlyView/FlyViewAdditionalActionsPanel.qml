@@ -14,6 +14,7 @@ import QGroundControl
 import QGroundControl.Controls
 
 ColumnLayout {
+    id: root
     property var additionalActions
     property var mavlinkActions
     property var customActions
@@ -26,6 +27,7 @@ ColumnLayout {
         model: additionalActions.model
 
         QGCButton {
+            background.opacity: ScreenTools.panelOpacity
             Layout.fillWidth:   true
             text:               modelData.title
             visible:            modelData.visible
@@ -42,6 +44,7 @@ ColumnLayout {
         model: customActions.model
 
         QGCButton {
+            background.opacity: ScreenTools.panelOpacity
             Layout.fillWidth:   true
             text:               modelData.title
             visible:            modelData.visible
@@ -58,12 +61,17 @@ ColumnLayout {
         model: _activeVehicle ? mavlinkActions : undefined // The action list is a QmlObjectListModel
 
         QGCButton {
+            background.opacity: ScreenTools.panelOpacity
             Layout.fillWidth:   true
             text:               object.label
+            enabled:            !root._guidedController.safetyController || root._guidedController.safetyController.customActionAllowed(object, root._activeVehicle)
 
             onClicked: {
                 dropPanel.hide()
-                object.sendTo(_activeVehicle)
+                if (root._guidedController.safetyController)
+                    root._guidedController.safetyController.executeCustomAction(object, root._activeVehicle)
+                else
+                    object.sendTo(root._activeVehicle)
             }
         }
     }

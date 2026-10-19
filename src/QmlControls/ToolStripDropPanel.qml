@@ -21,6 +21,9 @@ Item {
     property real   radius:             ScreenTools.isMobile ? ScreenTools.defaultFontPixelHeight * 1.75 : ScreenTools.defaultFontPixelHeight * 1.25
     property real   viewportMargins:    0
     property var    toolStrip
+    readonly property real occupiedWidth: visible ? dropDownItem.x + dropDownItem.width : 0
+    readonly property color panelColor: Qt.rgba(qgcPal.windowShade.r, qgcPal.windowShade.g, qgcPal.windowShade.b, ScreenTools.panelOpacity)
+    onPanelColorChanged: arrowCanvas.requestPaint()
 
     // Should be an enum but that get's into the whole problem of creating a singleton which isn't worth the effort
     readonly property int dropLeft:     1
@@ -134,7 +137,7 @@ Item {
                 context.lineTo(panelX, panelY)                              // top left
 
                 context.closePath()
-                context.fillStyle = qgcPal.windowShade
+                context.fillStyle = _root.panelColor
                 context.fill()
             }
         } // Canvas - arrowCanvas

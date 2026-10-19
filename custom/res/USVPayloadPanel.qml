@@ -94,8 +94,9 @@ Rectangle {
     readonly property int _commandTimeoutMs: 5000
 
     function _commandTimeoutFor(command) {
-        // ROS: four bounded 2s stages plus at most 1s failure cleanup.
-        return command === _cmdSpectroStart ? 10000 : _commandTimeoutMs
+        if (command === _cmdSpectroStart) return 40000
+        if (command === _cmdStop || command === _cmdStopSurvey || command === _cmdSpectroStop) return 15000
+        return _commandTimeoutMs
     }
 
     onVehicleChanged: {
@@ -107,7 +108,8 @@ Rectangle {
         target: Qt.application
         function onStateChanged() {
             if (Qt.application.state === Qt.ApplicationActive && root._hasPendingCommand
-                    && Date.now() - root._pendingSince >= root._commandTimeoutFor(root._pendingCommand)) {
+                    && Date.now() - root._pendingSince >= root._commandTimeoutFor(root._pendingCommand)
+                    && !(root.vehicle && root.vehicle.isMavCommandPending(root._payloadCompId, root._pendingCommand))) {
                 root._lastCommandWarning = true
                 root._lastCommandMessage = root._commandName(root._pendingCommand) + qsTr("响应超时，请核对载荷状态")
                 root._clearPendingCommand(root._pendingCommand)
@@ -155,7 +157,8 @@ Rectangle {
     }
 
     function _send(cmdId, param1) {
-        if (vehicle && !_hasPendingCommand) {
+        const stopping = cmdId === _cmdStop || cmdId === _cmdStopSurvey || cmdId === _cmdSpectroStop
+        if (vehicle && (!_hasPendingCommand || (stopping && _pendingCommand !== cmdId))) {
             _pendingCommand = cmdId
             _pendingSince = Date.now()
             _lastCommandWarning = false
@@ -208,6 +211,10 @@ Rectangle {
         repeat: false
         onTriggered: {
             if (_hasPendingCommand) {
+                if (vehicle && vehicle.isMavCommandPending(_payloadCompId, _pendingCommand)) {
+                    commandTimeoutTimer.restart()
+                    return
+                }
                 _lastCommandWarning = true
                 _lastCommandMessage = _commandName(_pendingCommand) + qsTr("响应超时")
                 _pendingCommand = 0

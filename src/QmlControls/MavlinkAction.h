@@ -26,6 +26,9 @@ class MavlinkAction: public QObject
     Q_MOC_INCLUDE("Vehicle.h")
     Q_PROPERTY(QString label READ label CONSTANT)
     Q_PROPERTY(QString description READ description CONSTANT)
+    Q_PROPERTY(int command READ command CONSTANT)
+    Q_PROPERTY(int targetComponent READ targetComponent CONSTANT)
+    Q_PROPERTY(float param1 READ param1 CONSTANT)
 
 public:
     explicit MavlinkAction(QObject *parent = nullptr);
@@ -50,6 +53,9 @@ public:
 
     const QString &label() const { return _label; }
     const QString &description() const { return _description; }
+    int command() const { return static_cast<int>(_mavCmd); }
+    int targetComponent() const { return static_cast<int>(_compId); }
+    float param1() const { return _params[0]; }
 
 private:
     const QString _label;

@@ -1,123 +1,321 @@
 import QtQuick
-import QtQuick.Layouts
 import QtQuick.Controls
+import QtQuick.Layouts
 
 import QGroundControl
 import QGroundControl.Controls
 
-import "USVFlyViewLayout.js" as USVLayout
-
 Rectangle {
     id: root
 
-    property var vehicle: null
-    property int payloadStatus: USVLayout.StatusIdle
-    property real availableWidth: parent ? parent.width : implicitWidth
-
-    readonly property int _cmdStart: 31010
-    readonly property int _cmdStop: 31011
-    readonly property int _cmdStartSurvey: 31015
-    readonly property int _cmdStopSurvey: 31016
-    readonly property int _cmdSetBaseline: 31017
-    readonly property int _cmdSpectroStart: 31018
-    readonly property int _cmdSpectroStop: 31019
     readonly property int _payloadCompId: 191
+    property real availableWidth: parent ? parent.width : implicitWidth
+    property bool emergencyHadFailure: false
+    property var emergencyTargetVehicle: null
+    property string expectedMode: ""
+    property string feedback: ""
+    property bool feedbackWarning: false
+    required property var operations
+    property bool payloadStopPending: false
+    property bool propulsionStopPending: false
+    property var theme: _theme
+    property var vehicle: operations ? operations.vehicle : null
 
-    property real _m: ScreenTools.defaultFontPixelWidth
-    property bool _hasPayloadGroup: vehicle && vehicle.factGroupNames.indexOf("usvPayload") >= 0
-    property var _linkActiveFact: _hasPayloadGroup ? vehicle.getFact("usvPayload.linkActive") : null
-    property var _baselineSetFact: _hasPayloadGroup ? vehicle.getFact("usvPayload.baselineSet") : null
-    property var _spectrometerValidFact: _hasPayloadGroup ? vehicle.getFact("usvPayload.spectrometerValid") : null
-    property bool _linkOk: _linkActiveFact ? _linkActiveFact.value === 1 : !_hasPayloadGroup
-    property bool baselineSet: _baselineSetFact ? Number(_baselineSetFact.value) >= 1 : false
-    property bool spectrometerValid: _spectrometerValidFact ? Number(_spectrometerValidFact.value) >= 1 : false
-    property bool _canStartPointSample: payloadStatus === USVLayout.StatusIdle
-                                        || payloadStatus === USVLayout.StatusSamplingDone
-                                        || payloadStatus === USVLayout.StatusHoldNoMission
-    property bool _isWorking: payloadStatus === USVLayout.StatusSampling
-                              || payloadStatus === USVLayout.StatusDetecting
-                              || payloadStatus === USVLayout.StatusCalibrating
-                              || payloadStatus === USVLayout.StatusNavigating
-                              || payloadStatus === USVLayout.StatusHolding
-                              || payloadStatus === USVLayout.StatusWaitingStable
-                              || payloadStatus === USVLayout.StatusResumingAuto
-                              || payloadStatus === USVLayout.StatusSurveying
-
-    implicitWidth: _m * 91
-    width: Math.min(implicitWidth, availableWidth)
-    height: actionRow.implicitHeight + _m * 2
-    radius: _m
-    color: Qt.rgba(qgcPal.window.r, qgcPal.window.g, qgcPal.window.b, USVLayout.Tokens.opacity.panel)
-    border.width: 1
-    border.color: Qt.rgba(qgcPal.windowShade.r, qgcPal.windowShade.g, qgcPal.windowShade.b, 0.45)
-    opacity: vehicle ? 1.0 : 0.0
-    visible: opacity > 0
-
-    Behavior on opacity { NumberAnimation { duration: 300 } }
-
-    QGCPalette { id: qgcPal; colorGroupEnabled: enabled }
-
-    function _send(cmdId, param1) {
-        if (vehicle) {
-            vehicle.sendCommand(_payloadCompId, cmdId, false, param1 || 0)
+    function clearEmergencyRequest() {
+        emergencyTargetVehicle = null;
+        propulsionStopPending = false;
+        payloadStopPending = false;
+        emergencyHadFailure = false;
+        if (emergencyTimeout)
+            emergencyTimeout.stop();
+    }
+    function confirmMode(mode) {
+        if (!operations.connected || !operations.guidedController || !vehicle.flightModeSetAvailable || !mode)
+            return;
+        operations.guidedController.confirmAction(operations.guidedController.actionSetFlightMode, mode);
+        feedbackWarning = false;
+        feedback = qsTr("请在顶部确认模式切换；实际模式以飞控返回为准");
+    }
+    function emergencyResult(vehicleId, targetComponent, command, ackResult, failureCode) {
+        if (!emergencyTargetVehicle || emergencyTargetVehicle !== vehicle || vehicleId !== emergencyTargetVehicle.id)
+            return;
+        const propulsionResult = command === 400 && propulsionStopPending;
+        const payloadResult = targetComponent === _payloadCompId && command === 31011 && payloadStopPending;
+        if (!propulsionResult && !payloadResult)
+            return;
+        if (ackResult === 5 && failureCode === 0) {
+            if (!emergencyHadFailure)
+                feedback = qsTr("紧急停止处理中，请核对设备实际状态");
+            emergencyTimeout.restart();
+            return;
+        }
+        if (propulsionResult)
+            propulsionStopPending = false;
+        if (payloadResult)
+            payloadStopPending = false;
+        emergencyHadFailure = emergencyHadFailure || ackResult !== 0 || failureCode !== 0;
+        feedbackWarning = true;
+        feedback = emergencyHadFailure ? qsTr("停止命令未确认执行，请核对设备状态与链路") : propulsionStopPending || payloadStopPending ? qsTr("已接受部分停止命令，等待其他设备响应；请核对实际停止") : qsTr("停止命令已接受，请核对推进电机与采样装置实际停止");
+        if (!propulsionStopPending && !payloadStopPending) {
+            emergencyTimeout.stop();
+            emergencyTargetVehicle = null;
         }
     }
+    function emergencyStop(targetVehicle) {
+        if (!operations.connected || targetVehicle !== vehicle || propulsionStopPending || payloadStopPending)
+            return;
+        expectedMode = "";
+        modeTimeout.stop();
+        emergencyTargetVehicle = targetVehicle;
+        propulsionStopPending = true;
+        payloadStopPending = operations.hasPayload;
+        emergencyHadFailure = false;
+        feedbackWarning = true;
+        feedback = qsTr("已发送紧急停止，等待设备响应；请核对实际停止");
+        emergencyTimeout.restart();
+        // Reuse QGC's emergency disarm and existing companion cancellation.
+        // Set pending first: QGC may report a queue rejection synchronously.
+        vehicle.emergencyStop();
+        if (operations.hasPayload)
+            vehicle.sendCommand(_payloadCompId, 31011, true);
+    }
+    function expireEmergencyRequest() {
+        if (!propulsionStopPending && !payloadStopPending)
+            return;
+        clearEmergencyRequest();
+        feedbackWarning = true;
+        feedback = qsTr("紧急停止响应超时，请核对推进电机与采样装置实际状态");
+    }
+    function pauseNavigation() {
+        if (!operations.connected || !vehicle.pauseVehicleSupported)
+            return;
+        feedbackWarning = false;
+        feedback = qsTr("暂停航行发送中，等待飞控进入保持模式");
+        expectedMode = vehicle.pauseFlightMode;
+        modeTimeout.restart();
+        vehicle.pauseVehicle();
+    }
+    function startMission() {
+        const controller = operations.guidedController;
+        if (!operations.connected || !operations.gpsReady || !controller)
+            return;
+        if (controller.showContinueMission)
+            controller.confirmAction(controller.actionContinueMission);
+        else if (controller.showStartMission)
+            controller.confirmAction(controller.actionStartMission);
+        else
+            return;
+        feedbackWarning = false;
+        feedback = qsTr("请在顶部确认开始任务；解锁检查由飞控执行");
+    }
+    function requestEmergencyStop() {
+        if (!operations.connected || propulsionStopPending || payloadStopPending)
+            return;
+        emergencyDialog.targetVehicle = vehicle;
+        emergencyDialog.open();
+    }
 
+    border.color: theme.divider
+    border.width: 1
+    color: theme.surface
+    height: implicitHeight
+    implicitHeight: actionRow.implicitHeight + theme.unit * 2 + (feedback.length ? feedbackLabel.implicitHeight + theme.unit : 0)
+    radius: theme.radius
+    width: Math.max(0, availableWidth)
+
+    onVehicleChanged: {
+        if (emergencyDialog)
+            emergencyDialog.close();
+        feedback = "";
+        expectedMode = "";
+        if (modeTimeout)
+            modeTimeout.stop();
+        clearEmergencyRequest();
+    }
+
+    USVOperationsTheme {
+        id: _theme
+
+    }
+    Connections {
+        function onFlightModeChanged() {
+            if (root.expectedMode && root.vehicle && root.vehicle.flightMode === root.expectedMode) {
+                root.feedback = qsTr("飞控已进入保持模式；采样状态见右侧面板");
+                root.feedbackWarning = false;
+                root.expectedMode = "";
+                modeTimeout.stop();
+            }
+        }
+        function onMavCommandResult(vehicleId, targetComponent, command, ackResult, failureCode) {
+            root.emergencyResult(vehicleId, targetComponent, command, ackResult, failureCode);
+        }
+
+        ignoreUnknownSignals: true
+        target: root.vehicle
+    }
+    Timer {
+        id: emergencyTimeout
+
+        interval: 15000
+
+        onTriggered: root.expireEmergencyRequest()
+    }
+    Timer {
+        id: modeTimeout
+
+        interval: 5000
+
+        onTriggered: {
+            root.expectedMode = "";
+            root.feedbackWarning = true;
+            root.feedback = qsTr("未确认进入保持模式，请检查飞控状态");
+        }
+    }
     Flow {
         id: actionRow
-        x: _m
-        y: _m
-        width: parent.width - _m * 2
-        spacing: _m * USVLayout.Tokens.spacing.md
 
-        Repeater {
-            model: [
-                { text: qsTr("启动信号"), cmd: _cmdSpectroStart, param1: 0, en: vehicle && _linkOk && payloadStatus !== USVLayout.StatusFault, warn: false },
-                { text: qsTr("设基线"), cmd: _cmdSetBaseline, param1: 0, en: vehicle && _linkOk && spectrometerValid && payloadStatus !== USVLayout.StatusFault, warn: false },
-                { text: qsTr("点采样"), cmd: _cmdStart, param1: 0, en: vehicle && _linkOk && spectrometerValid && baselineSet && _canStartPointSample, warn: false },
-                { text: qsTr("走航"), cmd: _cmdStartSurvey, param1: 5, en: vehicle && _linkOk && spectrometerValid && baselineSet && payloadStatus !== USVLayout.StatusFault && payloadStatus !== USVLayout.StatusSurveying, warn: false },
-                { text: qsTr("停止检测"), cmd: _cmdStop, param1: 0, en: vehicle && _isWorking, warn: true },
-                { text: qsTr("停止走航"), cmd: _cmdStopSurvey, param1: 0, en: vehicle && payloadStatus === USVLayout.StatusSurveying, warn: true },
-                { text: qsTr("停信号"), cmd: _cmdSpectroStop, param1: 0, en: vehicle && _linkOk, warn: true }
-            ]
+        spacing: root.theme.unit
+        width: Math.max(0, parent.width - root.theme.unit * 2)
+        x: root.theme.unit
+        y: root.theme.unit
 
-            delegate: Rectangle {
-                id: btnRect
-                height: Math.max(ScreenTools.minTouchPixels, ScreenTools.defaultFontPixelHeight * 2.5)
-                width: Math.min(actionRow.width, textLabel.implicitWidth + _m * 3)
-                radius: height / 2
+        Row {
+            id: modeButtons
 
-                property bool isHovered: btnMouse.containsMouse
-                property bool isPressed: btnMouse.pressed
-                property color baseColor: modelData.warn
-                    ? Qt.rgba(qgcPal.colorRed.r, qgcPal.colorRed.g, qgcPal.colorRed.b, 0.85)
-                    : Qt.rgba(qgcPal.windowShade.r, qgcPal.windowShade.g, qgcPal.windowShade.b, 0.7)
+            spacing: root.theme.unit * 0.5
 
-                color: !modelData.en
-                       ? Qt.rgba(qgcPal.windowShade.r, qgcPal.windowShade.g, qgcPal.windowShade.b, 0.3)
-                       : (isPressed ? Qt.darker(baseColor, 1.2) : (isHovered ? Qt.lighter(baseColor, 1.1) : baseColor))
+            USVOperationsButton {
+                checked: root.operations.connected && root.vehicle.flightMode === root.vehicle.stabilizedFlightMode
+                enabled: root.operations.connected && root.vehicle.flightModeSetAvailable && !!root.operations.guidedController
+                helpText: qsTr("切换到固件提供的手动驾驶模式")
+                text: qsTr("手动")
 
-                scale: isPressed ? 0.95 : 1.0
-                Behavior on scale { NumberAnimation { duration: 100 } }
-                Behavior on color { ColorAnimation { duration: 150 } }
+                onClicked: root.confirmMode(root.vehicle.stabilizedFlightMode)
+            }
+            USVOperationsButton {
+                checked: root.operations.autoMode
+                enabled: root.operations.connected && root.operations.hasMission && root.operations.gpsReady && root.vehicle.flightModeSetAvailable && !!root.operations.guidedController && root.vehicle.armed
+                helpText: qsTr("切换到自动任务模式；未解锁时请使用开始任务")
+                text: qsTr("自动")
 
-                QGCLabel {
-                    id: textLabel
-                    anchors.centerIn: parent
-                    text: modelData.text
-                    color: modelData.warn && modelData.en ? "white" : qgcPal.text
-                    opacity: modelData.en ? 1.0 : USVLayout.Tokens.opacity.disabled
-                    font.bold: true
-                    font.pointSize: ScreenTools.defaultFontPointSize
+                onClicked: root.confirmMode(root.vehicle.missionFlightMode)
+            }
+        }
+        Item {
+            height: root.theme.controlHeight
+            width: Math.max(0, (actionRow.width - modeButtons.width - taskButtons.width - emergencyButton.width - actionRow.spacing * 4) / 2)
+        }
+        Row {
+            id: taskButtons
+
+            spacing: root.theme.unit
+
+            USVOperationsButton {
+                enabled: root.operations.connected && root.operations.gpsReady && !!root.operations.guidedController && (root.operations.guidedController.showStartMission || root.operations.guidedController.showContinueMission)
+                helpText: qsTr("沿用 QGC 任务与解锁检查，确认后开始航线")
+                primary: true
+                text: root.operations.guidedController && root.operations.guidedController.showContinueMission ? qsTr("继续任务") : qsTr("开始任务")
+
+                onClicked: root.startMission()
+            }
+            USVOperationsButton {
+                enabled: root.operations.connected && root.vehicle.armed && root.vehicle.pauseVehicleSupported && !root.operations.holdMode
+                helpText: qsTr("切换保持模式，暂停航行")
+                text: qsTr("暂停")
+
+                onClicked: root.pauseNavigation()
+            }
+            USVOperationsButton {
+                enabled: root.operations.connected && root.operations.gpsReady && !!root.operations.guidedController && root.operations.guidedController.showRTL
+                helpText: qsTr("通过 QGC 确认并返回起航位置")
+                text: qsTr("返航")
+
+                onClicked: root.operations.guidedController.confirmAction(root.operations.guidedController.actionRTL)
+            }
+        }
+        Item {
+            height: root.theme.controlHeight
+            width: Math.max(0, (actionRow.width - modeButtons.width - taskButtons.width - emergencyButton.width - actionRow.spacing * 4) / 2)
+        }
+        USVOperationsButton {
+            id: emergencyButton
+
+            destructive: true
+            enabled: root.operations.connected
+            helpText: qsTr("确认后停止推进电机并取消当前采样")
+            text: qsTr("紧急停止")
+
+            onClicked: root.requestEmergencyStop()
+        }
+    }
+    QGCLabel {
+        id: feedbackLabel
+
+        anchors.left: parent.left
+        anchors.margins: root.theme.unit
+        anchors.right: parent.right
+        anchors.top: actionRow.bottom
+        color: root.feedbackWarning ? root.theme.warning : root.theme.secondary
+        font.pointSize: ScreenTools.defaultFontPointSize * 0.95
+        text: root.feedback
+        visible: text.length > 0
+        wrapMode: Text.WordWrap
+    }
+    Dialog {
+        id: emergencyDialog
+
+        property var targetVehicle: null
+
+        closePolicy: Popup.CloseOnEscape
+        focus: true
+        modal: true
+        objectName: "usvEmergencyDialog"
+        padding: root.theme.gap
+        parent: Overlay.overlay
+        width: Math.min(root.theme.unit * 58, parent.width * 0.9)
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+
+        background: Rectangle {
+            border.color: root.theme.danger
+            border.width: 1
+            color: root.theme.surface
+            radius: root.theme.radius
+        }
+        contentItem: ColumnLayout {
+            spacing: root.theme.gap
+
+            QGCLabel {
+                color: root.theme.text
+                font.bold: true
+                font.pointSize: ScreenTools.defaultFontPointSize * 1.35
+                text: qsTr("确认紧急停止")
+            }
+            QGCLabel {
+                Layout.fillWidth: true
+                color: root.theme.text
+                text: qsTr("停止推进电机并取消当前采样。船舶可能随水流漂移，请确认周边环境。")
+                wrapMode: Text.WordWrap
+            }
+            RowLayout {
+                Layout.fillWidth: true
+
+                USVOperationsButton {
+                    Layout.fillWidth: true
+                    text: qsTr("取消")
+
+                    onClicked: emergencyDialog.close()
                 }
+                USVOperationsButton {
+                    Layout.fillWidth: true
+                    destructive: true
+                    enabled: root.operations.connected && emergencyDialog.targetVehicle === root.vehicle && !root.propulsionStopPending && !root.payloadStopPending
+                    text: qsTr("发出紧急停止")
 
-                MouseArea {
-                    id: btnMouse
-                    anchors.fill: parent
-                    enabled: modelData.en
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: _send(modelData.cmd, modelData.param1)
+                    onClicked: {
+                        root.emergencyStop(emergencyDialog.targetVehicle);
+                        emergencyDialog.close();
+                    }
                 }
             }
         }

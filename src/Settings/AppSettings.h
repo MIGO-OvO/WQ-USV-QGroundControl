@@ -40,6 +40,7 @@ public:
     DEFINE_SETTINGFACT(virtualJoystickAutoCenterThrottle)
     DEFINE_SETTINGFACT(virtualJoystickLeftHandedMode)
     DEFINE_SETTINGFACT(appFontPointSize)
+    DEFINE_SETTINGFACT(usvBackgroundTransparency)
     DEFINE_SETTINGFACT(indoorPalette)
     DEFINE_SETTINGFACT(savePath)
     DEFINE_SETTINGFACT(androidDontSaveToSDCard)

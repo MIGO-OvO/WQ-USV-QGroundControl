@@ -44,6 +44,11 @@ SettingsPage {
             visible:    _appSettings.indoorPalette.visible
         }
 
+        LabelledFactTextField {
+            label: qsTr("驾驶舱背景透明度（%）")
+            fact: _appSettings.usvBackgroundTransparency
+        }
+
         LabelledFactComboBox {
             label:       qsTr("Stream GCS Position")
             fact:       _appSettings.followTarget

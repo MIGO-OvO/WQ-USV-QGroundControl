@@ -102,8 +102,8 @@
 // #include "InitialConnectTest.h"
 #include "MAVLinkLogManagerTest.h"
 // #include "RequestMessageTest.h"
-// #include "SendMavCommandWithHandlerTest.h"
-// #include "SendMavCommandWithSignalingTest.h"
+#include "SendMavCommandWithHandlerTest.h"
+#include "SendMavCommandWithSignallingTest.h"
 #include "VehicleLinkManagerTest.h"
 
 // Missing
@@ -203,8 +203,8 @@ int QGCUnitTest::runTests(bool stress, const QStringList& unitTests)
     // UT_REGISTER_TEST(InitialConnectTest)
     UT_REGISTER_TEST(MAVLinkLogManagerTest)
     // UT_REGISTER_TEST(RequestMessageTest)
-    // UT_REGISTER_TEST(SendMavCommandWithHandlerTest)
-    // UT_REGISTER_TEST(SendMavCommandWithSignalingTest)
+    UT_REGISTER_TEST(SendMavCommandWithHandlerTest)
+    UT_REGISTER_TEST(SendMavCommandWithSignallingTest)
     UT_REGISTER_TEST(VehicleLinkManagerTest)
 
     // Missing

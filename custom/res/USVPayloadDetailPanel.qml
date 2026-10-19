@@ -184,7 +184,7 @@ Rectangle {
                     QGCLabel { text: diagRect.payloadGroup ? diagRect.payloadGroup.rxNamedValue : "0"; font.pointSize: ScreenTools.smallFontPointSize; font.bold: true }
                     QGCLabel { text: "心跳"; font.pointSize: ScreenTools.smallFontPointSize; opacity: 0.5 }
                     QGCLabel { text: diagRect.payloadGroup ? diagRect.payloadGroup.rxHeartbeat : "0"; font.pointSize: ScreenTools.smallFontPointSize; font.bold: true }
-                    QGCLabel { text: "心跳间隔"; font.pointSize: ScreenTools.smallFontPointSize; opacity: 0.5 }
+                    QGCLabel { text: qsTr("心跳到达间隔"); font.pointSize: ScreenTools.smallFontPointSize; opacity: 0.5 }
                     QGCLabel { text: diagRect.payloadGroup ? Number(diagRect.payloadGroup.latencyMs).toFixed(0) + " ms" : "--"; font.pointSize: ScreenTools.smallFontPointSize; font.bold: true }
                 }
             }

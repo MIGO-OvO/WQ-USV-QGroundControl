@@ -119,6 +119,7 @@ Item {
     property real radioButtonIndicatorSize:         checkBoxIndicatorSize
 
     readonly property string normalFontFamily:      ScreenToolsController.normalFontFamily
+    readonly property real panelOpacity: 1 - Math.max(0, Math.min(100, QGroundControl.settingsManager.appSettings.usvBackgroundTransparency.rawValue)) / 100
     readonly property string fixedFontFamily:       ScreenToolsController.fixedFontFamily
     /* This mostly works but for some reason, reflowWidths() in SetupView doesn't change size.
        I've disabled (in release builds) until I figure out why. Changes require a restart for now.

@@ -151,6 +151,16 @@
     "default":         0
 },
 {
+    "name":             "usvBackgroundTransparency",
+    "shortDesc":        "驾驶舱背景透明度",
+    "longDesc":         "仅调整驾驶舱面板与控件背景，不影响文字和图标。0% 为不透明，100% 为全透明。",
+    "type":             "uint32",
+    "units":            "%",
+    "min":              0,
+    "max":              100,
+    "default":          50
+},
+{
     "name":             "indoorPalette",
     "shortDesc": "Application color scheme",
     "longDesc":  "The color scheme for the user interface.",

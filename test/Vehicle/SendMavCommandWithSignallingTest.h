@@ -16,16 +16,23 @@ class SendMavCommandWithSignallingTest : public UnitTest
 {
     Q_OBJECT
 
-private slots:
+   private slots:
     void _performTestCases(void);
     void _duplicateCommand(void);
+    void _retryRestartsAckDeadline(void);
+    void _payloadRetryPolicy(void);
+    void _payloadStopRetirementAndTotalDeadline(void);
+    void _payloadFactsFreshnessAndEvents(void);
+    void _payloadRequestIdentity(void);
+    void _payloadProgressLifecycle();
 
-private:
-    typedef struct {
-        MAV_CMD                             command;
-        MAV_RESULT                          expectedCommandResult;
-        Vehicle::MavCmdResultFailureCode_t  expectedFailureCode;
-        int                                 expectedSendCount;
+   private:
+    typedef struct
+    {
+        MAV_CMD command;
+        MAV_RESULT expectedCommandResult;
+        Vehicle::MavCmdResultFailureCode_t expectedFailureCode;
+        int expectedSendCount;
     } TestCase_t;
 
     void _testCaseWorker(TestCase_t& testCase);

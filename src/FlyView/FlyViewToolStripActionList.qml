@@ -20,7 +20,7 @@ ToolStripActionList {
     model: [
         ToolStripAction {
             property bool _is3DViewOpen:            viewer3DWindow.isOpen
-            property bool   _viewer3DEnabled:       QGroundControl.settingsManager.viewer3DSettings.enabled.rawValue
+            property bool   _viewer3DEnabled:       QGroundControl.settingsManager.viewer3DSettings ? QGroundControl.settingsManager.viewer3DSettings.enabled.rawValue : false
 
             id: view3DIcon
             visible: _viewer3DEnabled

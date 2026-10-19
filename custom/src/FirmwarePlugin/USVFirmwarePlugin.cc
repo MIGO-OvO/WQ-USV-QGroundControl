@@ -20,7 +20,6 @@ Q_LOGGING_CATEGORY(USVFirmwarePluginLog, "USV.FirmwarePlugin")
 USVArduPilotFirmwarePlugin::USVArduPilotFirmwarePlugin(QObject *parent)
     : ArduRoverFirmwarePlugin(parent)
 {
-    _nameToFactGroupMap["usvPayload"] = &_payloadFactGroup;
     qCDebug(USVFirmwarePluginLog) << "USVArduPilotFirmwarePlugin created";
 }
 
@@ -54,7 +53,18 @@ QString USVArduPilotFirmwarePlugin::brandImageOutdoor(const Vehicle *vehicle) co
 
 QMap<QString, FactGroup*>* USVArduPilotFirmwarePlugin::factGroups()
 {
+    // Vehicle consumes this map once in _commonInit. Each vehicle owns its data.
+    _nameToFactGroupMap["usvPayload"] = new USVPayloadFactGroup(this);
     return &_nameToFactGroupMap;
+}
+
+void USVArduPilotFirmwarePlugin::initializeVehicle(Vehicle *vehicle)
+{
+    ArduRoverFirmwarePlugin::initializeVehicle(vehicle);
+    if (auto *payload = qobject_cast<USVPayloadFactGroup*>(vehicle->getFactGroup(QStringLiteral("usvPayload")))) {
+        payload->setParent(vehicle);
+        payload->setVehicleId(vehicle->id());
+    }
 }
 
 /*===========================================================================*/
@@ -65,7 +75,6 @@ USVPX4FirmwarePlugin::USVPX4FirmwarePlugin(QObject *parent)
     : PX4FirmwarePlugin()
 {
     setParent(parent);
-    _nameToFactGroupMap["usvPayload"] = &_payloadFactGroup;
     qCDebug(USVFirmwarePluginLog) << "USVPX4FirmwarePlugin created";
 }
 
@@ -99,5 +108,15 @@ QString USVPX4FirmwarePlugin::brandImageOutdoor(const Vehicle *vehicle) const
 
 QMap<QString, FactGroup*>* USVPX4FirmwarePlugin::factGroups()
 {
+    _nameToFactGroupMap["usvPayload"] = new USVPayloadFactGroup(this);
     return &_nameToFactGroupMap;
+}
+
+void USVPX4FirmwarePlugin::initializeVehicle(Vehicle *vehicle)
+{
+    PX4FirmwarePlugin::initializeVehicle(vehicle);
+    if (auto *payload = qobject_cast<USVPayloadFactGroup*>(vehicle->getFactGroup(QStringLiteral("usvPayload")))) {
+        payload->setParent(vehicle);
+        payload->setVehicleId(vehicle->id());
+    }
 }

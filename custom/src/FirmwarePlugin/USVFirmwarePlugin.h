@@ -36,10 +36,10 @@ public:
     QString brandImageIndoor(const Vehicle *vehicle) const override;
     QString brandImageOutdoor(const Vehicle *vehicle) const override;
     QMap<QString, FactGroup*> *factGroups() override;
+    void initializeVehicle(Vehicle *vehicle) override;
 
 private:
     QMap<QString, FactGroup*> _nameToFactGroupMap;
-    USVPayloadFactGroup       _payloadFactGroup;
 };
 
 /*===========================================================================*/
@@ -61,8 +61,8 @@ public:
     QString brandImageIndoor(const Vehicle *vehicle) const override;
     QString brandImageOutdoor(const Vehicle *vehicle) const override;
     QMap<QString, FactGroup*> *factGroups() override;
+    void initializeVehicle(Vehicle *vehicle) override;
 
 private:
     QMap<QString, FactGroup*> _nameToFactGroupMap;
-    USVPayloadFactGroup       _payloadFactGroup;
 };

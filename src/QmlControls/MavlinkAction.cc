@@ -52,6 +52,12 @@ MavlinkAction::~MavlinkAction()
 void MavlinkAction::sendTo(Vehicle *vehicle)
 {
     if (vehicle) {
+        const bool payloadStop = _compId == 191 && (_mavCmd == 31011 || _mavCmd == 31016 || _mavCmd == 31019);
+        const bool disarm = _mavCmd == MAV_CMD_COMPONENT_ARM_DISARM && _params[0] == 0.0f;
+        if (vehicle->usvSafetyLocked() && !payloadStop && !disarm) {
+            qCWarning(MavlinkActionLog) << "Custom action blocked by USV stop verification latch:" << _label;
+            return;
+        }
         vehicle->sendMavCommand(_compId, _mavCmd, _showError, _params[0], _params[1], _params[2], _params[3], _params[4], _params[5], _params[6]);
     }
 };

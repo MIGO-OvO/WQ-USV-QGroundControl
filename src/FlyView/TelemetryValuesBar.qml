@@ -30,7 +30,7 @@ Item {
         height:     control.height
         color:      qgcPal.window
         radius:     ScreenTools.defaultFontPixelWidth / 2
-        opacity:    0.75
+        opacity:    ScreenTools.panelOpacity
     }
 
     ColumnLayout {
