@@ -139,6 +139,8 @@ Item {
             return;
         vehicleSafety = vehicleSafety.filter(record => record.vehicleId !== vehicle.id);
         targetVehicle.usvSafetyLocked = false;
+        if (commandController)
+            commandController.confirmPhysicalStop(targetVehicle);
         emergencyPhase = "idle";
         propulsionReceipt = "";
         payloadReceipt = "";

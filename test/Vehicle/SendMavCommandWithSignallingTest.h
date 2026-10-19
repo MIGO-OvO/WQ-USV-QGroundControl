@@ -24,6 +24,7 @@ private slots:
     void _payloadStopRetirementAndTotalDeadline(void);
     void _payloadFactsFreshnessAndEvents(void);
     void _payloadRequestIdentity(void);
+    void _payloadProgressLifecycle();
 
 private:
     typedef struct {

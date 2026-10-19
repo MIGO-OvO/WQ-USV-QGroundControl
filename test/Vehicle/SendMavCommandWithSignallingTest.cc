@@ -8,21 +8,246 @@
  ****************************************************************************/
 
 #include "SendMavCommandWithSignallingTest.h"
-#include "MultiVehicleManager.h"
-#include "MockLink.h"
-#include "../../custom/src/USVPayloadFactGroup.h"
-#include <QtCore/QJsonDocument>
-#include <QtCore/QJsonObject>
+
 #include <QtCore/QDir>
 #include <QtCore/QFile>
+#include <QtCore/QJsonArray>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QJsonObject>
 #include <QtCore/QLockFile>
 #include <QtCore/QScopeGuard>
 #include <QtCore/QSettings>
 #include <QtCore/QStandardPaths>
 #include <QtCore/QUuid>
-
+#include <QtQml/QJSValue>
+#include <QtQml/QQmlComponent>
+#include <QtQml/QQmlContext>
+#include <QtQml/QQmlEngine>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
+
+#include <memory>
+
+#include "../../custom/src/USVPayloadFactGroup.h"
+#include "MockLink.h"
+#include "MultiVehicleManager.h"
+
+namespace {
+QList<QByteArray> payloadEventFrames(const QJsonObject& event, int systemId)
+{
+    QList<QByteArray> frames;
+    const QByteArray text = "USVE1:" + QJsonDocument(event).toJson(QJsonDocument::Compact) + '\0';
+    static uint16_t chunkId = 77;
+    ++chunkId;
+    for (int offset = 0; offset < text.size(); offset += 50) {
+        char chunk[50]{};
+        memcpy(chunk, text.constData() + offset, qMin(qsizetype(50), text.size() - offset));
+        mavlink_message_t message{};
+        mavlink_msg_statustext_pack(systemId, 191, &message, MAV_SEVERITY_NOTICE, chunk, chunkId, offset / 50);
+        uint8_t bytes[MAVLINK_MAX_PACKET_LEN]{};
+        const uint16_t size = mavlink_msg_to_send_buffer(bytes, &message);
+        frames.append(QByteArray(reinterpret_cast<const char*>(bytes), size));
+    }
+    return frames;
+}
+
+void deliverPayloadFrames(USVPayloadFactGroup& facts, Vehicle* vehicle, const QList<QByteArray>& frames)
+{
+    mavlink_message_t buffer{}, message{};
+    mavlink_status_t status{}, decoded{};
+    for (const QByteArray& frame : frames) {
+        for (const uint8_t byte : frame) {
+            if (mavlink_frame_char_buffer(&buffer, &status, byte, &message, &decoded) == MAVLINK_FRAMING_OK)
+                facts.handleMessage(vehicle, message);
+        }
+    }
+}
+}  // namespace
+
+void SendMavCommandWithSignallingTest::_payloadProgressLifecycle()
+{
+    _connectMockLinkNoInitialConnectSequence();
+    Vehicle* vehicle = MultiVehicleManager::instance()->activeVehicle();
+    const QString originalName = QCoreApplication::applicationName();
+    QCoreApplication::setApplicationName("payload-lifecycle-" + QUuid::createUuid().toString(QUuid::WithoutBraces));
+    const QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    const auto restore = qScopeGuard([&] {
+        QDir(directory).removeRecursively();
+        QCoreApplication::setApplicationName(originalName);
+        _disconnectMockLink();
+    });
+    USVPayloadFactGroup facts;
+    facts.setVehicleId(vehicle->id());
+    const auto value = [&](const char* name, float number) {
+        mavlink_message_t message{};
+        char field[10]{};
+        memcpy(field, name, qMin(size_t(10), strlen(name)));
+        mavlink_msg_named_value_float_pack(vehicle->id(), 191, &message, 0, field, number);
+        facts.handleMessage(vehicle, message);
+    };
+    value("USV_PROTO", 1);
+    value("USV_STAT", 0);
+    value("USV_VLD", 1);
+    value("USV_BSET", 1);
+    value("USV_VOLT", 1.8f);
+    QQmlEngine engine;
+    engine.addImportPath("qrc:/qml");
+    QQmlEngine::setObjectOwnership(vehicle, QQmlEngine::CppOwnership);
+    QQmlEngine::setObjectOwnership(&facts, QQmlEngine::CppOwnership);
+    engine.rootContext()->setContextProperty("testVehicle", vehicle);
+    engine.rootContext()->setContextProperty("testFacts", &facts);
+    QQmlComponent component(&engine, QUrl::fromLocalFile(QFINDTESTDATA("USVPayloadLifecycleFixture.qml")));
+    QVERIFY2(component.isReady(), qPrintable(component.errorString()));
+    std::unique_ptr<QObject> fixture(component.create());
+    QVERIFY2(fixture, qPrintable(component.errorString()));
+    QObject* commands = fixture->property("commands").value<QObject*>();
+    QObject* panel = fixture->property("taskPanel").value<QObject*>();
+    QVERIFY(commands);
+    QVERIFY(panel);
+    QVERIFY(QMetaObject::invokeMethod(fixture.get(), "startSample"));
+    auto request = [&]() { return commands->property("request").value<QJSValue>().toVariant().toMap(); };
+    QCOMPARE(request().value("session").toInt(), 1);
+    QCOMPARE(request().value("request").toInt(), 1);
+    value("USV_STAT", 1);
+    QVERIFY(request().value("observed").toBool());
+
+    QJsonObject event{{"v", 1},
+                      {"session", 1},
+                      {"request", 1},
+                      {"tcp_session", 1},
+                      {"command", 31010},
+                      {"sender_system", 255},
+                      {"sender_component", 190},
+                      {"seq", 2},
+                      {"phase", "progress"},
+                      {"outcome", ""},
+                      {"reason", ""},
+                      {"state", "running"},
+                      {"attempt_id", "11111111111111111111111111111111"},
+                      {"preflight_phase", "homing"}};
+    QList<QByteArray> frames;
+    const QString external = qEnvironmentVariable("USV_QA_EVENT_FRAMES");
+    qInfo("Payload lifecycle wire source: %d/191; fixture: %s", vehicle->id(),
+          qPrintable(external.isEmpty() ? QStringLiteral("native MAVLink pack") : external));
+    if (!external.isEmpty()) {
+        // Generate the external CRC-valid fixture for the logged MockLink sysid.
+        // The standalone class is the cross-end QA entry point; no ID rewriting.
+        QFile input(external);
+        QVERIFY(input.open(QIODevice::ReadOnly));
+        const QJsonArray encoded = QJsonDocument::fromJson(input.readAll()).object().value("frames").toArray();
+        QVERIFY(!encoded.isEmpty());
+        for (const QJsonValue& frame : encoded) {
+            const QByteArray bytes = QByteArray::fromHex(frame.toString().toLatin1());
+            QVERIFY(!bytes.isEmpty());
+            frames.append(bytes);
+        }
+    } else
+        frames = payloadEventFrames(event, vehicle->id());
+    QSignalSpy received(&facts, &USVPayloadFactGroup::payloadEventReceived);
+    deliverPayloadFrames(facts, vehicle, frames);
+    QCOMPARE(received.count(), 1);
+    QCOMPARE(received.first()[0].toMap().value("outcome").toString(), QString());
+    QVERIFY(!commands->property("busy").toBool());
+    QVERIFY(!request().value("unknown").toBool());
+    QVERIFY(!request().value("accepted").toBool());
+    QVERIFY(!request().value("terminal").isValid() || request().value("terminal").isNull());
+    QVERIFY(!vehicle->usvSafetyLocked());
+    QCOMPARE(panel->property("taskTitle").toString(), QStringLiteral("手动点采样"));
+    QCOMPARE(panel->property("phaseIndex").toInt(), 1);
+    QCOMPARE(panel->property("preflightText").toString(), QStringLiteral("泵组回零"));
+    auto* phase = panel->findChild<QObject*>("usvTaskPhase");
+    QVERIFY(phase);
+    QVERIFY(phase->property("text").toString().contains(QStringLiteral("泵组回零")));
+
+    event["seq"] = 3;
+    event["preflight_phase"] = "complete";
+    deliverPayloadFrames(facts, vehicle, payloadEventFrames(event, vehicle->id()));
+    QCOMPARE(panel->property("phaseIndex").toInt(), 2);
+    QCOMPARE(panel->property("observedStages").value<QJSValue>().toVariant().toList(), QVariantList({1, 2}));
+    QVERIFY(QMetaObject::invokeMethod(fixture.get(), "pauseSample"));
+    value("USV_STAT", 11);
+    QJsonObject pause = event;
+    pause["request"] = request().value("request").toInt();
+    pause["command"] = 31012;
+    pause["seq"] = 1;
+    pause["phase"] = "request";
+    pause["outcome"] = "accepted";
+    deliverPayloadFrames(facts, vehicle, payloadEventFrames(pause, vehicle->id()));
+    QCOMPARE(phase->property("text").toString(), QStringLiteral("已暂停"));
+    event["seq"] = 4;
+    event["phase"] = "terminal";
+    event["outcome"] = "failed";
+    event["reason"] = "spectrometer_saturated";
+    event["cleanup_failed"] = true;
+    deliverPayloadFrames(facts, vehicle, payloadEventFrames(event, vehicle->id()));
+    QVERIFY(vehicle->usvSafetyLocked());
+    QVERIFY(commands->property("feedback").toString().contains("spectrometer_saturated"));
+    QVERIFY(QMetaObject::invokeMethod(fixture.get(), "confirmStopped"));
+    value("USV_STAT", 0);
+    QVERIFY(QMetaObject::invokeMethod(fixture.get(), "startSurvey"));
+    event["request"] = request().value("request").toInt();
+    event["command"] = 31015;
+    event["seq"] = 1;
+    event["phase"] = "progress";
+    event["outcome"] = "";
+    event["reason"] = "";
+    event["cleanup_failed"] = false;
+    event["attempt_id"] = "22222222222222222222222222222222";
+    value("USV_STAT", 14);
+    deliverPayloadFrames(facts, vehicle, payloadEventFrames(event, vehicle->id()));
+    QCOMPARE(panel->property("taskTitle").toString(), QStringLiteral("走航检测"));
+    QCOMPARE(panel->property("observedStages").value<QJSValue>().toVariant().toList(), QVariantList() << 2);
+    event["seq"] = 2;
+    event["phase"] = "terminal";
+    event["outcome"] = "succeeded";
+    deliverPayloadFrames(facts, vehicle, payloadEventFrames(event, vehicle->id()));
+    event["seq"] = 3;
+    event["phase"] = "progress";
+    event["outcome"] = "";
+    event["attempt_id"] = "33333333333333333333333333333333";
+    event["preflight_phase"] = "injection";
+    deliverPayloadFrames(facts, vehicle, payloadEventFrames(event, vehicle->id()));
+    QCOMPARE(panel->property("phaseIndex").toInt(), 1);
+    QCOMPARE(panel->property("preflightText").toString(), QStringLiteral("进样准备"));
+    QCOMPARE(panel->property("observedStages").value<QJSValue>().toVariant().toList(), QVariantList() << 1);
+
+    // Two native Vehicles exercise captured-object ownership, not just IDs.
+    QPointer<MockLink> otherLink = MockLink::startNoInitialConnectMockLink(false);
+    const int otherId = otherLink->vehicleId();
+    const auto removeOther = qScopeGuard([&] {
+        if (otherLink)
+            otherLink->disconnect();
+        QTRY_VERIFY(!MultiVehicleManager::instance()->getVehicleById(otherId));
+    });
+    QTRY_VERIFY(MultiVehicleManager::instance()->getVehicleById(otherId));
+    Vehicle* otherVehicle = MultiVehicleManager::instance()->getVehicleById(otherId);
+    QQmlEngine::setObjectOwnership(otherVehicle, QQmlEngine::CppOwnership);
+    USVPayloadFactGroup otherFacts;
+    otherFacts.setVehicleId(otherId);
+    QQmlEngine::setObjectOwnership(&otherFacts, QQmlEngine::CppOwnership);
+    QObject* operations = fixture->property("operations").value<QObject*>();
+    QVERIFY(operations);
+    QVERIFY(operations->setProperty("payload", QVariant::fromValue(&otherFacts)));
+    QVERIFY(operations->setProperty("vehicle", QVariant::fromValue(otherVehicle)));
+    QVERIFY(vehicle->usvSafetyLocked());
+    QVERIFY(!otherVehicle->usvSafetyLocked());
+    QCOMPARE(commands->property("activeTask").value<QJSValue>().toVariant().isNull(), true);
+    const QString switchedFeedback = commands->property("feedback").toString();
+    event["seq"] = 5;
+    event["phase"] = "terminal";
+    event["outcome"] = "failed";
+    event["cleanup_failed"] = true;
+    event["reason"] = "old_vehicle_failure";
+    deliverPayloadFrames(facts, vehicle, payloadEventFrames(event, vehicle->id()));
+    QCOMPARE(commands->property("feedback").toString(), switchedFeedback);
+    QVERIFY(!otherVehicle->usvSafetyLocked());
+    const int before = received.count();
+    QSignalSpy otherReceived(&otherFacts, &USVPayloadFactGroup::payloadEventReceived);
+    deliverPayloadFrames(otherFacts, otherVehicle, payloadEventFrames(event, vehicle->id()));
+    QCOMPARE(received.count(), before);
+    QCOMPARE(otherReceived.count(), 0);
+    QVERIFY(!otherVehicle->usvSafetyLocked());
+}
 
 void SendMavCommandWithSignallingTest::_payloadRequestIdentity()
 {

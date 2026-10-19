@@ -6,6 +6,8 @@ import QtQuick.Layouts
 
 import QGroundControl.Controls
 
+import "USVFlyViewLayout.js" as USVLayout
+
 USVCockpitSurface {
     id: root
 
@@ -16,6 +18,50 @@ USVCockpitSurface {
     property bool expanded: true
     property bool diagnostics: false
     readonly property real contentHeight: expanded ? bodyColumn.implicitHeight + theme.gap : 0
+    readonly property var currentTask: controller.commandController && controller.commandController.activeTask
+                                      && controller.commandController.activeTask.vehicle === operations.vehicle
+                                      ? controller.commandController.activeTask : null
+    readonly property bool routeTask: !currentTask && operations.taskExecuting && [USVLayout.StatusNavigating, USVLayout.StatusWaypointReached,
+                                        USVLayout.StatusHolding, USVLayout.StatusResumingAuto].indexOf(operations.payloadStatus) >= 0
+    readonly property string taskTitle: currentTask ? currentTask.command === 31010 ? qsTr("手动点采样")
+                                                      : currentTask.command === 31014 ? qsTr("泵组校准") : qsTr("走航检测")
+                                                  : routeTask ? qsTr("航线任务") : qsTr("载荷作业（来源待确认）")
+    readonly property string preflightPhase: currentTask && currentTask.latestEvent ? currentTask.latestEvent.preflight_phase || "" : ""
+    readonly property string preflightText: {
+        switch (preflightPhase) {
+        case "checking": return qsTr("检查设备");
+        case "homing": return qsTr("泵组回零");
+        case "compensating": return qsTr("泵组补偿");
+        case "separating": return qsTr("油相分隔");
+        case "injection": return qsTr("进样准备");
+        case "complete": return qsTr("准备完成");
+        default: return qsTr("设备准备");
+        }
+    }
+    readonly property bool preparing: !!currentTask && !currentTask.terminal && operations.payloadStatus !== USVLayout.StatusPaused
+                                      && preflightPhase !== "" && preflightPhase !== "complete"
+    readonly property int phaseIndex: !operations.payloadOnline ? -1 : currentTask
+                                     ? currentTask.terminal ? 3 : preparing ? 1 : currentTask.executing || currentTask.observed ? 2 : -1
+                                     : operations.phaseIndex
+    readonly property var observedStages: {
+        if (!currentTask)
+            return routeTask ? operations.observedStages : phaseIndex >= 0 ? [phaseIndex] : [];
+        const seen = [];
+        for (const event of currentTask.stages) {
+            if (currentTask.attemptId && event.attempt_id !== currentTask.attemptId)
+                continue;
+            const stage = event.phase === "terminal" ? 3 : event.preflight_phase && event.preflight_phase !== "complete" ? 1 : event.phase === "progress" ? 2 : -1;
+            if (stage >= 0 && seen.indexOf(stage) < 0)
+                seen.push(stage);
+        }
+        if (phaseIndex >= 0 && seen.indexOf(phaseIndex) < 0)
+            seen.push(phaseIndex);
+        return seen;
+    }
+    readonly property var stages: routeTask ? [
+        { phase: 0, label: qsTr("接近航点") }, { phase: 1, label: preflightText },
+        { phase: 2, label: qsTr("执行采样") }, { phase: 3, label: qsTr("返回结果") }, { phase: 4, label: qsTr("继续航行") }
+    ] : [{ phase: 1, label: preflightText }, { phase: 2, label: currentTask && currentTask.command === 31014 ? qsTr("执行校准") : qsTr("执行检测") }, { phase: 3, label: qsTr("任务结果") }]
 
     objectName: "usvCurrentTaskPanel"
     implicitHeight: header.implicitHeight + theme.gap * 2 + contentHeight
@@ -49,7 +95,7 @@ USVCockpitSurface {
             spacing: root.theme.unit
             visible: root.maxHeight >= root.theme.line * 11
             USVCockpitIcon { Layout.preferredWidth: root.theme.line * 1.4; Layout.preferredHeight: root.theme.line * 1.4; name: "route"; color: root.theme.accent }
-            QGCLabel { font.pointSize: root.theme.bodyPointSize; Layout.fillWidth: true; color: root.theme.text; font.bold: true; text: root.operations.hasMission ? qsTr("航线定点采样") : qsTr("手动载荷作业"); elide: Text.ElideRight }
+            QGCLabel { font.pointSize: root.theme.bodyPointSize; Layout.fillWidth: true; color: root.theme.text; font.bold: true; text: root.taskTitle; elide: Text.ElideRight }
         }
         Rectangle {
             Layout.fillWidth: true
@@ -61,7 +107,7 @@ USVCockpitSurface {
                 anchors.margins: root.theme.unit
                 color: root.theme.text
                 font.bold: true
-                text: root.controller.safetyLocked ? qsTr("实际停止待核验") : root.operations.samplingText
+                text: root.controller.safetyLocked ? qsTr("实际停止待核验") : root.preparing ? qsTr("设备准备：%1").arg(root.preflightText) : root.operations.samplingText
                 textFormat: Text.PlainText
                 verticalAlignment: Text.AlignVCenter
                 objectName: "usvTaskPhase"
@@ -116,12 +162,12 @@ USVCockpitSurface {
                 visible: !root.diagnostics
                 spacing: root.compact ? root.theme.unit * 0.75 : root.theme.unit * 1.5
                 Repeater {
-                    model: 5
+                    model: root.stages
                     delegate: RowLayout {
                         id: stage
-                        required property int index
-                        readonly property bool current: root.operations.phaseIndex === index
-                        readonly property bool observed: root.operations.observedStages.indexOf(index) >= 0
+                        required property var modelData
+                        readonly property bool current: root.phaseIndex === modelData.phase
+                        readonly property bool observed: root.observedStages.indexOf(modelData.phase) >= 0
                         Layout.fillWidth: true
                         spacing: root.theme.unit
                         Rectangle {
@@ -133,7 +179,7 @@ USVCockpitSurface {
                             border.width: 1
                             USVCockpitIcon { anchors.fill: parent; anchors.margins: root.theme.unit * 0.25; name: stage.observed && !stage.current ? "check" : ""; color: root.theme.surface }
                         }
-                        QGCLabel { font.pointSize: root.theme.bodyPointSize; Layout.fillWidth: true; text: [qsTr("接近航点"), qsTr("保持稳定"), qsTr("执行采样"), qsTr("返回结果"), qsTr("继续航行")][stage.index]; color: stage.current ? root.theme.accent : root.theme.text; font.bold: stage.current }
+                        QGCLabel { font.pointSize: root.theme.bodyPointSize; Layout.fillWidth: true; text: stage.modelData.label; color: stage.current ? root.theme.accent : root.theme.text; font.bold: stage.current }
                         QGCLabel { text: stage.current ? qsTr("当前") : stage.observed ? qsTr("已观测") : qsTr("待观测"); color: root.theme.secondary; font.pointSize: root.theme.captionPointSize; visible: !root.compact }
                     }
                 }

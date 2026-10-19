@@ -81,8 +81,178 @@ Item {
             verify(!!controller, "Component exists");
         }
         function event(seq, phase, outcome, extra) {
-            return Object.assign({}, controller.request, {seq: seq, phase: phase, outcome: outcome,
+            return Object.assign({}, controller.request, {v: 1, tcp_session: 1, seq: seq, phase: phase, outcome: outcome,
                 reason: "", attempt_id: "11111111111111111111111111111111", preflight_phase: ""}, extra || {});
+        }
+        function startSample() {
+            controller.send(31010);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            operations.payloadStatus = Status.StatusSampling;
+            payload.receive("status");
+            return Object.assign({}, controller.request);
+        }
+        function pauseSample() {
+            controller.send(31012);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            operations.payloadStatus = Status.StatusPaused;
+            payload.receive("status");
+        }
+        function test_correlatedProgressProvesExecutionWithoutAccepted() {
+            controller.send(31010);
+            operations.payloadStatus = Status.StatusSampling;
+            payload.receive("status");
+            payload.payloadEventReceived(event(2, "progress", "", {state: "running"}));
+            const deadline = controller.request.deadline;
+            payload.clock = deadline + 1;
+            wait(350);
+            compare(controller.request.unknown, false);
+            compare(controller.busy, false);
+            compare(controller.request.accepted, false);
+            compare(controller.request.terminal, null);
+            compare(vehicle.usvSafetyLocked, false);
+        }
+        function test_progressStillRequiresNewTelemetryAndTerminal() {
+            controller.send(31010);
+            payload.payloadEventReceived(event(2, "progress", "", {state: "running"}));
+            compare(controller.busy, true);
+            compare(controller.request.observed, false);
+            compare(controller.request.terminal, null);
+            payload.clock = controller.request.deadline + 1;
+            tryCompare(controller, "busy", false, 1500);
+            compare(controller.request.unknown, true);
+            compare(vehicle.usvSafetyLocked, true);
+        }
+        function test_invalidProgressCannotProveExecution() {
+            controller.send(31010);
+            operations.payloadStatus = Status.StatusSampling;
+            payload.receive("status");
+            payload.payloadEventReceived(event(2, "progress", "running", {state: "running"}));
+            compare(controller.busy, true);
+            compare(controller.request.seq, 0);
+            compare(controller.request.executing, false);
+        }
+        function test_sampleFailureRemainsVisibleAfterPause() {
+            const sampling = startSample();
+            pauseSample();
+            payload.payloadEventReceived(Object.assign({}, sampling, {
+                seq: 3, phase: "terminal", outcome: "failed", reason: "spectrometer_saturated",
+                preflight_phase: "injection", cleanup_failed: true
+            }));
+            compare(vehicle.usvSafetyLocked, true);
+            compare(controller.warning, true);
+            verify(controller.feedback.indexOf("spectrometer_saturated") >= 0);
+            compare(controller.activeTask.terminal.cleanup_failed, true);
+            payload.payloadEventReceived(event(2, "request", "accepted"));
+            vehicle.mavCommandResult(1, 191, 31012, 0, 0);
+            verify(controller.feedback.indexOf("spectrometer_saturated") >= 0);
+            compare(controller.allowed(31013), false);
+            compare(controller.allowed(31011), true);
+        }
+        function test_resumeDoesNotRetireSampleBeforeDisconnect() {
+            const sampling = startSample();
+            pauseSample();
+            controller.send(31013);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            operations.payloadStatus = Status.StatusSampling;
+            payload.receive("status");
+            compare(controller.busy, false);
+            operations.connected = false;
+            compare(vehicle.usvSafetyLocked, true);
+            const original = controller.history.find(record => record.request === sampling.request);
+            verify(!!original);
+            compare(original.unknown, true);
+            compare(controller.activeTask, null);
+        }
+        function test_calibrationObservedThenDisconnectLocksVehicle() {
+            controller.send(31014);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            operations.payloadStatus = Status.StatusCalibrating;
+            payload.receive("status");
+            compare(controller.busy, false);
+            operations.connected = false;
+            compare(vehicle.usvSafetyLocked, true);
+            compare(controller.history[0].unknown, true);
+        }
+        function test_reconnectKeepsLateTaskFailureVisibleWithoutReplaying() {
+            const sampling = startSample();
+            pauseSample();
+            const sent = vehicle.sent.length;
+            operations.connected = false;
+            operations.connected = true;
+            payload.payloadEventReceived(Object.assign({}, sampling, {
+                seq: 3, phase: "terminal", outcome: "failed", reason: "late_cleanup_failure", cleanup_failed: true
+            }));
+            compare(vehicle.sent.length, sent);
+            compare(vehicle.usvSafetyLocked, true);
+            verify(controller.feedback.indexOf("late_cleanup_failure") >= 0);
+            compare(controller.activeTask.terminal.cleanup_failed, true);
+        }
+        function test_knownFailureStaysVisibleForItsVehicleUntilVerified() {
+            const sampling = startSample();
+            pauseSample();
+            payload.payloadEventReceived(Object.assign({}, sampling, {
+                seq: 3, phase: "terminal", outcome: "failed", reason: "retained_first_failure", cleanup_failed: true
+            }));
+            operations.connected = false;
+            verify(controller.feedback.indexOf("retained_first_failure") >= 0);
+            const other = createTemporaryObject(vehicleComponent, root, {id: 2});
+            operations.vehicle = other;
+            verify(controller.feedback.indexOf("retained_first_failure") < 0);
+            operations.vehicle = vehicle;
+            verify(controller.feedback.indexOf("retained_first_failure") >= 0);
+            controller.confirmPhysicalStop(vehicle);
+            verify(controller.feedback.indexOf("retained_first_failure") < 0);
+        }
+        function test_verifiedPhysicalStopRetiresDisconnectedTask() {
+            const sampling = startSample();
+            operations.connected = false;
+            controller.confirmPhysicalStop(vehicle);
+            vehicle.usvSafetyLocked = false;
+            operations.connected = true;
+            payload.payloadEventReceived(Object.assign({}, sampling, {
+                seq: 3, phase: "terminal", outcome: "failed", reason: "late_verified_failure", cleanup_failed: true
+            }));
+            compare(vehicle.usvSafetyLocked, false);
+            compare(controller.activeTask, null);
+            compare(controller.history[0].physicalStopVerified, true);
+        }
+        function test_switchVehicleIsolatesOldTaskEvents() {
+            const sampling = startSample();
+            pauseSample();
+            const other = createTemporaryObject(vehicleComponent, root, {id: 2});
+            const otherPayload = createTemporaryObject(payloadComponent, root);
+            operations.payload = otherPayload;
+            operations.vehicle = other;
+            compare(vehicle.usvSafetyLocked, true);
+            compare(other.usvSafetyLocked, false);
+            controller.observeEvent(Object.assign({}, sampling, {
+                seq: 4, phase: "terminal", outcome: "failed", reason: "old_vehicle_failure", cleanup_failed: true
+            }));
+            compare(other.usvSafetyLocked, false);
+            verify(controller.feedback.indexOf("old_vehicle_failure") < 0);
+        }
+        function test_attemptBindingAndFirstTerminalAreRetained() {
+            startSample();
+            payload.payloadEventReceived(event(2, "progress", "", {state: "running"}));
+            payload.payloadEventReceived(event(3, "terminal", "failed", {reason: "wrong_attempt", attempt_id: "22222222222222222222222222222222"}));
+            compare(controller.request.terminal, null);
+            payload.payloadEventReceived(event(4, "terminal", "failed", {reason: "first_failure", cleanup_failed: true}));
+            payload.payloadEventReceived(event(5, "terminal", "succeeded", {reason: "late_success"}));
+            compare(controller.request.terminal.reason, "first_failure");
+            compare(controller.request.terminal.cleanup_failed, true);
+        }
+        function test_oldTerminalCannotStopOrFailNewAttempt() {
+            const old = startSample();
+            payload.payloadEventReceived(event(2, "terminal", "cancelled", {reason: "operator_stop"}));
+            operations.payloadStatus = Status.StatusIdle;
+            payload.receive("status");
+            controller.send(31010);
+            const current = controller.request.request;
+            verify(current !== old.request);
+            payload.payloadEventReceived(Object.assign({}, old, {seq: 5, phase: "terminal", outcome: "failed", cleanup_failed: true}));
+            compare(controller.request.request, current);
+            compare(controller.request.terminal, null);
+            compare(vehicle.usvSafetyLocked, false);
         }
         function test_sameValueTelemetryBeforeAck() {
             controller.send(31018);
@@ -143,7 +313,7 @@ Item {
         function test_absoluteTimeoutNotExtendedByProgress() {
             controller.send(31010);
             const deadline = controller.request.deadline;
-            payload.payloadEventReceived(event(1, "progress", "running"));
+            payload.payloadEventReceived(event(1, "progress", "", {state: "running"}));
             payload.payloadEventReceived(event(2, "request", "accepted"));
             compare(controller.request.deadline, deadline);
             payload.clock = deadline + 1;
@@ -167,7 +337,7 @@ Item {
             controller.send(31015);
             payload.payloadEventReceived(event(1, "request", "accepted"));
             payload.payloadEventReceived(event(2, "terminal", "succeeded"));
-            payload.payloadEventReceived(event(3, "progress", "running", {attempt_id: "22222222222222222222222222222222"}));
+            payload.payloadEventReceived(event(3, "progress", "", {state: "running", attempt_id: "22222222222222222222222222222222"}));
             payload.payloadEventReceived(event(4, "terminal", "failed", {attempt_id: "22222222222222222222222222222222", reason: "spectrometer_stale"}));
             compare(controller.request.seq, 4);
             compare(controller.request.terminal.reason, "spectrometer_stale");
