@@ -201,7 +201,9 @@ Item {
             operations.vehicle = vehicle;
             verify(controller.feedback.indexOf("retained_first_failure") >= 0);
             controller.confirmPhysicalStop(vehicle);
-            verify(controller.feedback.indexOf("retained_first_failure") < 0);
+            // The failure is acknowledged, not erased: the receipt says both.
+            verify(controller.feedback.indexOf("retained_first_failure") >= 0);
+            verify(controller.feedback.indexOf(qsTr("本次停止已核验")) >= 0);
         }
         function test_verifiedPhysicalStopRetiresDisconnectedTask() {
             const sampling = startSample();
@@ -290,15 +292,19 @@ Item {
             compare(controller.request.accepted, true);
             compare(controller.request.seq, 2);
         }
-        function test_stopRequiresExplicitStoppedState() {
+        function test_stopAcceptanceSettlesTheCommandButKeepsStateEvidence() {
             controller.send(31019);
             payload.receive("spectrometerValid");
             payload.receive("adsState");
             payload.payloadEventReceived(event(1, "request", "accepted"));
-            compare(controller.busy, true);
+            // A correlated accept is the backend's stop result; the ADS state
+            // is separate evidence and is still tracked.
+            compare(controller.busy, false);
+            verify(controller.feedback.indexOf(qsTr("已接受")) >= 0);
+            compare(vehicle.usvSafetyLocked, false);
             payload.adsState = {rawValue: 1};
             payload.receive("adsState");
-            compare(controller.busy, false);
+            compare(controller.request.observed, true);
             compare(controller.request.terminal, null);
         }
         function test_unknownProtocolAndPendingStop() {
@@ -310,14 +316,22 @@ Item {
             controller.transportTick++;
             compare(controller.allowed(31010), false);
         }
-        function test_absoluteTimeoutNotExtendedByProgress() {
+        function test_progressRenewsTheExecutionWindowWithinOneRun() {
             controller.send(31010);
-            const deadline = controller.request.deadline;
-            payload.payloadEventReceived(event(1, "progress", "", {state: "running"}));
-            payload.payloadEventReceived(event(2, "request", "accepted"));
-            compare(controller.request.deadline, deadline);
-            payload.clock = deadline + 1;
-            tryCompare(controller, "busy", false, 1500);
+            const receiptDeadline = controller.request.deadline;
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            payload.payloadEventReceived(event(2, "progress", "", {state: "running"}));
+            verify(controller.request.deadline > receiptDeadline);
+            // At the original receipt deadline the task is still executing and
+            // must not be reported as unanswered.
+            payload.clock = receiptDeadline + 1;
+            controller.expire();
+            compare(controller.request.unknown, false);
+            compare(controller.busy, true);
+            // Without further correlated progress the renewed window still ends
+            // in a real unknown result.
+            payload.clock = controller.request.deadline + 1;
+            controller.expire();
             compare(controller.request.unknown, true);
             compare(vehicle.usvSafetyLocked, true);
         }
@@ -342,6 +356,90 @@ Item {
             compare(controller.request.seq, 4);
             compare(controller.request.terminal.reason, "spectrometer_stale");
             compare(controller.request.stages.filter(e => e.phase === "terminal").length, 2);
+        }
+        function test_startSignalAckWithoutDataIsNotAnUnknownCommand() {
+            controller.send(31018);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            compare(controller.busy, false);
+            verify(controller.feedback.indexOf(qsTr("启动已确认，等待有效数据")) >= 0);
+            compare(vehicle.usvSafetyLocked, false);
+            // A detector that never delivers a frame is a measurement problem,
+            // not a missing command answer.
+            payload.clock = controller.request.deadline + 1;
+            controller.expire();
+            compare(controller.request.unknown, false);
+            compare(vehicle.usvSafetyLocked, false);
+            // The real frame still decides whether new data arrived.
+            compare(controller.request.observed, false);
+            payload.receive("spectrometerValid");
+            compare(controller.request.observed, false);
+            payload.receive("voltage");
+            compare(controller.request.observed, true);
+        }
+        function test_currentFaultBlocksMotionButKeepsRecoveryReachable() {
+            operations.payloadStatus = Status.StatusFault;
+            operations.payloadFault = true;
+            payload.receive("status");
+            // Recovery commands must stay reachable in Fault/Aborted.
+            compare(controller.allowed(31019), true);
+            compare(controller.allowed(31018), true);
+            compare(controller.allowed(31017), true);
+            // Motion still needs a recovered device.
+            compare(controller.allowed(31010), false);
+            compare(controller.allowed(31015), false);
+            // Stops are never blocked by the lock or by a stale protocol.
+            vehicle.usvSafetyLocked = true;
+            controller.safetyLocked = true;
+            compare(controller.allowed(31011), true);
+            compare(controller.allowed(31019), true);
+        }
+        function test_verifiedStopRetiresALateTerminal() {
+            controller.send(31010);
+            const unknownTask = Object.assign({}, controller.request);
+            operations.connected = false;
+            controller.confirmPhysicalStop(vehicle);
+            vehicle.usvSafetyLocked = false;
+            operations.connected = true;
+            payload.payloadEventReceived(Object.assign({}, unknownTask, {
+                seq: 9, phase: "terminal", outcome: "failed", reason: "very_late_failure", cleanup_failed: true
+            }));
+            // A retired request keeps its history but cannot re-lock the vessel.
+            compare(vehicle.usvSafetyLocked, false);
+            compare(controller.activeTask, null);
+            const record = controller.history.find(r => r.request === unknownTask.request);
+            verify(!!record);
+            compare(record.retired, true);
+            compare(record.physicalStopVerified, true);
+        }
+        function test_twoStopsKeepTheirOwnResults() {
+            controller.send(31011);
+            const first = Object.assign({}, controller.request);
+            controller.send(31019);
+            const second = Object.assign({}, controller.request);
+            verify(first.request !== second.request);
+            payload.payloadEventReceived(Object.assign({}, first, {
+                seq: 2, phase: "terminal", outcome: "cancelled", reason: "operator_stop"
+            }));
+            // The newest request is not replaced by another stop's result.
+            compare(controller.request.request, second.request);
+            const record = controller.history.find(r => r.request === first.request);
+            verify(!!record);
+            compare(record.terminal.reason, "operator_stop");
+            compare(controller.busy, true);
+        }
+        function test_recoveredDeviceAllowsANewSampleCycle() {
+            operations.payloadStatus = Status.StatusFault;
+            operations.payloadFault = true;
+            payload.receive("status");
+            controller.send(31010);
+            compare(controller.request, null, "motion must stay blocked while the payload reports a fault");
+            // After verify + backend recovery the same command becomes available.
+            vehicle.usvSafetyLocked = false;
+            controller.safetyLocked = false;
+            operations.payloadStatus = Status.StatusIdle;
+            operations.payloadFault = false;
+            payload.receive("status");
+            compare(controller.allowed(31010), true);
         }
     }
 }

@@ -54,6 +54,18 @@ Item {
     function physicalCommand(command) {
         return command === 31010 || command === 31014 || command === 31015;
     }
+    function stopCommand(command) {
+        return command === 31011 || command === 31016 || command === 31019;
+    }
+    function movesOutputs(command) {
+        return physicalCommand(command) || command === 31013;
+    }
+    // A correlated request-phase result is a complete answer for a finite
+    // command. Only acquisition-like commands keep waiting for the device to
+    // reach a new state, and that state is evidence of progress, not of receipt.
+    function resultKnown(candidate) {
+        return !!candidate && (!!candidate.terminal || (!!candidate.accepted && !physicalCommand(candidate.command)));
+    }
     function taskUnfinished(candidate) {
         if (!candidate || !physicalCommand(candidate.command) || candidate.physicalStopVerified)
             return false;
@@ -85,23 +97,44 @@ Item {
         return qsTr("任务未成功：%1；准备阶段：%2").arg(event.reason).arg(event.preflight_phase || "—");
     }
     function confirmPhysicalStop(targetVehicle) {
-        history = history.map(record => record.vehicle === targetVehicle && physicalCommand(record.command)
-                              ? Object.assign({}, record, { physicalStopVerified: true }) : record);
+        const failed = activeFailure();
+        history = history.map(record => record.vehicle === targetVehicle && (physicalCommand(record.command) || stopCommand(record.command))
+                              ? Object.assign({}, record, { physicalStopVerified: true, retired: true }) : record);
         if (activeTask && activeTask.vehicle === targetVehicle) {
-            archive(Object.assign({}, activeTask, { physicalStopVerified: true }));
+            archive(Object.assign({}, activeTask, { physicalStopVerified: true, retired: true }));
             activeTask = null;
         }
+        // The verified stop answers this request; retire it so a late accepted,
+        // progress or terminal can no longer reopen the wait or re-lock.
+        if (request && request.vehicle === targetVehicle) {
+            archive(Object.assign({}, request, { physicalStopVerified: true, retired: true }));
+            request = null;
+            pendingCommand = 0;
+            awaitedCommand = 0;
+            timeout.stop();
+        }
+        commandWarning = !!failed;
+        commandFeedback = failed && failed.terminal
+                ? qsTr("上一任务失败：%1；本次停止已核验").arg(failed.terminal.reason)
+                : qsTr("已核验设备停止");
     }
 
     function allowed(command) {
         if (!operations.connected || !operations.hasPayload)
             return false;
-        if (command === 31011 || command === 31016 || command === 31019)
+        // Stop paths stay reachable while a lock, an unknown result or an old
+        // protocol version is still being resolved. Hiding them would hide the
+        // only exit the operator has.
+        if (stopCommand(command))
             return pendingCommand !== command && !operations.vehicle.isMavCommandPending(_payloadCompId, command);
         if (safetyLocked || operations.vehicle.usvSafetyLocked || !protocolReady || stopsPending)
             return false;
         const observedStart = command === 31017 && request && request.command === 31018 && request.observed && !request.terminal;
-        if (((pendingCommand || awaitedCommand) && !observedStart) || !operations.payloadOnline || operations.payloadFault || operations.payloadStatus < 0 || operations.payloadStatus > USVLayout.StatusSurveying)
+        if (((pendingCommand || awaitedCommand) && !observedStart) || !operations.payloadOnline || operations.payloadStatus < 0 || operations.payloadStatus > USVLayout.StatusSurveying)
+            return false;
+        // A current device fault forbids motion, not device recovery: starting
+        // the detector or re-baselining is how the operator clears it.
+        if (operations.payloadFault && movesOutputs(command))
             return false;
         if (operations.vehicle.isMavCommandPending(_payloadCompId, command))
             return false;
@@ -148,15 +181,43 @@ Item {
         }
     }
     function commandTimeoutFor(command) {
+        // Receipt window: how long the backend may take to answer at all.
         if (command === 31018)
             return 40000;
-        if (command === 31011 || command === 31016 || command === 31019)
+        if (stopCommand(command))
             return 15000;
         return 5000;
+    }
+    function progressTimeoutFor(command) {
+        // Silence window while the command is genuinely executing. Renewed only
+        // by a correlated event for this request, never by a local heartbeat.
+        if (stopCommand(command))
+            return 15000;
+        if (command === 31018)
+            return 30000;
+        if (physicalCommand(command))
+            return 60000;
+        return 15000;
     }
     function expire() {
         if (!request || (!pendingCommand && !awaitedCommand))
             return;
+        if (request.terminal)
+            return;
+        if (now() < request.deadline)
+            return;
+        if (resultKnown(request)) {
+            // The command has an answer; the device state is a separate,
+            // asynchronous fact and must not turn a success into an unknown.
+            commandWarning = false;
+            commandFeedback = request.command === 31018
+                    ? qsTr("启动已确认，等待有效数据")
+                    : commandName(request.command) + qsTr("已接受，等待设备状态更新");
+            pendingCommand = 0;
+            awaitedCommand = 0;
+            timeout.stop();
+            return;
+        }
         commandWarning = true;
         saveRequest(Object.assign({}, request, { unknown: true }));
         commandFeedback = request.command === 31018 && request.observed
@@ -242,11 +303,19 @@ Item {
                 && candidate.sender_system === event.sender_system && candidate.sender_component === event.sender_component;
         const current = matches(request);
         const task = matches(activeTask);
-        const retained = !activeTask && history.find(record => matches(record) && record.unknown
-                          && physicalCommand(record.command) && !record.terminal && !record.physicalStopVerified);
-        if (!current && !task && !retained)
+        // Several stop buttons may be in flight at once. Keep every unfinished
+        // request correlatable so a later result updates its own record instead
+        // of being dropped (or overwriting the newest feedback).
+        const unfinished = history.find(record => matches(record) && !record.retired
+                          && !record.terminal && !record.physicalStopVerified);
+        // A physical task lost by a reconnect is re-attached to activeTask; a
+        // secondary stop request only updates its own history record.
+        const retainedTask = !activeTask && unfinished && physicalCommand(unfinished.command) ? unfinished : null;
+        if (!current && !task && !unfinished)
             return;
-        const candidate = current ? request : task ? activeTask : retained;
+        const candidate = current ? request : task ? activeTask : unfinished;
+        if (candidate.retired)
+            return;
         const nextSurveyAttempt = candidate.command === 31015 && candidate.terminal
                 && candidate.terminal.outcome === "succeeded" && event.attempt_id
                 && event.attempt_id !== candidate.terminal.attempt_id
@@ -255,9 +324,11 @@ Item {
                 || (candidate.attemptId && event.attempt_id && candidate.attemptId !== event.attempt_id && !nextSurveyAttempt)
                 || (event.phase === "progress" && event.outcome !== ""))
             return;
+        const progressAt = now();
         const updated = Object.assign({}, candidate, { seq: event.seq, latestEvent: event,
             attemptId: event.attempt_id || candidate.attemptId,
             terminal: nextSurveyAttempt ? null : candidate.terminal,
+            deadline: event.phase === "progress" ? progressAt + progressTimeoutFor(candidate.command) : candidate.deadline,
             stages: candidate.stages.concat([event]).slice(-16) });
         if (event.phase === "progress")
             updated.executing = true;
@@ -267,7 +338,7 @@ Item {
             updated.terminal = event;
         if (current)
             request = updated;
-        if (task || retained)
+        if (task || retainedTask)
             activeTask = updated;
         history = history.map(record => sameRequest(record, updated) ? updated : record);
         if (event.phase === "terminal") {
@@ -276,16 +347,35 @@ Item {
                 awaitedCommand = 0;
                 timeout.stop();
             }
-            commandWarning = event.outcome !== "succeeded";
-            commandFeedback = commandWarning ? terminalFeedback(event)
-                               : commandName(updated.command) + qsTr("已完成；软件清理结果已记录");
-            if (event.cleanup_failed || event.outcome === "failed")
+            if (current || task) {
+                commandWarning = event.outcome !== "succeeded";
+                commandFeedback = commandWarning ? terminalFeedback(event)
+                                   : commandName(updated.command) + qsTr("已完成；软件清理结果已记录");
+            }
+            // Only a failure with unproven output shutdown escalates to the
+            // vessel lock. A cancelled physical run was stopped by the stop
+            // path, and a measurement command never moved anything.
+            if (event.cleanup_failed
+                    || (event.outcome === "failed" && physicalCommand(updated.command)))
                 lockUnknown(updated);
         } else if (current && event.phase === "request") {
             if (event.outcome === "accepted") {
                 pendingCommand = 0;
-                awaitedCommand = request.command;
-                commandFeedback = commandName(request.command) + qsTr("关联请求已接受，等待新状态");
+                const settled = !physicalCommand(request.command);
+                if (settled) {
+                    // The command answered. A missing follow-up state is
+                    // reported as pending evidence, never as an unknown command
+                    // that locks the whole vessel.
+                    awaitedCommand = 0;
+                    timeout.stop();
+                    commandWarning = false;
+                    commandFeedback = request.command === 31018
+                            ? qsTr("启动已确认，等待有效数据")
+                            : commandName(request.command) + qsTr("已接受，等待设备状态更新");
+                } else {
+                    awaitedCommand = request.command;
+                    commandFeedback = commandName(request.command) + qsTr("关联请求已接受，等待新状态");
+                }
                 observeTelemetry();
             } else {
                 commandWarning = true;
@@ -303,6 +393,7 @@ Item {
             if (current) {
                 pendingCommand = 0;
                 awaitedCommand = request.command;
+                timeout.restart();
                 observeTelemetry();
             }
         }
@@ -379,7 +470,7 @@ Item {
         id: timeout
         interval: 250
         repeat: true
-        onTriggered: { if (root.request && root.now() >= root.request.deadline) root.expire(); }
+        onTriggered: root.expire()
     }
     Timer {
         interval: 250

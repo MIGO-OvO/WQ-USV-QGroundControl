@@ -14,7 +14,27 @@ Item {
     readonly property var vehicle: operations.vehicle
     readonly property bool safetyLocked: emergencyPhase !== "idle"
     readonly property bool emergencyPending: propulsionPending || payloadPending
-    readonly property bool canVerifyStop: operations.connected && !emergencyPending && (!commandController || !commandController.stopsPending) && safetyLocked && !vehicle.armed && operations.payloadOnline && [0, 9, 12, 13].indexOf(operations.payloadStatus) >= 0
+    readonly property bool canVerifyStop: operations.connected && !emergencyPending && (!commandController || !commandController.stopsPending) && safetyLocked && !vehicle.armed && operations.payloadOnline && [0, 3, 9, 12, 13].indexOf(operations.payloadStatus) >= 0
+    // Why the only recovery entry is unavailable. Shown instead of hiding it.
+    readonly property string verifyBlockedReason: {
+        if (canVerifyStop)
+            return "";
+        if (!safetyLocked)
+            return "";
+        if (!operations.connected)
+            return qsTr("等待无人船连接");
+        if (emergencyPending)
+            return qsTr("停止命令仍在处理中");
+        if (commandController && commandController.stopsPending)
+            return qsTr("停止回执仍在处理中");
+        if (vehicle.armed)
+            return qsTr("飞控仍处于解锁状态，请先停止推进");
+        if (!operations.payloadOnline)
+            return qsTr("载荷遥测中断，无法确认采样装置状态");
+        if ([0, 3, 9, 12, 13].indexOf(operations.payloadStatus) < 0)
+            return qsTr("载荷仍在工作（状态 %1），请先停止采样").arg(operations.payloadStatus);
+        return qsTr("等待停止证据");
+    }
     property string emergencyPhase: "idle"
     property string propulsionReceipt: ""
     property string payloadReceipt: ""
@@ -294,7 +314,7 @@ Item {
         contentItem: ColumnLayout {
             spacing: root.theme.gap
             QGCLabel { color: root.theme.text; font.bold: true; text: qsTr("核验停止 · 无人船 %1").arg(verifyDialog.targetVehicle ? verifyDialog.targetVehicle.id : "—") }
-            QGCLabel { Layout.fillWidth: true; color: root.theme.text; wrapMode: Text.WordWrap; text: qsTr("飞控已返回未解锁，采样已返回结束状态。泵角度不能证明电机停止，请现场核验。") }
+            QGCLabel { Layout.fillWidth: true; color: root.theme.text; wrapMode: Text.WordWrap; text: qsTr("飞控已返回未解锁，载荷已停止或已结束本次任务。泵角度不能证明电机停止，请现场核验。解除锁定后需重新启动分光并建立基线才能再次采样。") }
             CheckBox { id: onsiteCheck; Layout.fillWidth: true; text: qsTr("已现场确认推进与采样装置停止"); palette.windowText: root.theme.text }
             RowLayout {
                 Layout.fillWidth: true

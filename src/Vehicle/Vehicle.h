@@ -1209,6 +1209,10 @@ private:
             float param1, float param2, float param3, float param4, double param5, double param6, float param7);
     bool _usvSafetyCommandAllowed(int compId, MAV_CMD command, float param1) const;
     void _rejectUsvSafetyCommand(int compId, MAV_CMD command, const MavCmdAckHandlerInfo_t* handler, bool showError);
+    // Payload commands carry their own correlated result and user-facing text
+    // through the payload event channel; generic command toasts would duplicate
+    // and contradict them.
+    static bool _isUsvPayloadCommand(int compId, MAV_CMD command);
     void _sendMavCommandFromList(int index);
     int  _findMavCommandListEntryIndex(int targetCompId, MAV_CMD command);
     bool _sendMavCommandShouldRetry(MAV_CMD command);

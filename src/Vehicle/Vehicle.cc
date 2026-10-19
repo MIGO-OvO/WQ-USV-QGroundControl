@@ -2628,6 +2628,11 @@ bool Vehicle::_commandCanBeDuplicated(MAV_CMD command)
     }
 }
 
+bool Vehicle::_isUsvPayloadCommand(int compId, MAV_CMD command)
+{
+    return compId == 191 && command >= 31010 && command <= 31019;
+}
+
 bool Vehicle::_usvSafetyCommandAllowed(int compId, MAV_CMD command, float param1) const
 {
     if (compId == 191 && command >= 31010 && command <= 31019
@@ -2806,7 +2811,7 @@ void Vehicle::_sendMavCommandFromList(int index)
         } else {
             emit mavCommandResult(_id, commandEntry.targetCompId, commandEntry.command, MAV_RESULT_FAILED, MavCmdResultFailureNoResponseToCommand);
         }
-        if (commandEntry.showError) {
+        if (commandEntry.showError && !_isUsvPayloadCommand(commandEntry.targetCompId, commandEntry.command)) {
             qgcApp()->showAppMessage(tr("Vehicle did not respond to command: %1").arg(friendlyName));
         }
         return;
@@ -2984,7 +2989,7 @@ void Vehicle::_handleCommandAck(mavlink_message_t& message)
             if (commandEntry.ackHandlerInfo.resultHandler) {
                 (*commandEntry.ackHandlerInfo.resultHandler)(commandEntry.ackHandlerInfo.resultHandlerData, message.compid, ack, MavCmdResultCommandResultOnly);
             } else {
-                if (commandEntry.showError) {
+                if (commandEntry.showError && !_isUsvPayloadCommand(message.compid, static_cast<MAV_CMD>(ack.command))) {
                     showCommandAckError(ack);
                 }
                 emit mavCommandResult(_id, message.compid, ack.command, ack.result, MavCmdResultCommandResultOnly);
