@@ -44,6 +44,7 @@ QtObject {
     property real fontFactor: 1
     property real defaultFontPixelWidth: 9 * fontFactor
     property real defaultFontPixelHeight: 20 * fontFactor
+    property real panelOpacity: 0.5
     property real defaultFontPointSize: 12 * fontFactor
     property real smallFontPointSize: 10 * fontFactor
     property real minTouchPixels: 44

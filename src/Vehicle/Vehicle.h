@@ -144,6 +144,7 @@ public:
     Q_PROPERTY(QGeoCoordinate       armedPosition               READ armedPosition                                                  NOTIFY armedPositionChanged)
     Q_PROPERTY(bool                 armed                       READ armed                      WRITE setArmedShowError             NOTIFY armedChanged)
     Q_PROPERTY(bool                 usvSafetyLocked             READ usvSafetyLocked            WRITE setUsvSafetyLocked            NOTIFY usvSafetyLockedChanged)
+    Q_PROPERTY(QString              usvSafetyLockSource         READ usvSafetyLockSource        WRITE setUsvSafetyLockSource        NOTIFY usvSafetyLockedChanged)
     Q_PROPERTY(bool                 autoDisarm                  READ autoDisarm                                                     NOTIFY autoDisarmChanged)
     Q_PROPERTY(bool                 flightModeSetAvailable      READ flightModeSetAvailable                                         CONSTANT)
     Q_PROPERTY(QStringList          flightModes                 READ flightModes                                                    NOTIFY flightModesChanged)
@@ -480,6 +481,8 @@ public:
 
     bool usvSafetyLocked() const;
     void setUsvSafetyLocked(bool locked);
+    QString usvSafetyLockSource() const;
+    void setUsvSafetyLockSource(const QString &source);
 
     bool flightModeSetAvailable             ();
     QStringList flightModes                 ();

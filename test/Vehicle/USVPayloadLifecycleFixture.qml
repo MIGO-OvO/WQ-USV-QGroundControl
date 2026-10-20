@@ -7,19 +7,24 @@ Item {
     property alias commands: commands
     property alias taskPanel: taskPanel
     property alias operations: state
+    property alias cockpit: safety
 
     function startSample() { commands.send(31010); }
     function pauseSample() { commands.send(31012); }
     function startSurvey() { commands.send(31015); }
+    function stopSample() { commands.send(31011); }
+    function stopDetector() { commands.send(31019); }
     function confirmStopped() {
         commands.confirmPhysicalStop(state.vehicle);
         state.vehicle.usvSafetyLocked = false;
+        safety.emergencyPhase = "idle";
     }
 
     QtObject {
         id: state
         property var vehicle: testVehicle
         property var payload: testFacts
+        property var guidedController: null
         property bool connected: true
         property bool hasPayload: true
         property bool payloadOnline: true
@@ -42,12 +47,13 @@ Item {
         function fresh(field) { return payload.freshFields.indexOf(field) >= 0; }
         function factNumber(fact, fallback) { return fact ? fact.rawValue : fallback; }
     }
-    USVPayloadCommandController { id: commands; operations: state }
+    USVPayloadCommandController { id: commands; operations: state; safetyLocked: safety.safetyLocked }
     USVOperationsTheme { id: testTheme }
-    QtObject {
+    USVCockpitController {
         id: safety
-        property var commandController: commands
-        readonly property bool safetyLocked: state.vehicle && state.vehicle.usvSafetyLocked
+        operations: state
+        theme: testTheme
+        commandController: commands
     }
     USVCurrentTaskPanel {
         id: taskPanel

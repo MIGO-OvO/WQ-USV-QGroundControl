@@ -17,6 +17,19 @@ Item {
     property int commandCalls: 0
     property int defaultComponentId: 1
     property bool usvSafetyLocked: false
+    property string usvSafetyLockSource: ""
+    property string retainedSafetySource: ""
+    onUsvSafetyLockSourceChanged: {
+        if (usvSafetyLockSource && (retainedSafetySource === "emergency"
+                || usvSafetyLockSource === "communication" && retainedSafetySource))
+            usvSafetyLockSource = retainedSafetySource;
+        retainedSafetySource = usvSafetyLockSource;
+        usvSafetyLocked = usvSafetyLockSource.length > 0;
+    }
+    onUsvSafetyLockedChanged: {
+        if (!usvSafetyLocked) usvSafetyLockSource = "";
+        else if (!usvSafetyLockSource) usvSafetyLockSource = "emergency";
+    }
     property var distanceToHome: ({
             rawValue: 86
         })
@@ -46,7 +59,10 @@ Item {
     property var headingToNextWP: ({rawValue: 145})
     property int id: 1
     property int lastCommand: 0
-    function isMavCommandPending(component, command) { return false; }
+    property var pendingCommands: []
+    function isMavCommandPending(component, command) {
+        return pendingCommands.some(entry => entry.component === component && entry.command === command);
+    }
     property int lastComponent: 0
     property string missionFlightMode: "Auto"
     property int pauseCalls: 0
@@ -59,11 +75,17 @@ Item {
         property int nextRequest: 0
         signal freshnessChanged()
         signal payloadEventReceived(var event)
-        function monotonicMs() { return Date.now(); }
+        property double clock: 1000
+        function monotonicMs() { return clock; }
         function fieldSequence(field) { return sequences[field] || 0; }
         function receive(field) { sequences[field] = fieldSequence(field) + 1; freshnessChanged(); }
         function allocateRequest() { return {session: 1, request: ++nextRequest, sender_system: 255, sender_component: 190}; }
-        property var freshFields: ["voltage", "absorbance", "pumpX", "pumpY", "pumpZ", "pumpA", "status", "packetCount", "stepCurrent", "stepTotal", "loopCurrent", "loopTotal", "sampleCount", "pidError", "pidMode", "baselineSet", "referenceVoltage", "baselineVoltage", "spectrometerValid", "jetsonTemp", "detectorTemp", "jetsonCpu", "jetsonMemory", "detectorHeap"]
+        onStatusChanged: receive("status")
+        onAdsStateChanged: receive("adsState")
+        onSpectrometerValidChanged: receive("spectrometerValid")
+        onVoltageChanged: receive("voltage")
+        onBaselineSetChanged: receive("baselineSet")
+        property var freshFields: ["protocolVersion", "adsState", "voltage", "absorbance", "pumpX", "pumpY", "pumpZ", "pumpA", "status", "packetCount", "stepCurrent", "stepTotal", "loopCurrent", "loopTotal", "sampleCount", "pidError", "pidMode", "baselineSet", "referenceVoltage", "baselineVoltage", "spectrometerValid", "jetsonTemp", "detectorTemp", "jetsonCpu", "jetsonMemory", "detectorHeap"]
         property double telemetryAgeMs: 0
         property var absorbance: ({
                 rawValue: 0.1157
@@ -160,6 +182,10 @@ Item {
     }
 
     signal mavCommandResult(int vehicleId, int targetComponent, int command, int ackResult, int failureCode)
+    onMavCommandResult: (vehicleId, targetComponent, command, ackResult, failureCode) => {
+        if (vehicleId === id && ackResult !== 5)
+            pendingCommands = pendingCommands.filter(entry => entry.component !== targetComponent || entry.command !== command);
+    }
 
     function emergencyStop() {
         emergencyCalls++;
@@ -170,9 +196,10 @@ Item {
     function pauseVehicle() {
         pauseCalls++;
     }
-    function sendCommand(component, command, errors, param1) {
+    function sendCommand(component, command, errors, param1, param2, param3, param4) {
         lastComponent = component;
         lastCommand = command;
         commandCalls++;
+        pendingCommands = pendingCommands.concat([{component: component, command: command}]);
     }
 }

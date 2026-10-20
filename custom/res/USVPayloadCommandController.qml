@@ -37,10 +37,10 @@ Item {
     // The vessel-wide lock is reserved for a physical state this client cannot
     // confirm: an unconfirmed output shutdown or a lost link while a task may
     // still be running. An unanswered command is only an unanswered command.
-    function lockUnknown(candidate) {
+    function lockUnknown(candidate, source) {
         const targetVehicle = (candidate || request || {}).vehicle;
         if (targetVehicle)
-            targetVehicle.usvSafetyLocked = true;
+            targetVehicle.usvSafetyLockSource = source || "outputs";
     }
     function sameRequest(left, right) {
         return !!left && !!right && left.vehicle === right.vehicle && left.session === right.session && left.request === right.request
@@ -123,6 +123,22 @@ Item {
         return [USVLayout.StatusIdle, USVLayout.StatusSamplingDone,
                 USVLayout.StatusHoldNoMission].indexOf(operations.payloadStatus) >= 0;
     }
+    function recoverCommunication() {
+        const target = operations.vehicle;
+        if (!target || !operations.connected || target.usvSafetyLockSource !== "communication"
+                || target.isMavCommandPending(_payloadCompId, 31011))
+            return;
+        const statusSeq = idleReading();
+        const confirmed = [request].concat(history).some(record => record && record.vehicle === target
+                && record.command === 31011 && record.communicationRecovery && record.accepted
+                && !record.retired && !record.terminal && statusSeq > record.evidenceStatus);
+        if (!confirmed)
+            return;
+        confirmPhysicalStop(target);
+        target.usvSafetyLocked = false;
+        commandWarning = false;
+        commandFeedback = qsTr("采样输出停止已确认，通信锁定已解除");
+    }
     // An idle reading with its own receive sequence. The sequence is a client
     // receive counter, so an unchanged USV_STAT value still produces a new one:
     // the reading alone says "the payload looks idle now", never "this task
@@ -139,9 +155,6 @@ Item {
     //   * the run reached its own terminal (one attempt only for 31015);
     //   * the payload was really seen running and now reports idle;
     //   * the survey schedule was stopped by 31016;
-    //   * an unanswered attempt only counts against a reading taken after the
-    //     receipt window closed, so a periodic Idle frame cannot retire a
-    //     START that the backend has simply not answered yet.
     function convergenceEvidence(task, statusSeq) {
         if (!task || !physicalCommand(task.command) || task.retired || task.physicalStopVerified)
             return false;
@@ -161,7 +174,7 @@ Item {
             return true;
         if (task.observed)
             return true;
-        return !!task.unacknowledged && statusSeq > (task.settledStatus || 0);
+        return false;
     }
     // The current device state decides what is allowed now, but only evidence
     // that this task ended may retire it. It keeps its reason in history and
@@ -197,7 +210,8 @@ Item {
             return operations.vehicle.isMavCommandPending(_payloadCompId, command)
                     ? qsTr("同类停止仍在处理中") : qsTr("当前不可用");
         if (safetyLocked || operations.vehicle.usvSafetyLocked)
-            return qsTr("操作已锁定，请先核验设备停止");
+            return operations.vehicle.usvSafetyLockSource === "communication"
+                    ? qsTr("通信中断后，请停止采样并等待状态同步") : qsTr("操作已锁定，请先核验设备停止");
         if (!protocolReady)
             return qsTr("等待载荷协议能力汇报");
         if (stopsPending)
@@ -319,12 +333,11 @@ Item {
         if (now() < request.deadline)
             return;
         // End only this send wait. Nothing here proves the vessel is idle, so
-        // nothing is locked and no new request is invented. The status reading
-        // taken now is the earliest one that may later say "it never ran".
+        // nothing is locked and no new request is invented. A periodic Idle
+        // still cannot prove that the unanswered START never ran.
         commandWarning = true;
         saveRequest(Object.assign({}, request, {
-                                      unacknowledged: true,
-                                      settledStatus: operations.payload ? operations.payload.fieldSequence("status") : 0 }));
+                                      unacknowledged: true }));
         commandFeedback = commandName(request.command) + qsTr("未收到回执；继续按设备状态判断");
         pendingCommand = 0;
         timeout.stop();
@@ -346,9 +359,11 @@ Item {
                                accepted: false, executing: false, terminal: null, unknown: false, baseline: baseline,
                                // Receive sequence of the newest fact we hold about
                                // this task; an idle reading older than it proves nothing.
-                               evidenceStatus: baseline.status, settledStatus: 0, surveyStopped: false,
+                               evidenceStatus: baseline.status, surveyStopped: false,
                                vehicle: operations.vehicle, attemptId: "", latestEvent: null,
                                stages: [], deadline: now() + commandTimeoutFor(command) });
+        request.communicationRecovery = command === 31011 && !!identity.session
+                && operations.vehicle.usvSafetyLockSource === "communication";
         if (physicalCommand(command))
             activeTask = request;
         pendingCommand = command;
@@ -381,8 +396,14 @@ Item {
         }
     }
     function observeTelemetry() {
+        recoverCommunication();
         reconcileState();
-        if (!request || request.terminal || !telemetryMatches(request.command))
+        if (!request || request.retired || request.terminal || !telemetryMatches(request.command))
+            return;
+        // A compatible STOP has no USVE1. Preserve its final standard result;
+        // later device readings cannot demand an event or erase a rejection.
+        const compatible = !request.session || !request.request;
+        if (compatible && request.ack && !request.accepted)
             return;
         // This reading is the running evidence for the task, and it is also the
         // newest status fact the task holds: only a later idle may end it.
@@ -477,9 +498,10 @@ Item {
                 // physical task that was running: a later idle reading may end
                 // it without waiting for a terminal that may never come. A
                 // detector-only stop (31019) says nothing about the pumps.
-                if ((request.command === 31011 || request.command === 31016)
+                if ((request.command === 31011 || request.command === 31016 && activeTask && activeTask.command === 31015)
                         && activeTask && activeTask.vehicle === operations.vehicle)
-                    activeTask = Object.assign({}, activeTask, { stoppedByRequest: request.command });
+                    activeTask = Object.assign({}, activeTask, { stoppedByRequest: request.command,
+                        evidenceStatus: operations.payload.fieldSequence("status") });
                 observeTelemetry();
             } else {
                 commandWarning = true;
@@ -499,18 +521,23 @@ Item {
             commandFeedback = event.preflight_phase ? qsTr("设备准备：%1").arg(event.preflight_phase) : qsTr("执行阶段：%1").arg(event.state || "—");
             if (current) {
                 pendingCommand = 0;
-                timeout.restart();
+                timeout.stop();
                 observeTelemetry();
             }
         }
     }
     function observeAck(command, ackResult, failureCode) {
-        if (!request || request.command !== command || request.terminal)
+        if (!request || request.command !== command || request.retired || request.terminal)
             return;
+        const correlated = !!request.session && !!request.request;
+        if (!correlated && request.ack && (request.ack.result !== 5 || request.ack.failure !== 0))
+            return;  // A final compatible result cannot be replaced by a late ACK.
         saveRequest(Object.assign({}, request, { ack: { result: ackResult, failure: failureCode } }));
+        recoverCommunication();
+        if (!request)
+            return;
         if (request.accepted || request.executing)
             return;  // A correlated answer already settled this request.
-        const correlated = !!request.session && !!request.request;
         if (correlated) {
             // Correlated requests have their own event; the standard ACK stays
             // evidence and must not complete or reject them.
@@ -528,6 +555,8 @@ Item {
             return;
         }
         const accepted = ackResult === 0 && failureCode === 0;
+        if (accepted)
+            saveRequest(Object.assign({}, request, { accepted: true }));
         commandWarning = !accepted;
         pendingCommand = 0;
         timeout.stop();
@@ -537,16 +566,21 @@ Item {
             observeTelemetry();
     }
     function reset() {
+        // A stop from before this disconnect cannot recover the new unknown
+        // state. Only a request issued after reconnect may do so.
+        history = history.map(record => Object.assign({}, record, { communicationRecovery: false }));
+        if (request)
+            saveRequest(Object.assign({}, request, { communicationRecovery: false }));
         // A lost link with a task that may still be running is the one case
         // this client cannot answer on its own.
         if (request && !request.terminal && pendingCommand && physicalCommand(request.command)
                 && !request.physicalStopVerified) {
-            lockUnknown();
+            lockUnknown(null, "communication");
             request = Object.assign({}, request, { unknown: true });
         }
         archiveRequest();
         if (taskUnfinished(activeTask)) {
-            lockUnknown(activeTask);
+            lockUnknown(activeTask, "communication");
             archive(Object.assign({}, activeTask, { unknown: true }));
         }
         activeTask = null;

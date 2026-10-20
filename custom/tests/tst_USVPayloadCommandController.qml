@@ -17,12 +17,23 @@ Item {
         QtObject {
             property int id: 1
             property bool usvSafetyLocked: false
+            property string usvSafetyLockSource: ""
+            onUsvSafetyLockSourceChanged: usvSafetyLocked = usvSafetyLockSource.length > 0
+            onUsvSafetyLockedChanged: {
+                if (!usvSafetyLocked) usvSafetyLockSource = "";
+                else if (!usvSafetyLockSource) usvSafetyLockSource = "emergency";
+            }
             property var pending: []
             property var sent: []
             signal mavCommandResult(int vehicleId, int targetComponent, int command, int result, int failure)
+            onMavCommandResult: (vehicleId, targetComponent, command, result, failure) => {
+                if (vehicleId === id && targetComponent === 191 && result !== 5)
+                    pending = pending.filter(value => value !== command);
+            }
             function isMavCommandPending(component, command) { return pending.indexOf(command) >= 0; }
             function sendCommand(component, command, showError, p1, p2, p3, p4) {
                 sent = sent.concat([{command: command, request: p3, session: p4}]);
+                pending = pending.concat([command]);
             }
         }
     }
@@ -81,6 +92,10 @@ Item {
             verify(!!controller, "Component exists");
         }
         function event(seq, phase, outcome, extra) {
+            // Deliver the matching standard ACK as the native Vehicle transport
+            // does; it clears transport pending independently of USVE1.
+            if (phase === "request" && outcome === "accepted")
+                vehicle.mavCommandResult(vehicle.id, 191, controller.request.command, 0, 0);
             return Object.assign({}, controller.request, {v: 1, tcp_session: 1, seq: seq, phase: phase, outcome: outcome,
                 reason: "", attempt_id: "11111111111111111111111111111111", preflight_phase: ""}, extra || {});
         }
@@ -320,7 +335,7 @@ Item {
             controller.transportTick++;
             compare(controller.allowed(31010), false);
         }
-        function test_progressRenewsTheExecutionWindowWithinOneRun() {
+        function test_progressDoesNotReopenTheReceiptWindow() {
             controller.send(31010);
             const receiptDeadline = controller.request.deadline;
             payload.payloadEventReceived(event(1, "request", "accepted"));
@@ -473,12 +488,16 @@ Item {
             compare(controller.allowed(31010), false);
             verify(controller.blockedReason(31010).length > 0);
             compare(vehicle.sent.length, sent, "no automatic START may be re-sent");
-            // ...until ROS publishes a new state that says the payload is idle.
+            // A later unchanged Idle is still not evidence that this START ended.
             operations.payloadStatus = Status.StatusIdle;
             payload.receive("status");
-            compare(controller.activeTask, null);
-            compare(controller.allowed(31010), true);
+            verify(!!controller.activeTask);
+            compare(controller.allowed(31010), false);
             compare(vehicle.usvSafetyLocked, false);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            operations.payloadStatus = Status.StatusSampling;
+            payload.receive("status");
+            compare(controller.activeTask.observed, true);
         }
         function test_standardAckSettlesACompatibleStopWithoutAnIdentity() {
             payload.protocolVersion = {rawValue: 0};
@@ -494,6 +513,49 @@ Item {
             payload.payloadEventReceived(event(9, "terminal", "failed", {reason: "late_other"}));
             compare(controller.request.terminal, null);
         }
+        function test_compatibleStopKeepsItsResultAcrossTelemetry_data() {
+            return [{tag: "ADS", command: 31019}, {tag: "outputs", command: 31011}];
+        }
+        function test_compatibleStopKeepsItsResultAcrossTelemetry(data) {
+            payload.protocolVersion = {rawValue: 0};
+            controller.send(data.command);
+            vehicle.mavCommandResult(2, 191, data.command, 0, 0);
+            vehicle.mavCommandResult(1, 1, data.command, 0, 0);
+            vehicle.mavCommandResult(1, 191, data.command === 31011 ? 31019 : 31011, 0, 0);
+            compare(controller.busy, true);
+            vehicle.mavCommandResult(1, 191, data.command, 5, 0);
+            payload.adsState = {rawValue: 1};
+            payload.receive("adsState");
+            payload.receive("status");
+            compare(controller.busy, true);
+            compare(controller.request.accepted, false);
+            vehicle.mavCommandResult(1, 191, data.command, 0, 0);
+            for (let i = 0; i < 3; ++i) {
+                payload.receive(data.command === 31019 ? "adsState" : "status");
+                compare(controller.busy, false);
+                compare(controller.warning, false);
+                compare(controller.request.accepted, true);
+                verify(controller.feedback.indexOf(qsTr("等待关联回执")) < 0);
+                compare(controller.request.physicalStopVerified, undefined);
+            }
+            vehicle.mavCommandResult(1, 191, data.command, 4, 0);
+            compare(controller.request.ack.result, 0, "late ACK cannot replace a final result");
+        }
+        function test_compatibleStopFailureSurvivesLaterIdle_data() {
+            return [{tag: "FAILED", ack: 4}, {tag: "DENIED", ack: 2}];
+        }
+        function test_compatibleStopFailureSurvivesLaterIdle(data) {
+            payload.protocolVersion = {rawValue: 0};
+            controller.send(31011);
+            vehicle.mavCommandResult(1, 191, 31011, data.ack, 0);
+            payload.receive("status");
+            payload.receive("status");
+            vehicle.mavCommandResult(1, 191, 31011, 0, 0);
+            compare(controller.busy, false);
+            compare(controller.request.accepted, false);
+            compare(controller.warning, true);
+            compare(controller.request.ack.result, data.ack);
+        }
         function test_stopSurveyThenStopSpectrometerBothFinishWithoutALeftoverGate() {
             controller.send(31015);
             payload.payloadEventReceived(event(1, "request", "accepted"));
@@ -505,11 +567,13 @@ Item {
             // stops the detector straight away.
             controller.send(31016);
             const surveyStop = Object.assign({}, controller.request);
+            vehicle.mavCommandResult(1, 191, 31016, 0, 0);
             payload.payloadEventReceived(Object.assign({}, surveyStop, {seq: 2, phase: "request", outcome: "accepted"}));
             compare(controller.busy, false);
             compare(controller.allowed(31019), true);
             controller.send(31019);
             const detectorStop = Object.assign({}, controller.request);
+            vehicle.mavCommandResult(1, 191, 31019, 0, 0);
             payload.payloadEventReceived(Object.assign({}, detectorStop, {seq: 2, phase: "request", outcome: "accepted"}));
             compare(controller.busy, false);
             // ROS then publishes the stopped state for both scopes.

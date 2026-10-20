@@ -12,9 +12,9 @@ Item {
     required property var theme
     property var commandController: null
     readonly property var vehicle: operations.vehicle
-    readonly property bool safetyLocked: emergencyPhase !== "idle"
+    readonly property bool safetyLocked: (!!vehicle && vehicle.usvSafetyLocked) || emergencyPhase !== "idle"
     readonly property bool emergencyPending: propulsionPending || payloadPending
-    readonly property bool canVerifyStop: operations.connected && !emergencyPending && (!commandController || !commandController.stopsPending) && safetyLocked && !vehicle.armed && operations.payloadOnline && [0, 3, 9, 12, 13].indexOf(operations.payloadStatus) >= 0
+    readonly property bool canVerifyStop: operations.connected && !emergencyPending && (!commandController || !commandController.stopsPending) && safetyLocked && vehicle.usvSafetyLockSource !== "communication" && !vehicle.armed && operations.payloadOnline && [0, 3, 9, 12, 13].indexOf(operations.payloadStatus) >= 0
     // Why the only recovery entry is unavailable. Shown instead of hiding it.
     readonly property string verifyBlockedReason: {
         if (canVerifyStop)
@@ -23,6 +23,8 @@ Item {
             return "";
         if (!operations.connected)
             return qsTr("等待无人船连接");
+        if (vehicle.usvSafetyLockSource === "communication")
+            return qsTr("请停止采样，等待本次停止确认与载荷状态同步");
         if (emergencyPending)
             return qsTr("停止命令仍在处理中");
         if (commandController && commandController.stopsPending)
@@ -48,7 +50,7 @@ Item {
     property string feedback: ""
     property bool feedbackWarning: false
     property string expectedMode: ""
-    readonly property string emergencyTitle: emergencyPhase === "sending" ? qsTr("急停发送中") : emergencyPhase === "partial" ? qsTr("部分命令已接受") : emergencyPhase === "accepted" ? qsTr("停止命令已接受") : emergencyPhase === "failed" ? qsTr("急停未获完整确认") : emergencyPhase === "timeout" ? qsTr("急停响应超时") : ""
+    readonly property string emergencyTitle: emergencyPhase === "communication" ? qsTr("通信中断后等待停止确认") : emergencyPhase === "sending" ? qsTr("急停发送中") : emergencyPhase === "partial" ? qsTr("部分命令已接受") : emergencyPhase === "accepted" ? qsTr("停止命令已接受") : emergencyPhase === "failed" ? qsTr("急停未获完整确认") : emergencyPhase === "timeout" ? qsTr("急停响应超时") : ""
 
     signal emergencyIssued()
 
@@ -73,11 +75,10 @@ Item {
         trackedVehicleId = vehicle ? vehicle.id : -1;
         const record = vehicleSafety.find(entry => entry.vehicleId === trackedVehicleId);
         const retainedLock = !!vehicle && vehicle.usvSafetyLocked;
-        emergencyPhase = record ? record.phase : retainedLock ? "failed" : "idle";
+        emergencyPhase = retainedLock && vehicle.usvSafetyLockSource === "communication" ? "communication"
+                         : record ? record.phase : retainedLock ? "failed" : "idle";
         propulsionReceipt = record ? record.propulsion : retainedLock ? qsTr("上次急停尚未核验") : "";
         payloadReceipt = record ? record.payload : retainedLock ? qsTr("请核对载荷停止状态") : "";
-        if (safetyLocked && vehicle)
-            vehicle.usvSafetyLocked = true;
     }
     function requestEmergencyStop() {
         if (!operations.connected || emergencyPending)
@@ -92,6 +93,7 @@ Item {
         feedback = "";
         modeTimeout.stop();
         emergencyTarget = targetVehicle;
+        targetVehicle.usvSafetyLockSource = "emergency";
         emergencyPhase = "sending";
         propulsionPending = true;
         payloadPending = operations.hasPayload;
@@ -203,7 +205,6 @@ Item {
     }
 
     onVehicleChanged: { if (initialized) switchVehicle(); }
-    onSafetyLockedChanged: { if (safetyLocked && vehicle) vehicle.usvSafetyLocked = true; }
     Component.onCompleted: { switchVehicle(); initialized = true; }
 
     function isVehicleLocked(targetVehicle) {
@@ -239,8 +240,17 @@ Item {
         target: root.vehicle
         ignoreUnknownSignals: true
         function onUsvSafetyLockedChanged() {
-            if (root.vehicle && root.vehicle.usvSafetyLocked && root.emergencyPhase === "idle")
+            if (!root.vehicle)
+                return;
+            const source = root.vehicle.usvSafetyLockSource;
+            if (source === "communication")
+                root.emergencyPhase = "communication";
+            else if (source && (root.emergencyPhase === "idle" || root.emergencyPhase === "communication"))
                 root.emergencyPhase = "failed";
+            else if (!source && root.emergencyPhase === "communication") {
+                root.vehicleSafety = root.vehicleSafety.filter(record => record.vehicleId !== root.vehicle.id);
+                root.emergencyPhase = "idle";
+            }
         }
         function onMavCommandResult(vehicleId, targetComponent, command, ackResult, failureCode) {
             root.emergencyResult(vehicleId, targetComponent, command, ackResult, failureCode);

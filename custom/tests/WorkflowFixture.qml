@@ -6,6 +6,7 @@ import QGroundControl
 import QGroundControl.Controls
 import QGroundControl.FlightMap
 import USV
+import "../res/USVFlyViewLayout.js" as USVLayout
 
 ApplicationWindow {
     id: mainWindow
@@ -29,8 +30,14 @@ ApplicationWindow {
         mock.payload.baselineSet = {rawValue: name === "signal" || name === "baseline" ? 0 : 1};
         if (workflow) {
             workflow.commands.reset();
+            mock.pendingCommands = [];
+            other.pendingCommands = [];
+            mock.usvSafetyLocked = false;
+            workflow.emergencyController.emergencyPhase = "idle";
+            workflow.emergencyController.propulsionPending = false;
+            workflow.emergencyController.payloadPending = false;
+            workflow.emergencyController.emergencyTarget = null;
             workflow.emergencyController.feedback = "";
-            workflow.emergencyController.clearEmergencyRequest();
             workflow.expanded = name !== "collapsed" && name !== "collapsed-fault";
             workflow.detailSection = name === "devices" ? "devices" : name === "diagnostics" ? "diagnostics" : "";
             if (name === "collapsed-fault")
@@ -40,8 +47,16 @@ ApplicationWindow {
                 mock.payload.baselineSet = {rawValue: 0};
                 workflow.send(31018);
                 mock.mavCommandResult(1, 191, 31018, 0, 0);
+                accepted();
             }
         }
+    }
+    function accepted(outcome) {
+        const request = workflow.commands.request;
+        mock.payload.payloadEventReceived(Object.assign({}, request, {
+            seq: 1, phase: "request", outcome: outcome || "accepted", reason: "fixture_result",
+            attempt_id: "", preflight_phase: ""
+        }));
     }
     function verifyBehavior() {
         const checks = [];
@@ -59,25 +74,30 @@ ApplicationWindow {
         mock.mavCommandResult(1, 191, 31018, 5, 0);
         check(cmd.pendingCommand === 31018, "in-progress ACK remains pending", checks);
         mock.mavCommandResult(1, 191, 31018, 0, 0);
+        check(cmd.busy, "standard ACK cannot complete a correlated START", checks);
+        accepted();
         check(cmd.pendingCommand === 0 && !cmd.busy, "accepted start ends the send wait", checks);
-        const calls = mock.commandCalls;
-        workflow.send(31018);
-        check(mock.commandCalls === calls, "duplicate start prevented during telemetry wait", checks);
+        check(!cmd.busy && !ops.validSignal, "accepted start waits only for real measurement readiness", checks);
         check(cmd.allowed(31011) && cmd.allowed(31019), "stops remain available while waiting", checks);
         mock.payload.spectrometerValid = {rawValue: 1};
         check(!cmd.busy && workflow.mainCommand === 31017, "valid telemetry advances to baseline", checks);
         workflow.send(31017);
         mock.mavCommandResult(1, 191, 31017, 0, 0);
+        check(cmd.busy, "baseline standard ACK still needs its associated result", checks);
+        accepted();
         check(!cmd.busy && !cmd.allowed(31010), "baseline ACK alone cannot enable sampling", checks);
         mock.payload.baselineSet = {rawValue: 1};
         check(!cmd.busy && workflow.mainCommand === 31010 && cmd.allowed(31010), "baseline Fact enables manual sampling", checks);
         workflow.send(31010);
         mock.mavCommandResult(1, 191, 31010, 0, 0);
+        check(cmd.busy, "sample standard ACK still needs its associated result", checks);
+        accepted();
         check(!cmd.busy && !cmd.allowed(31010), "sample ACK cannot trigger duplicate sampling", checks);
         mock.payload.status = {rawValue: 1};
         check(!cmd.busy && workflow.mainCommand === 31012, "sampling telemetry offers pause", checks);
         workflow.send(31012);
         mock.mavCommandResult(1, 191, 31012, 0, 0);
+        accepted();
         check(!cmd.busy && !cmd.allowed(31013), "pause ACK ends the wait; resume needs paused status", checks);
         mock.payload.status = {rawValue: 11};
         check(!cmd.busy && workflow.mainCommand === 31013, "paused status offers resume", checks);
@@ -90,24 +110,38 @@ ApplicationWindow {
         workflow.send(31011);
         check(mock.commandCalls === stopCalls, "pending stop is not duplicated", checks);
         mock.mavCommandResult(1, 191, 31011, 0, 0);
-        check(!cmd.busy || cmd.pendingCommand === 31011, "stop ACK ends the wait without claiming the state", checks);
+        check(cmd.busy, "correlated STOP still needs its associated result", checks);
+        accepted();
+        check(!cmd.busy, "associated STOP result ends its wait", checks);
         mock.payload.status = {rawValue: 13};
         check(!cmd.busy && !cmd.warning, "confirmed hold after stop clears the wait", checks);
         scenario("signal");
         workflow.send(31018);
+        mock.payload.clock = cmd.request.deadline + 1;
         cmd.expire();
         check(!cmd.busy && cmd.warning, "ACK timeout offers state check without completion", checks);
         workflow.send(31018);
         mock.mavCommandResult(1, 191, 31018, 2, 0);
+        accepted("failed");
         check(!cmd.busy && cmd.warning && !ops.validSignal, "rejected command cannot advance preparation", checks);
         workflow.send(31018);
         mock.mavCommandResult(1, 191, 31018, 0, 0);
-        cmd.expireTelemetry();
-        check(!cmd.busy && cmd.warning && !ops.validSignal, "telemetry timeout keeps actual state and permits retry", checks);
+        accepted();
+        mock.payload.clock = cmd.request.deadline + 1;
+        cmd.expire();
+        check(!cmd.busy && !cmd.warning && !ops.validSignal, "accepted START stays answered without a first frame", checks);
+        scenario("ready");
+        mock.payload.protocolVersion = {rawValue: 0};
+        workflow.send(31019);
+        mock.mavCommandResult(1, 191, 31019, 0, 0);
+        mock.payload.adsState = {rawValue: 1};
+        mock.payload.receive("adsState");
+        check(!cmd.busy && !cmd.warning && cmd.request.accepted, "compatible ADS STOP stays answered after telemetry", checks);
+        mock.payload.protocolVersion = {rawValue: 1};
         scenario("signal");
         workflow.send(31018);
         layer.activeVehicle = other;
-        check(!cmd.busy && cmd.feedback.length === 0, "vehicle switch clears command tracking", checks);
+        check(!cmd.busy && cmd.request === null, "vehicle switch clears current command tracking", checks);
         mock.mavCommandResult(1, 191, 31018, 0, 0);
         check(!cmd.busy, "previous vehicle ACK cannot affect current vehicle", checks);
         scenario("signal");
@@ -124,7 +158,7 @@ ApplicationWindow {
         check(mock.emergencyCalls > 0 && mock.lastCommand === 31011, "emergency stops propulsion and sampling", checks);
         mock.mavCommandResult(1, 1, 400, 0, 0);
         mock.mavCommandResult(1, 191, 31011, 0, 0);
-        check(!emergency.propulsionStopPending && !emergency.payloadStopPending && emergency.feedbackWarning, "accepted emergency still requests actual-state check", checks);
+        check(!emergency.propulsionPending && !emergency.payloadPending && emergency.safetyLocked, "accepted emergency still requires physical stop verification", checks);
         scenario("ready");
         return JSON.stringify(checks);
     }
@@ -281,6 +315,28 @@ ApplicationWindow {
             _guidedController: null
             activeVehicle: mock
             parentToolInsets: insets
+            visible: false
+        }
+        USVOperationsTheme { id: workflowTheme }
+        USVSamplingWorkflow {
+            id: workflowDock
+            readonly property var placement: USVLayout.workflowDock(parent.width, parent.height, workflowTheme.unit, insets)
+            x: placement.x
+            y: parent.height - height - placement.bottom
+            width: placement.width
+            maxHeight: placement.maxHeight
+            operations: layer.operations
+            emergencyController: layer.controller
+            theme: workflowTheme
+        }
+        Binding {
+            target: layer.controller
+            property: "commandController"
+            value: workflowDock.commands
+        }
+        Connections {
+            target: layer.controller
+            function onEmergencyIssued() { workflowDock.commands.reset(); }
         }
     }
 }
