@@ -555,5 +555,77 @@ Item {
             compare(controller.allowed(31019), false);
             verify(controller.blockedReason(31019).length > 0);
         }
+        function test_periodicIdleCannotRetireAFreshStart() {
+            controller.send(31010);
+            const task = Object.assign({}, controller.activeTask);
+            // The next periodic frame still says Idle: same value, new seq.
+            operations.payloadStatus = Status.StatusIdle;
+            payload.receive("status");
+            compare(controller.activeTask.request, task.request,
+                    "an identical periodic Idle must not retire a START");
+            compare(controller.request.retired, undefined);
+            compare(controller.busy, true, "the receipt window stays open");
+            compare(controller.allowed(31010), false);
+            compare(vehicle.sent.length, 1, "no second START is generated");
+            // The backend answers, and the run really starts.
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            compare(controller.busy, false);
+            compare(controller.activeTask.request, task.request);
+            operations.payloadStatus = Status.StatusSampling;
+            payload.receive("status");
+            compare(controller.request.observed, true);
+            compare(controller.activeTask.request, task.request);
+            // The failure belongs to this request and must still be shown.
+            payload.payloadEventReceived(event(2, "terminal", "failed",
+                                             {reason: "spectrometer_stale", preflight_phase: "injecting"}));
+            compare(controller.request.terminal.reason, "spectrometer_stale");
+            compare(controller.activeTask.request, task.request);
+            compare(vehicle.usvSafetyLocked, false, "a confirmed-stop failure is not a vessel lock");
+            verify(controller.feedback.indexOf("spectrometer_stale") >= 0);
+        }
+        function test_periodicIdleDoesNotSwallowAnUnconfirmedStopFailure() {
+            controller.send(31010);
+            const task = Object.assign({}, controller.activeTask);
+            payload.receive("status");
+            compare(controller.activeTask.request, task.request);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            operations.payloadStatus = Status.StatusSampling;
+            payload.receive("status");
+            payload.payloadEventReceived(event(2, "terminal", "failed",
+                                             {reason: "cleanup_incomplete", cleanup_failed: true}));
+            compare(controller.activeTask.terminal.cleanup_failed, true);
+            compare(vehicle.usvSafetyLocked, true, "unconfirmed output stop still locks");
+        }
+        function test_surveyAcceptedThenPeriodicIdleKeepsTheSchedule() {
+            controller.send(31015);
+            const task = Object.assign({}, controller.activeTask);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            compare(controller.busy, false);
+            // Idle keeps being reported while the schedule has not started yet.
+            payload.receive("status");
+            compare(controller.activeTask.request, task.request,
+                    "an Idle frame must not end the survey schedule");
+            compare(controller.allowed(31010), false);
+            compare(controller.allowed(31015), false);
+            operations.payloadStatus = Status.StatusSurveying;
+            payload.receive("status");
+            compare(controller.activeTask.observed, true);
+            compare(controller.activeTask.request, task.request);
+        }
+        function test_confirmedStopEndsAnUnfinishedTask() {
+            controller.send(31010);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            operations.payloadStatus = Status.StatusSampling;
+            payload.receive("status");
+            // The run never reports a terminal; the operator stops it instead.
+            controller.send(31011);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            compare(controller.allowed(31010), false,
+                    "a stopped task still owns the payload until it reports idle");
+            operations.payloadStatus = Status.StatusIdle;
+            payload.receive("status");
+            compare(controller.activeTask, null);
+            compare(controller.allowed(31010), true);
+        }
     }
 }

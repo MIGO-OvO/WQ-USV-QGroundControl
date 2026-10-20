@@ -613,7 +613,7 @@ class USVQGCContractTests(unittest.TestCase):
             var clock = 1000;
             var request = {command: 31019, deadline: 16000}, locked = false, lockUnknown = () => locked = true;
             var _payloadCompId = 191, waiting = true, restarted = 0;
-            var operations = {payload: {monotonicMs: () => clock},
+            var operations = {payload: {monotonicMs: () => clock, fieldSequence: () => 0},
                               vehicle: {isMavCommandPending: (comp, cmd) => {
                 assert.equal(comp, 191); assert.equal(cmd, 31019); return waiting;
             }}};
@@ -643,7 +643,8 @@ class USVQGCContractTests(unittest.TestCase):
             var request = {command: 31019, accepted: true, deadline: 16000}, locked = false;
             var lockUnknown = () => locked = true;
             var _payloadCompId = 191;
-            var operations = {payload: {monotonicMs: () => clock}, vehicle: {isMavCommandPending: () => false}};
+            var operations = {payload: {monotonicMs: () => clock, fieldSequence: () => 0},
+                              vehicle: {isMavCommandPending: () => false}};
             var timeout = {restart: () => {}, stop: () => {}};
             var commandName = () => 'stop', qsTr = text => text;
             clock = 16001;

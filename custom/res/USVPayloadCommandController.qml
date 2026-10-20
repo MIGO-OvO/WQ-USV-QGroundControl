@@ -123,17 +123,55 @@ Item {
         return [USVLayout.StatusIdle, USVLayout.StatusSamplingDone,
                 USVLayout.StatusHoldNoMission].indexOf(operations.payloadStatus) >= 0;
     }
-    function idleAfter(candidate) {
-        return !!candidate && payloadIdle() && operations.payloadOnline && operations.fresh("status")
-                && !!operations.payload
-                && operations.payload.fieldSequence("status") > (candidate.baseline ? candidate.baseline.status : 0);
+    // An idle reading with its own receive sequence. The sequence is a client
+    // receive counter, so an unchanged USV_STAT value still produces a new one:
+    // the reading alone says "the payload looks idle now", never "this task
+    // ended". It is only half of the evidence used below.
+    function idleReading() {
+        if (!operations.payloadOnline || !operations.payload || !operations.fresh("status"))
+            return -1;
+        if (!payloadIdle())
+            return -1;
+        return operations.payload.fieldSequence("status");
     }
-    // The current device state decides what is allowed now. Once ROS reports a
-    // newer idle reading after a task, that task is history: it keeps its
-    // reason, it no longer blocks preparation.
+    // Why a task may be treated as finished by the current device state.
+    // Every path needs its own closing evidence, all of it already tracked:
+    //   * the run reached its own terminal (one attempt only for 31015);
+    //   * the payload was really seen running and now reports idle;
+    //   * the survey schedule was stopped by 31016;
+    //   * an unanswered attempt only counts against a reading taken after the
+    //     receipt window closed, so a periodic Idle frame cannot retire a
+    //     START that the backend has simply not answered yet.
+    function convergenceEvidence(task, statusSeq) {
+        if (!task || !physicalCommand(task.command) || task.retired || task.physicalStopVerified)
+            return false;
+        const known = task.evidenceStatus !== undefined ? task.evidenceStatus
+                                                        : (task.baseline ? task.baseline.status : 0);
+        if (statusSeq <= known)
+            return false;
+        if (task.command === 31015) {
+            // One attempt's terminal, including a successful one, does not end
+            // the survey schedule; only its own stop result does.
+            return !!task.surveyStopped || !!task.stoppedByRequest
+                    || (!!task.terminal && task.terminal.outcome !== "succeeded");
+        }
+        if (task.terminal)
+            return true;
+        if (task.stoppedByRequest)
+            return true;
+        if (task.observed)
+            return true;
+        return !!task.unacknowledged && statusSeq > (task.settledStatus || 0);
+    }
+    // The current device state decides what is allowed now, but only evidence
+    // that this task ended may retire it. It keeps its reason in history and
+    // stops blocking preparation.
     function reconcileState() {
         const task = activeTask && activeTask.vehicle === operations.vehicle ? activeTask : null;
-        if (!task || task.retired || task.physicalStopVerified || !idleAfter(task))
+        if (!task)
+            return;
+        const statusSeq = idleReading();
+        if (statusSeq < 0 || !convergenceEvidence(task, statusSeq))
             return;
         archive(Object.assign({}, task, { stoppedByCurrentState: true, retired: true }));
         if (sameRequest(request, task)) {
@@ -281,9 +319,12 @@ Item {
         if (now() < request.deadline)
             return;
         // End only this send wait. Nothing here proves the vessel is idle, so
-        // nothing is locked and no new request is invented.
+        // nothing is locked and no new request is invented. The status reading
+        // taken now is the earliest one that may later say "it never ran".
         commandWarning = true;
-        saveRequest(Object.assign({}, request, { unacknowledged: true }));
+        saveRequest(Object.assign({}, request, {
+                                      unacknowledged: true,
+                                      settledStatus: operations.payload ? operations.payload.fieldSequence("status") : 0 }));
         commandFeedback = commandName(request.command) + qsTr("未收到回执；继续按设备状态判断");
         pendingCommand = 0;
         timeout.stop();
@@ -303,6 +344,9 @@ Item {
             baseline[field] = operations.payload ? operations.payload.fieldSequence(field) : 0;
         request = Object.assign({}, identity, { command: command, seq: 0, ack: null, observed: false,
                                accepted: false, executing: false, terminal: null, unknown: false, baseline: baseline,
+                               // Receive sequence of the newest fact we hold about
+                               // this task; an idle reading older than it proves nothing.
+                               evidenceStatus: baseline.status, settledStatus: 0, surveyStopped: false,
                                vehicle: operations.vehicle, attemptId: "", latestEvent: null,
                                stages: [], deadline: now() + commandTimeoutFor(command) });
         if (physicalCommand(command))
@@ -340,7 +384,11 @@ Item {
         reconcileState();
         if (!request || request.terminal || !telemetryMatches(request.command))
             return;
-        saveRequest(Object.assign({}, request, { observed: true }));
+        // This reading is the running evidence for the task, and it is also the
+        // newest status fact the task holds: only a later idle may end it.
+        const statusSeq = operations.payload ? operations.payload.fieldSequence("status") : 0;
+        saveRequest(Object.assign({}, request, { observed: true,
+                                                 evidenceStatus: Math.max(request.evidenceStatus || 0, statusSeq) }));
         const executionProven = request.accepted || request.executing;
         commandWarning = !executionProven;
         commandFeedback = executionProven ? commandName(request.command) + qsTr("已确认进入执行并观察到新状态；不代表任务完成")
@@ -392,6 +440,10 @@ Item {
         const updated = Object.assign({}, candidate, { seq: event.seq, latestEvent: event,
             attemptId: event.attempt_id || candidate.attemptId,
             terminal: nextSurveyAttempt ? null : candidate.terminal,
+            // A correlated answer is newer than every status reading already
+            // received: only an idle reading after it may end this task.
+            evidenceStatus: Math.max(candidate.evidenceStatus || 0,
+                                     operations.payload ? operations.payload.fieldSequence("status") : 0),
             stages: candidate.stages.concat([event]).slice(-16) });
         if (event.phase === "progress")
             updated.executing = true;
@@ -421,6 +473,13 @@ Item {
         } else if (current && event.phase === "request") {
             if (event.outcome === "accepted") {
                 settleReceipt();
+                // A confirmed sampling/survey stop is closing evidence for the
+                // physical task that was running: a later idle reading may end
+                // it without waiting for a terminal that may never come. A
+                // detector-only stop (31019) says nothing about the pumps.
+                if ((request.command === 31011 || request.command === 31016)
+                        && activeTask && activeTask.vehicle === operations.vehicle)
+                    activeTask = Object.assign({}, activeTask, { stoppedByRequest: request.command });
                 observeTelemetry();
             } else {
                 commandWarning = true;
