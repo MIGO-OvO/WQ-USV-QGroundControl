@@ -500,7 +500,7 @@ class USVQGCContractTests(unittest.TestCase):
             var operations = {connected: true, hasPayload: true, payloadOnline: true,
                               payloadFault: false, payloadWorking: false, validSignal: true,
                               payloadStatus: 0};
-            var pendingCommand = 0, awaitedCommand = 0, ready = true, canStartPointSample = true;
+            var pendingCommand = 0, ready = true, canStartPointSample = true;
             var safetyLocked = false;
             var protocolReady = true, stopsPending = false, request = null, activeTask = null, _payloadCompId = 191;
             operations.vehicle = {usvSafetyLocked: false, isMavCommandPending: () => false};

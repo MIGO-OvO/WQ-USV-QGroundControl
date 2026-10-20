@@ -540,5 +540,20 @@ Item {
             compare(controller.allowed(31018), true, "the detector may be started again");
             verify(controller.feedback.indexOf("spectrometer_stale") >= 0);
         }
+        function test_disabledControlsNameTheMissingCondition() {
+            compare(controller.blockedReason(31010), "");
+            operations.baselineSet = false;
+            compare(controller.allowed(31010), false);
+            verify(controller.blockedReason(31010).length > 0);
+            compare(controller.helpTextFor(31010, "fallback"), controller.blockedReason(31010));
+            // An allowed command keeps the caller's own help text.
+            operations.baselineSet = true;
+            compare(controller.helpTextFor(31010, "fallback"), "fallback");
+            // The safety exit explains its own state instead of disappearing.
+            vehicle.pending = [31019];
+            controller.transportTick++;
+            compare(controller.allowed(31019), false);
+            verify(controller.blockedReason(31019).length > 0);
+        }
     }
 }
