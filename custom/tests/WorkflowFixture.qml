@@ -59,7 +59,7 @@ ApplicationWindow {
         mock.mavCommandResult(1, 191, 31018, 5, 0);
         check(cmd.pendingCommand === 31018, "in-progress ACK remains pending", checks);
         mock.mavCommandResult(1, 191, 31018, 0, 0);
-        check(cmd.pendingCommand === 0 && cmd.awaitedCommand === 31018 && cmd.busy, "accepted ACK waits for telemetry", checks);
+        check(cmd.pendingCommand === 0 && !cmd.busy, "accepted start ends the send wait", checks);
         const calls = mock.commandCalls;
         workflow.send(31018);
         check(mock.commandCalls === calls, "duplicate start prevented during telemetry wait", checks);
@@ -68,17 +68,17 @@ ApplicationWindow {
         check(!cmd.busy && workflow.mainCommand === 31017, "valid telemetry advances to baseline", checks);
         workflow.send(31017);
         mock.mavCommandResult(1, 191, 31017, 0, 0);
-        check(cmd.awaitedCommand === 31017 && !cmd.allowed(31010), "baseline ACK alone cannot enable sampling", checks);
+        check(!cmd.busy && !cmd.allowed(31010), "baseline ACK alone cannot enable sampling", checks);
         mock.payload.baselineSet = {rawValue: 1};
         check(!cmd.busy && workflow.mainCommand === 31010 && cmd.allowed(31010), "baseline Fact enables manual sampling", checks);
         workflow.send(31010);
         mock.mavCommandResult(1, 191, 31010, 0, 0);
-        check(cmd.awaitedCommand === 31010 && !cmd.allowed(31010), "sample ACK cannot trigger duplicate sampling", checks);
+        check(!cmd.busy && !cmd.allowed(31010), "sample ACK cannot trigger duplicate sampling", checks);
         mock.payload.status = {rawValue: 1};
         check(!cmd.busy && workflow.mainCommand === 31012, "sampling telemetry offers pause", checks);
         workflow.send(31012);
         mock.mavCommandResult(1, 191, 31012, 0, 0);
-        check(cmd.awaitedCommand === 31012, "pause ACK waits for paused status", checks);
+        check(!cmd.busy && !cmd.allowed(31013), "pause ACK ends the wait; resume needs paused status", checks);
         mock.payload.status = {rawValue: 11};
         check(!cmd.busy && workflow.mainCommand === 31013, "paused status offers resume", checks);
         scenario("preparing");
@@ -90,7 +90,7 @@ ApplicationWindow {
         workflow.send(31011);
         check(mock.commandCalls === stopCalls, "pending stop is not duplicated", checks);
         mock.mavCommandResult(1, 191, 31011, 0, 0);
-        check(cmd.awaitedCommand === 31011, "stop ACK still requires stopped telemetry", checks);
+        check(!cmd.busy || cmd.pendingCommand === 31011, "stop ACK ends the wait without claiming the state", checks);
         mock.payload.status = {rawValue: 13};
         check(!cmd.busy && !cmd.warning, "confirmed hold after stop clears the wait", checks);
         scenario("signal");

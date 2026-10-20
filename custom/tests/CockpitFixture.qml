@@ -99,7 +99,7 @@ ApplicationWindow {
         mock.mavCommandResult(1, 191, 31018, 0, 0);
         check(commands.pendingCommand === 31018, "standard ACK alone does not confirm request identity");
         accepted();
-        check(commands.awaitedCommand === 31018 && !commands.allowed(31010), "accepted ACK waits for measurement telemetry");
+        check(!commands.busy && !commands.allowed(31010), "accepted start ends the wait; sampling still needs measurement");
         mock.payload.spectrometerValid = {rawValue: 1};
         mock.payload.receive("spectrometerValid");
         mock.payload.receive("voltage");
@@ -107,7 +107,7 @@ ApplicationWindow {
         commands.send(31017, 0);
         mock.mavCommandResult(1, 191, 31017, 0, 0);
         accepted();
-        check(commands.awaitedCommand === 31017 && !commands.allowed(31010), "baseline ACK cannot authorize sampling");
+        check(!commands.busy && !commands.allowed(31010), "baseline ACK cannot authorize sampling");
         mock.payload.baselineSet = {rawValue: 1};
         mock.payload.receive("baselineSet");
         mock.payload.status = {rawValue: 0};
@@ -123,7 +123,7 @@ ApplicationWindow {
         commands.send(31012, 0);
         mock.mavCommandResult(1, 191, 31012, 0, 0);
         accepted();
-        check(commands.awaitedCommand === 31012, "pause waits for actual paused status");
+        check(!commands.busy && !commands.allowed(31013), "pause ACK ends the wait; resume needs paused status");
         mock.payload.status = {rawValue: 11};
         mock.payload.receive("status");
         check(commands.allowed(31013), "paused telemetry permits resume");
