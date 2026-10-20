@@ -288,14 +288,19 @@ void SendMavCommandWithSignallingTest::_payloadCommunicationRecovery()
     QVERIFY(commands && cockpit && operations);
     const auto accepted = [&]() {
         const QVariantMap request = commands->property("request").value<QJSValue>().toVariant().toMap();
-        QJsonObject event{{"v", 1}, {"tcp_session", 1}, {"seq", 1}, {"phase", "request"},
-                          {"outcome", "accepted"}, {"reason", ""},
-                          {"attempt_id", ""}, {"preflight_phase", ""}};
+        QJsonObject event{{"v", 1},
+                          {"tcp_session", 1},
+                          {"seq", 1},
+                          {"phase", "request"},
+                          {"outcome", "accepted"},
+                          {"reason", ""},
+                          {"attempt_id", ""},
+                          {"preflight_phase", ""}};
         for (const QString& key : {"session", "request", "command", "sender_system", "sender_component"})
             event[key] = QJsonValue::fromVariant(request.value(key));
         mavlink_message_t ack{};
-        mavlink_msg_command_ack_pack(vehicle->id(), 191, &ack, request.value("command").toInt(),
-                                     MAV_RESULT_ACCEPTED, 0, 0, 255, 190);
+        mavlink_msg_command_ack_pack(vehicle->id(), 191, &ack, request.value("command").toInt(), MAV_RESULT_ACCEPTED, 0,
+                                     0, 255, 190);
         vehicle->_handleCommandAck(ack);
         deliverPayloadFrames(facts, vehicle, payloadEventFrames(event, vehicle->id()));
     };
@@ -328,7 +333,7 @@ void SendMavCommandWithSignallingTest::_payloadCommunicationRecovery()
     QVERIFY(commands->property("request").value<QJSValue>().toVariant().isNull());
     QVERIFY(!vehicle->isMavCommandPending(191, 31011));
     QVERIFY(QMetaObject::invokeMethod(fixture.get(), "startSample"));
-    QVERIFY(vehicle->isMavCommandPending(191, 31010)); // C++ gate really reopened
+    QVERIFY(vehicle->isMavCommandPending(191, 31010));  // C++ gate really reopened
     accepted();
     // A payload-only outage does not invent a whole-link failure.
     QVERIFY(operations->setProperty("payloadOnline", false));
@@ -343,7 +348,7 @@ void SendMavCommandWithSignallingTest::_payloadCommunicationRecovery()
     value("USV_STAT", 0);
     QVERIFY(vehicle->usvSafetyLocked());
     QVERIFY(cockpit->property("safetyLocked").toBool());
-    QVERIFY(!cockpit->property("canVerifyStop").toBool()); // still armed
+    QVERIFY(!cockpit->property("canVerifyStop").toBool());  // still armed
 }
 
 void SendMavCommandWithSignallingTest::_payloadRequestIdentity()

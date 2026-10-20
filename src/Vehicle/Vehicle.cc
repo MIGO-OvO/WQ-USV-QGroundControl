@@ -1609,7 +1609,7 @@ QString Vehicle::usvSafetyLockSource() const
     return usvSafetyLocks.value(_id);
 }
 
-void Vehicle::setUsvSafetyLockSource(const QString &source)
+void Vehicle::setUsvSafetyLockSource(const QString& source)
 {
     if (!source.isEmpty() && source != "communication" && source != "outputs" && source != "emergency") {
         return;
@@ -1617,8 +1617,8 @@ void Vehicle::setUsvSafetyLockSource(const QString &source)
     {
         const QMutexLocker locker(&usvSafetyMutex);
         const QString previous = usvSafetyLocks.value(_id);
-        if (previous == source || (!source.isEmpty() &&
-                (previous == "emergency" || (source == "communication" && !previous.isEmpty())))) {
+        if (previous == source ||
+            (!source.isEmpty() && (previous == "emergency" || (source == "communication" && !previous.isEmpty())))) {
             return;
         }
         if (!source.isEmpty()) {
