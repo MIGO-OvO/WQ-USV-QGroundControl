@@ -494,7 +494,7 @@ class USVQGCContractTests(unittest.TestCase):
         self.assertIn("vehicle.emergencyStop()", action_bar)
         self.assertIn("vehicle.sendCommand(_payloadCompId, 31011, true)", action_bar)
         self.assertNotIn("31010", action_bar)
-        self._run_qml_functions("USVPayloadCommandController.qml", ["physicalCommand", "stopCommand", "movesOutputs", "taskUnfinished", "unresolvedMotion", "allowed"], '''
+        self._run_qml_functions("USVPayloadCommandController.qml", ["physicalCommand", "stopCommand", "movesOutputs", "taskUnfinished", "unresolvedMotion", "transportPending", "allowed"], '''
             const assert = require('node:assert/strict');
             var USVLayout = {StatusSampling: 1, StatusPaused: 11, StatusSurveying: 14};
             var operations = {connected: true, hasPayload: true, payloadOnline: true,
@@ -503,7 +503,7 @@ class USVQGCContractTests(unittest.TestCase):
             var pendingCommand = 0, ready = true, canStartPointSample = true;
             var safetyLocked = false;
             var protocolReady = true, stopsPending = false, request = null, activeTask = null, _payloadCompId = 191;
-            operations.vehicle = {usvSafetyLocked: false, isMavCommandPending: () => false};
+            operations.vehicle = {usvSafetyLocked: false, pendingMavCommands: [], isMavCommandPending: () => false};
             assert.equal(allowed(31010), true);
             safetyLocked = true;
             assert.equal(allowed(31010), false);
@@ -586,10 +586,10 @@ class USVQGCContractTests(unittest.TestCase):
 
     def test_spectrometer_transport_ack_timeout(self):
         source = (REPO_ROOT / "src/Vehicle/Vehicle.cc").read_text(encoding="utf-8")
-        self.assertIn("if (targetCompId == 191 && command == 31018)", source)
-        self.assertIn("qMax(entry.ackTimeoutMSecs, 40000)", source)
+        self.assertIn("if (_isUsvPayloadCommand(targetCompId, command))", source)
+        self.assertIn("command == 31018 ? 40000", source)
         self.assertIn("command == 31011 || command == 31016 || command == 31019", source)
-        self.assertIn("entry.usvTotalTimeoutMSecs = 15000", source)
+        self.assertIn("? 15000 : 5000", source)
         self.assertIn("isHighLatency() ? _mavCommandAckTimeoutMSecsHighLatency : _mavCommandAckTimeoutMSecs", source)
         self.assertIn("_sendMavCommandShouldRetry(command) ? _mavCommandMaxRetryCount : 1", source)
 
@@ -597,16 +597,16 @@ class USVQGCContractTests(unittest.TestCase):
         source = (REPO_ROOT / "src/Vehicle/Vehicle.cc").read_text(encoding="utf-8")
         sender = source.split("void Vehicle::_sendMavCommandFromList(int index)", 1)[1].split("void Vehicle::_sendMavCommandResponseTimeoutCheck", 1)[0]
         self.assertIn("_mavCommandList[index].elapsedTimer.restart();", sender)
-        self.assertIn("entry.maxTries = _mavCommandMaxRetryCount;", source)
-        self.assertIn("qMax(entry.ackTimeoutMSecs, 5000)", source)
+        self.assertIn("entry.maxTries = (correlated || stopping) ? _mavCommandMaxRetryCount : 1;", source)
+        self.assertIn("entry.ackTimeoutMSecs = correlated ? 1000", source)
         for name in ("USVPayloadCommandController.qml", "USVPayloadPanel.qml"):
             qml = (REPO_ROOT / "custom/res" / name).read_text(encoding="utf-8")
-            self.assertIn("isMavCommandPending(", qml)
+            self.assertTrue("transportPending(" in qml or "isMavCommandPending(" in qml)
 
-    def test_controller_absolute_deadline_expires_even_with_pending_transport(self):
+    def test_controller_deadline_waits_for_native_transport_release(self):
         self._run_qml_functions(
             'USVPayloadCommandController.qml',
-            ['physicalCommand', 'stopCommand', 'sameRequest', 'resultKnown', 'saveRequest', 'now', 'expire',
+            ['transportPending', 'executingFeedback', 'physicalCommand', 'stopCommand', 'sameRequest', 'resultKnown', 'saveRequest', 'now', 'expire',
              'settleReceipt', 'acceptedFeedback', 'commandName'], '''
             const assert = require('node:assert/strict');
             var pendingCommand = 31019, commandWarning = false, commandFeedback = '', activeTask = null;
@@ -614,7 +614,7 @@ class USVQGCContractTests(unittest.TestCase):
             var request = {command: 31019, deadline: 16000}, locked = false, lockUnknown = () => locked = true;
             var _payloadCompId = 191, waiting = true, restarted = 0;
             var operations = {payload: {monotonicMs: () => clock, fieldSequence: () => 0},
-                              vehicle: {isMavCommandPending: (comp, cmd) => {
+                              vehicle: {pendingMavCommands: ['191:31019'], isMavCommandPending: (comp, cmd) => {
                 assert.equal(comp, 191); assert.equal(cmd, 31019); return waiting;
             }}};
             var timeout = {restart: () => restarted++, stop: () => {}};
@@ -623,6 +623,9 @@ class USVQGCContractTests(unittest.TestCase):
             expire();
             assert.equal(pendingCommand, 31019); assert.equal(commandWarning, false);
             clock = 16001;
+            expire();
+            assert.equal(pendingCommand, 31019);
+            operations.vehicle.pendingMavCommands = [];
             expire();
             // The send window ends, the vessel is untouched: an unanswered
             // receipt is not evidence of a fault.
@@ -635,7 +638,7 @@ class USVQGCContractTests(unittest.TestCase):
     def test_accepted_stop_is_a_result_not_an_unknown_command(self):
         self._run_qml_functions(
             'USVPayloadCommandController.qml',
-            ['physicalCommand', 'stopCommand', 'sameRequest', 'resultKnown', 'saveRequest', 'now', 'expire',
+            ['transportPending', 'executingFeedback', 'physicalCommand', 'stopCommand', 'sameRequest', 'resultKnown', 'saveRequest', 'now', 'expire',
              'settleReceipt', 'acceptedFeedback', 'commandName'], '''
             const assert = require('node:assert/strict');
             var clock = 1000;
@@ -644,7 +647,7 @@ class USVQGCContractTests(unittest.TestCase):
             var lockUnknown = () => locked = true;
             var _payloadCompId = 191;
             var operations = {payload: {monotonicMs: () => clock, fieldSequence: () => 0},
-                              vehicle: {isMavCommandPending: () => false}};
+                              vehicle: {pendingMavCommands: [], isMavCommandPending: () => false}};
             var timeout = {restart: () => {}, stop: () => {}};
             var commandName = () => 'stop', qsTr = text => text;
             clock = 16001;
@@ -652,7 +655,7 @@ class USVQGCContractTests(unittest.TestCase):
             assert.equal(locked, false, 'a correlated stop result must not lock the vessel');
             assert.equal(request.unknown, undefined);
             assert.equal(commandWarning, false);
-            assert.ok(commandFeedback.indexOf('stop') >= 0);
+            assert.equal(commandFeedback, '已完成');
             ''')
 
     def test_stop_deadlines_and_completed_hold_state_execute_controller_functions(self):

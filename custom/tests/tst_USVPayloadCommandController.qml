@@ -24,11 +24,19 @@ Item {
                 else if (!usvSafetyLockSource) usvSafetyLockSource = "emergency";
             }
             property var pending: []
+            readonly property var pendingMavCommands: pending.map(command => "191:" + command)
             property var sent: []
             signal mavCommandResult(int vehicleId, int targetComponent, int command, int result, int failure)
             onMavCommandResult: (vehicleId, targetComponent, command, result, failure) => {
-                if (vehicleId === id && targetComponent === 191 && result !== 5)
+                const last = sent.filter(item => item.command === command).slice(-1)[0];
+                if (vehicleId === id && targetComponent === 191 && result !== 5 && last && !last.request)
                     pending = pending.filter(value => value !== command);
+            }
+            function payloadCommandReceipt(event) {
+                const last = sent.filter(item => item.command === event.command).slice(-1)[0];
+                if (last && last.request === event.request && last.session === event.session
+                        && event.sender_system === 255 && event.sender_component === 190)
+                    pending = pending.filter(value => value !== event.command);
             }
             function isMavCommandPending(component, command) { return pending.indexOf(command) >= 0; }
             function sendCommand(component, command, showError, p1, p2, p3, p4) {
@@ -40,6 +48,7 @@ Item {
     Component {
         id: payloadComponent
         QtObject {
+            property var transportVehicle
             property var protocolVersion: ({ rawValue: 1 })
             property var adsState: ({ rawValue: 3 })
             property var sequences: ({})
@@ -47,6 +56,7 @@ Item {
             property double clock: 1000
             signal freshnessChanged()
             signal payloadEventReceived(var event)
+            onPayloadEventReceived: event => transportVehicle.payloadCommandReceipt(event)
             function monotonicMs() { return clock; }
             function fieldSequence(field) { return sequences[field] || 0; }
             function receive(field) {
@@ -86,16 +96,12 @@ Item {
 
         function init() {
             vehicle = createTemporaryObject(vehicleComponent, root);
-            payload = createTemporaryObject(payloadComponent, root);
+            payload = createTemporaryObject(payloadComponent, root, {transportVehicle: vehicle});
             operations = createTemporaryObject(operationsComponent, root, {vehicle: vehicle, payload: payload});
             controller = createTemporaryObject(controllerComponent, root, {operations: operations});
             verify(!!controller, "Component exists");
         }
         function event(seq, phase, outcome, extra) {
-            // Deliver the matching standard ACK as the native Vehicle transport
-            // does; it clears transport pending independently of USVE1.
-            if (phase === "request" && outcome === "accepted")
-                vehicle.mavCommandResult(vehicle.id, 191, controller.request.command, 0, 0);
             return Object.assign({}, controller.request, {v: 1, tcp_session: 1, seq: seq, phase: phase, outcome: outcome,
                 reason: "", attempt_id: "11111111111111111111111111111111", preflight_phase: ""}, extra || {});
         }
@@ -330,7 +336,7 @@ Item {
             // A correlated accept is the backend's stop result; the ADS state
             // is separate evidence and is still tracked.
             compare(controller.busy, false);
-            verify(controller.feedback.indexOf(qsTr("已接受")) >= 0);
+            compare(controller.feedback, qsTr("已完成"));
             compare(vehicle.usvSafetyLocked, false);
             payload.adsState = {rawValue: 1};
             payload.receive("adsState");
@@ -343,7 +349,6 @@ Item {
             compare(controller.allowed(31011), true);
             payload.protocolVersion = {rawValue: 1};
             vehicle.pending = [31019];
-            controller.transportTick++;
             compare(controller.allowed(31010), false);
         }
         function test_progressDoesNotReopenTheReceiptWindow() {
@@ -474,7 +479,7 @@ Item {
             payload.payloadEventReceived(event(1, "request", "accepted"));
             compare(controller.busy, false);
             compare(vehicle.usvSafetyLocked, false);
-            verify(controller.feedback.indexOf(qsTr("已接受")) >= 0);
+            compare(controller.feedback, qsTr("正在采样"));
             // 5.4 s: the new survey state is simply late; it must not lock nor
             // be reported as an unanswered command.
             payload.clock = controller.request.deadline + 400;
@@ -489,10 +494,11 @@ Item {
             controller.send(31010);
             const sent = vehicle.sent.length;
             payload.clock = controller.request.deadline + 1;
+            vehicle.pending = []; // The native total receipt budget has expired.
             controller.expire();
             compare(controller.busy, false);
             compare(controller.request.unacknowledged, true);
-            verify(controller.feedback.indexOf(qsTr("未收到回执")) >= 0);
+            compare(controller.feedback, qsTr("响应超时"));
             compare(vehicle.usvSafetyLocked, false);
             // A pre-send Idle is not proof that the task did not start, so a
             // second physical start is still refused...
@@ -518,7 +524,7 @@ Item {
             vehicle.mavCommandResult(1, 191, 31019, 0, 0);
             compare(controller.busy, false);
             compare(vehicle.usvSafetyLocked, false);
-            verify(controller.feedback.indexOf(qsTr("已接受")) >= 0);
+            compare(controller.feedback, qsTr("已完成"));
             // A late correlated terminal for another request cannot overwrite
             // this answer.
             payload.payloadEventReceived(event(9, "terminal", "failed", {reason: "late_other"}));
@@ -640,6 +646,7 @@ Item {
             payload.receive("status");
             compare(controller.activeTask, null);
             payload.clock = controller.request.deadline + 1;
+            vehicle.pending = []; // Native timeout retires the unanswered STOP.
             controller.expire();
             controller.send(31010);
             const current = Object.assign({}, controller.request);
@@ -795,7 +802,6 @@ Item {
             compare(controller.helpTextFor(31010, "fallback"), "fallback");
             // The safety exit explains its own state instead of disappearing.
             vehicle.pending = [31019];
-            controller.transportTick++;
             compare(controller.allowed(31019), false);
             verify(controller.blockedReason(31019).length > 0);
         }

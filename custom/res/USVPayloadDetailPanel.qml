@@ -107,7 +107,7 @@ Rectangle {
                             opacity: USVLayout.Tokens.opacity.subtle
                         }
                         QGCLabel {
-                            text: (modelData.fact && modelData.fact.value !== undefined) ? Number(modelData.fact.value).toFixed(1) + "°" : "--"
+                            text: modelData.fact && Number(modelData.fact.value) < 0 ? qsTr("未校准") : (modelData.fact && modelData.fact.value !== undefined) ? Number(modelData.fact.value).toFixed(1) + "°" : "--"
                             font.bold: true
                             font.pointSize: ScreenTools.smallFontPointSize
                         }

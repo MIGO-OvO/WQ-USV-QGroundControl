@@ -9,8 +9,17 @@
 
 #include "AudioOutputTest.h"
 #include "AudioOutput.h"
+#include "AppSettings.h"
+#include "Fact.h"
+#include "QGCPalette.h"
+#include "SettingsManager.h"
 
+#include <QtQml/QQmlComponent>
+#include <QtQml/QQmlContext>
+#include <QtQml/QQmlEngine>
+#include <QtQuick/QQuickItem>
 #include <QtTest/QTest>
+#include <memory>
 
 void AudioOutputTest::_testSpokenReplacements()
 {
@@ -32,4 +41,34 @@ void AudioOutputTest::_testSpokenReplacements()
     QCOMPARE(result, QStringLiteral("1 second"));
     result = AudioOutput::_fixTextMessageForAudio(QStringLiteral("1001ms"));
     QCOMPARE(result, QStringLiteral("1 second and 1 millisecond"));
+}
+
+void AudioOutputTest::_speechConfiguration()
+{
+    auto *muted = SettingsManager::instance()->appSettings()->audioMuted();
+    QQmlEngine engine;
+    engine.addImportPath("qrc:/qml");
+    QGCPalette palette;
+    engine.rootContext()->setContextProperty("qgcPal", &palette);
+    QQmlComponent component(&engine, QUrl("qrc:/qml/QGroundControl/FlyView/PreFlightSoundCheck.qml"));
+    QVERIFY2(component.isReady(), qPrintable(component.errorString()));
+    QQuickItem parent;
+    std::unique_ptr<QObject> check(component.createWithInitialProperties({{"parent", QVariant::fromValue(&parent)}}));
+    QVERIFY2(check, qPrintable(component.errorString()));
+#ifdef DISABLE_SPEECH
+    QVERIFY(!muted->property("visible").toBool());
+    QVERIFY(check->property("passed").toBool());
+    QVERIFY(check->property("manualText").toString().isEmpty());
+    QVERIFY(!check->property("telemetryFailure").toBool());
+    AudioOutput output;
+    output.init(nullptr);
+    output.setMuted(false);
+    output.say(QStringLiteral("Muted test"));
+    QVERIFY(output.isMuted());
+    QVERIFY(output.children().isEmpty());
+#else
+    QVERIFY(muted->property("visible").toBool());
+    QVERIFY(check->property("_speechAvailable").toBool());
+    QVERIFY(!check->property("manualText").toString().isEmpty());
+#endif
 }

@@ -29,7 +29,7 @@ Rectangle {
     property var theme: _theme
     readonly property real targetHeight: Math.min(maxHeight, header.implicitHeight + (expanded ? bodyColumn.implicitHeight + theme.gap * 2 : 0))
     readonly property string nextTitle: !operations.connected ? qsTr("连接无人船后开始准备") : !operations.payloadOnline ? qsTr("检查船载设备连接") : operations.payloadFault ? qsTr("检查采样装置") : operations.payloadStatus === USVLayout.StatusPaused ? qsTr("采样已暂停") : operations.payloadStatus === USVLayout.StatusWaitingStable ? qsTr("正在准备采样") : operations.payloadWorking ? qsTr("设备正在执行作业") : !operations.validSignal ? qsTr("先让检测器开始工作") : !operations.baselineSet ? qsTr("用当前有效测量设置基线") : qsTr("采样准备完成")
-    readonly property string nextDescription: !operations.connected ? qsTr("通过 QGC 连接飞控，确认通信链路正常。") : !operations.payloadOnline ? qsTr("飞控已连接，等待载荷遥测；检查 Jetson 与检测装置链路。") : operations.payloadFault ? qsTr("本次任务未确认完成。核对设备状态后再继续操作。") : operations.payloadStatus === USVLayout.StatusPaused ? qsTr("确认现场条件后恢复采样，也可停止本次作业。") : operations.payloadStatus === USVLayout.StatusWaitingStable ? qsTr("准备完成后自动进入采样。可停止本次准备，准备期间不支持暂停。") : operations.payloadWorking ? qsTr("步骤与结果以载荷遥测为准。航线任务由官方任务控制器管理。") : !operations.validSignal ? qsTr("启动信号采集，收到有效测量后即可设置当前基线。") : !operations.baselineSet ? qsTr("确认检测电压有效，再设置基线；收到基线状态后可采样。") : qsTr("可开始一次手动点采样。航线定点采样请在 Plan 中配置任务项。")
+    readonly property string nextDescription: !operations.connected ? qsTr("连接飞控后开始准备。") : !operations.payloadOnline ? qsTr("检查 Jetson 与检测装置连接。") : operations.payloadFault ? qsTr("任务失败，请检查载荷状态。") : operations.payloadStatus === USVLayout.StatusPaused ? qsTr("可恢复采样或停止本次作业。") : operations.payloadStatus === USVLayout.StatusWaitingStable ? qsTr("正在准备，可停止本次操作。") : operations.payloadWorking ? operations.samplingText : !operations.validSignal ? qsTr("启动信号，等待有效测量。") : !operations.baselineSet ? qsTr("设置当前基线后即可采样。") : qsTr("可开始点采样。")
 
     function toggleExpanded() {
         expanded = !expanded;
@@ -342,7 +342,7 @@ Rectangle {
                         Layout.fillWidth: true
                         color: root.theme.secondary
                         horizontalAlignment: Text.AlignHCenter
-                        text: commands.busy ? qsTr("设备状态返回后可继续") : root.preparationStep === 1 ? qsTr("下一步：等待有效测量") : root.preparationStep === 2 ? qsTr("下一步：确认基线状态") : root.operations.payloadWorking ? root.progressText() : qsTr("操作结果以遥测为准")
+                        text: commands.busy ? qsTr("等待响应") : root.preparationStep === 1 ? qsTr("等待有效测量") : root.preparationStep === 2 ? qsTr("等待基线状态") : root.operations.payloadWorking ? root.progressText() : commands.ready ? qsTr("可开始采样") : qsTr("等待设备就绪")
                         wrapMode: Text.WordWrap
                     }
                 }

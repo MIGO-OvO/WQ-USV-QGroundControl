@@ -112,6 +112,12 @@ DECLARE_SETTINGGROUP(App, "")
     connect(savePathFact, &Fact::rawValueChanged, this, &AppSettings::savePathsChanged);
     connect(savePathFact, &Fact::rawValueChanged, this, &AppSettings::_checkSavePathDirectories);
 
+#ifdef DISABLE_SPEECH
+    audioMuted();
+    _audioMutedFact->setVisible(false);
+    batteryPercentRemainingAnnounce();
+    _batteryPercentRemainingAnnounceFact->setVisible(false);
+#endif
     _checkSavePathDirectories();
 }
 

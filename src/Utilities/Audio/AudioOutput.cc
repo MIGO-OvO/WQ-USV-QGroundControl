@@ -14,7 +14,9 @@
 
 #include <QtCore/QRegularExpression>
 #include <QtCore/QApplicationStatic>
+#ifndef DISABLE_SPEECH
 #include <QtTextToSpeech/QTextToSpeech>
+#endif
 
 QGC_LOGGING_CATEGORY(AudioOutputLog, "Utilities.AudioOutput");
 // qt.speech.tts.flite
@@ -45,7 +47,9 @@ Q_APPLICATION_STATIC(AudioOutput, _audioOutput);
 
 AudioOutput::AudioOutput(QObject *parent)
     : QObject(parent)
+#ifndef DISABLE_SPEECH
     , _engine(new QTextToSpeech(QStringLiteral("none"), this))
+#endif
 {
     // qCDebug(AudioOutputLog) << this;
 }
@@ -62,6 +66,11 @@ AudioOutput *AudioOutput::instance()
 
 void AudioOutput::init(Fact *mutedFact)
 {
+#ifdef DISABLE_SPEECH
+    Q_UNUSED(mutedFact);
+    _muted = true;
+    _initialized = true;
+#else
     Q_CHECK_PTR(mutedFact);
 
     if (_initialized) {
@@ -119,18 +128,28 @@ void AudioOutput::init(Fact *mutedFact)
     _initialized = true;
 
     qCDebug(AudioOutputLog) << "AudioOutput initialized with muted state:" << _muted;
+#endif
 }
 
 void AudioOutput::setMuted(bool muted)
 {
+#ifdef DISABLE_SPEECH
+    Q_UNUSED(muted);
+    _muted = true;
+#else
     if (_muted.exchange(muted) != muted) {
         (void) QMetaObject::invokeMethod(_engine, "setVolume", Qt::AutoConnection, muted ? 0.0 : 1.0);
         qCDebug(AudioOutputLog) << "AudioOutput muted state set to:" << muted;
     }
+#endif
 }
 
 void AudioOutput::say(const QString &text, TextMods textMods)
 {
+#ifdef DISABLE_SPEECH
+    Q_UNUSED(text);
+    Q_UNUSED(textMods);
+#else
     if (!_initialized) {
         if (!qgcApp()->runningUnitTests()) {
             qCWarning(AudioOutputLog) << "AudioOutput not initialized. Call init() before using say().";
@@ -168,6 +187,7 @@ void AudioOutput::say(const QString &text, TextMods textMods)
     } else {
         qCWarning(AudioOutputLog) << "Failed to invoke Enqueue method.";
     }
+#endif
 }
 
 QString AudioOutput::_fixTextMessageForAudio(const QString &string)

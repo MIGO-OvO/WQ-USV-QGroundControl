@@ -78,6 +78,7 @@ void SendMavCommandWithSignallingTest::_payloadProgressLifecycle()
     });
     USVPayloadFactGroup facts;
     facts.setVehicleId(vehicle->id());
+    connect(&facts, &USVPayloadFactGroup::payloadEventReceived, vehicle, &Vehicle::payloadCommandReceipt);
     const auto value = [&](const char* name, float number) {
         mavlink_message_t message{};
         char field[10]{};
@@ -260,6 +261,7 @@ void SendMavCommandWithSignallingTest::_payloadCommunicationRecovery()
     });
     USVPayloadFactGroup facts;
     facts.setVehicleId(vehicle->id());
+    connect(&facts, &USVPayloadFactGroup::payloadEventReceived, vehicle, &Vehicle::payloadCommandReceipt);
     const auto value = [&](const char* name, float number) {
         mavlink_message_t message{};
         char field[10]{};
@@ -587,9 +589,25 @@ void SendMavCommandWithSignallingTest::_payloadRetryPolicy(void)
         QVERIFY(index >= 0);
         const auto& entry = vehicle->_mavCommandList[index];
         const bool stopping = command == 31011 || command == 31016 || command == 31019;
-        QCOMPARE(entry.maxTries, stopping ? 3 : 1);
+        QCOMPARE(entry.maxTries, 3);
         QCOMPARE(entry.usvTotalTimeoutMSecs, command == 31018 ? 40000 : stopping ? 15000 : 5000);
-        QCOMPARE(entry.ackTimeoutMSecs, command == 31018 ? 40000 : 5000);
+        QCOMPARE(entry.ackTimeoutMSecs, 1000);
+        vehicle->_mavCommandList.removeAt(index);
+    }
+    // Protocol capability may be unavailable: keep the existing safe STOP
+    // retries for the legacy path, without retrying uncorrelated starts.
+    for (const int command : {31010, 31011, 31016, 31019}) {
+        vehicle->sendMavCommand(191, static_cast<MAV_CMD>(command), false);
+        const int index = vehicle->_findMavCommandListEntryIndex(191, static_cast<MAV_CMD>(command));
+        if (command == 31010) {
+            QCOMPARE(index, -1); // No protocol capability: starts are refused.
+            continue;
+        }
+        QVERIFY(index >= 0);
+        const auto &entry = vehicle->_mavCommandList[index];
+        QCOMPARE(entry.rgParam3, 0.0f);
+        QCOMPARE(entry.maxTries, 3);
+        QCOMPARE(entry.ackTimeoutMSecs, 5000);
         vehicle->_mavCommandList.removeAt(index);
     }
     _disconnectMockLink();
@@ -622,4 +640,109 @@ void SendMavCommandWithSignallingTest::_payloadStopRetirementAndTotalDeadline(vo
     vehicle->_handleCommandAck(progress);
     QCOMPARE(vehicle->_findMavCommandListEntryIndex(191, stop), -1);
     _disconnectMockLink();
+}
+
+void SendMavCommandWithSignallingTest::_payloadReceiptOrderingAndButtons()
+{
+    _connectMockLinkNoInitialConnectSequence();
+    auto *vehicle = MultiVehicleManager::instance()->activeVehicle();
+    const auto disconnect = qScopeGuard([&] { _disconnectMockLink(); });
+    USVPayloadFactGroup facts;
+    facts.setVehicleId(vehicle->id());
+    connect(&facts, &USVPayloadFactGroup::payloadEventReceived, vehicle, &Vehicle::payloadCommandReceipt);
+    QQmlEngine engine;
+    engine.addImportPath("qrc:/qml");
+    QQmlEngine::setObjectOwnership(vehicle, QQmlEngine::CppOwnership);
+    QQmlEngine::setObjectOwnership(&facts, QQmlEngine::CppOwnership);
+    engine.rootContext()->setContextProperty("testVehicle", vehicle);
+    engine.rootContext()->setContextProperty("testFacts", &facts);
+    for (const auto *name : {"USV_PROTO", "USV_VLD", "USV_BSET"}) {
+        mavlink_message_t message{};
+        char field[10]{};
+        memcpy(field, name, strlen(name));
+        mavlink_msg_named_value_float_pack(vehicle->id(), 191, &message, 0, field, 1);
+        facts.handleMessage(vehicle, message);
+    }
+    QQmlComponent component(&engine, QUrl::fromLocalFile(QFINDTESTDATA("USVPayloadLifecycleFixture.qml")));
+    QVERIFY2(component.isReady(), qPrintable(component.errorString()));
+    std::unique_ptr<QObject> fixture(component.create());
+    QVERIFY2(fixture, qPrintable(component.errorString()));
+    QObject *commands = fixture->property("commands").value<QObject*>();
+    QObject *button = fixture->property("detectorButton").value<QObject*>();
+    QObject *stopButton = fixture->property("stopButton").value<QObject*>();
+    auto request = [&]() { return commands->property("request").value<QJSValue>().toVariant().toMap(); };
+    auto ack = [&](int command, MAV_RESULT result) {
+        mavlink_message_t message{};
+        mavlink_msg_command_ack_pack(vehicle->id(), 191, &message, command, result, 0, 0, 255, 190);
+        vehicle->_handleCommandAck(message);
+    };
+    auto receipt = [&](const QVariantMap &identity, int systemOffset = 0) {
+        QJsonObject event = QJsonObject::fromVariantMap(identity);
+        // Only wire identities are serialized, never the QML Vehicle reference.
+        for (auto it = event.begin(); it != event.end();) {
+            if (!QStringList({"session", "request", "command", "sender_system", "sender_component"}).contains(it.key()))
+                it = event.erase(it);
+            else
+                ++it;
+        }
+        event.insert("v", 1); event.insert("seq", 1); event.insert("tcp_session", 1);
+        event.insert("phase", "request"); event.insert("outcome", "accepted");
+        event.insert("reason", ""); event.insert("attempt_id", ""); event.insert("preflight_phase", "");
+        deliverPayloadFrames(facts, vehicle, payloadEventFrames(event, vehicle->id() + systemOffset));
+    };
+    QVERIFY(button->property("enabled").toBool());
+    for (const bool ackFirst : {false, true}) {
+        QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
+        const QVariantMap first = request();
+        QVERIFY(vehicle->isMavCommandPending(191, 31018));
+        QVERIFY(!button->property("enabled").toBool());
+        int index = vehicle->_findMavCommandListEntryIndex(191, static_cast<MAV_CMD>(31018));
+        // First two requests may be lost. Retry the identical payload, then
+        // leave the last copy waiting until the original total deadline.
+        for (int attempt = 2; attempt <= 3; ++attempt) {
+            vehicle->_mavCommandList[index].ackTimeoutMSecs = 1;
+            QTest::qSleep(3);
+            vehicle->_sendMavCommandResponseTimeoutCheck();
+            QCOMPARE(vehicle->_mavCommandList[index].tryCount, attempt);
+            QCOMPARE(vehicle->_mavCommandList[index].rgParam3, first.value("request").toFloat());
+            QCOMPARE(vehicle->_mavCommandList[index].rgParam4, first.value("session").toFloat());
+        }
+        QTest::qSleep(3);
+        vehicle->_sendMavCommandResponseTimeoutCheck();
+        QCOMPARE(vehicle->_mavCommandList[index].tryCount, 3);
+        if (ackFirst) ack(31018, MAV_RESULT_ACCEPTED);
+        QVERIFY(vehicle->isMavCommandPending(191, 31018));
+        receipt(first, 1); // Wrong Vehicle cannot release the native queue.
+        QVERIFY(!button->property("enabled").toBool());
+        receipt(first);
+        QVERIFY(!vehicle->isMavCommandPending(191, 31018));
+        QTRY_VERIFY(button->property("enabled").toBool());
+        QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
+        const QVariantMap second = request();
+        QVERIFY(second.value("request") != first.value("request"));
+        ack(31018, MAV_RESULT_ACCEPTED); // The first request's late standard ACK.
+        ack(31018, MAV_RESULT_FAILED);
+        receipt(first); // Its delayed correlated event also cannot release the new request.
+        QVERIFY(vehicle->isMavCommandPending(191, 31018));
+        QVERIFY(!button->property("enabled").toBool());
+        receipt(second);
+        QTRY_VERIFY(button->property("enabled").toBool());
+        QVERIFY(QMetaObject::invokeMethod(stopButton, "clicked"));
+        const QVariantMap stop = request();
+        QVERIFY(!stopButton->property("enabled").toBool());
+        QVERIFY(!button->property("enabled").toBool());
+        receipt(stop);
+        QTRY_VERIFY(stopButton->property("enabled").toBool());
+        QTRY_VERIFY(button->property("enabled").toBool());
+    }
+    QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
+    QVERIFY(QMetaObject::invokeMethod(fixture.get(), "expireReceipt"));
+    QVERIFY(!button->property("enabled").toBool()); // Native send is still waiting.
+    const int index = vehicle->_findMavCommandListEntryIndex(191, static_cast<MAV_CMD>(31018));
+    QVERIFY(index >= 0);
+    vehicle->_mavCommandList[index].usvTotalTimeoutMSecs = 1;
+    QTest::qSleep(3);
+    vehicle->_sendMavCommandResponseTimeoutCheck();
+    QVERIFY(!vehicle->isMavCommandPending(191, 31018));
+    QTRY_VERIFY(button->property("enabled").toBool());
 }
