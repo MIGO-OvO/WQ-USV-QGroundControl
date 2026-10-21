@@ -67,15 +67,17 @@
 #endif
 
 #include <QtCore/QDateTime>
+#include <QtCore/QHash>
 #include <QtCore/QMutex>
 #include <QtCore/QSet>
 
 QGC_LOGGING_CATEGORY(VehicleLog, "Vehicle.Vehicle")
 
 // Retain the local stop latch across reconnects for the lifetime of this GCS.
-// The cockpit releases it only after telemetry and on-site stop verification.
+// Communication loss can recover through a new confirmed payload STOP;
+// an emergency or unconfirmed output shutdown retains physical verification.
 static QMutex usvSafetyMutex;
-static QSet<int> usvSafetyLockedVehicleIds;
+static QHash<int, QString> usvSafetyLocks;
 
 #define UPDATE_TIMER 50
 #define DEFAULT_LAT  38.965767f
@@ -1593,20 +1595,36 @@ void Vehicle::setArmed(bool armed, bool showError)
 bool Vehicle::usvSafetyLocked() const
 {
     const QMutexLocker locker(&usvSafetyMutex);
-    return usvSafetyLockedVehicleIds.contains(_id);
+    return usvSafetyLocks.contains(_id);
 }
 
 void Vehicle::setUsvSafetyLocked(bool locked)
 {
+    setUsvSafetyLockSource(locked ? QStringLiteral("emergency") : QString());
+}
+
+QString Vehicle::usvSafetyLockSource() const
+{
+    const QMutexLocker locker(&usvSafetyMutex);
+    return usvSafetyLocks.value(_id);
+}
+
+void Vehicle::setUsvSafetyLockSource(const QString& source)
+{
+    if (!source.isEmpty() && source != "communication" && source != "outputs" && source != "emergency") {
+        return;
+    }
     {
         const QMutexLocker locker(&usvSafetyMutex);
-        if (usvSafetyLockedVehicleIds.contains(_id) == locked) {
+        const QString previous = usvSafetyLocks.value(_id);
+        if (previous == source ||
+            (!source.isEmpty() && (previous == "emergency" || (source == "communication" && !previous.isEmpty())))) {
             return;
         }
-        if (locked) {
-            usvSafetyLockedVehicleIds.insert(_id);
+        if (!source.isEmpty()) {
+            usvSafetyLocks.insert(_id, source);
         } else {
-            usvSafetyLockedVehicleIds.remove(_id);
+            usvSafetyLocks.remove(_id);
         }
     }
     emit usvSafetyLockedChanged();
@@ -2628,6 +2646,11 @@ bool Vehicle::_commandCanBeDuplicated(MAV_CMD command)
     }
 }
 
+bool Vehicle::_isUsvPayloadCommand(int compId, MAV_CMD command)
+{
+    return compId == 191 && command >= 31010 && command <= 31019;
+}
+
 bool Vehicle::_usvSafetyCommandAllowed(int compId, MAV_CMD command, float param1) const
 {
     if (compId == 191 && command >= 31010 && command <= 31019
@@ -2806,7 +2829,7 @@ void Vehicle::_sendMavCommandFromList(int index)
         } else {
             emit mavCommandResult(_id, commandEntry.targetCompId, commandEntry.command, MAV_RESULT_FAILED, MavCmdResultFailureNoResponseToCommand);
         }
-        if (commandEntry.showError) {
+        if (commandEntry.showError && !_isUsvPayloadCommand(commandEntry.targetCompId, commandEntry.command)) {
             qgcApp()->showAppMessage(tr("Vehicle did not respond to command: %1").arg(friendlyName));
         }
         return;
@@ -2984,7 +3007,7 @@ void Vehicle::_handleCommandAck(mavlink_message_t& message)
             if (commandEntry.ackHandlerInfo.resultHandler) {
                 (*commandEntry.ackHandlerInfo.resultHandler)(commandEntry.ackHandlerInfo.resultHandlerData, message.compid, ack, MavCmdResultCommandResultOnly);
             } else {
-                if (commandEntry.showError) {
+                if (commandEntry.showError && !_isUsvPayloadCommand(message.compid, static_cast<MAV_CMD>(ack.command))) {
                     showCommandAckError(ack);
                 }
                 emit mavCommandResult(_id, message.compid, ack.command, ack.result, MavCmdResultCommandResultOnly);

@@ -25,6 +25,7 @@ class SendMavCommandWithSignallingTest : public UnitTest
     void _payloadFactsFreshnessAndEvents(void);
     void _payloadRequestIdentity(void);
     void _payloadProgressLifecycle();
+    void _payloadCommunicationRecovery();
 
    private:
     typedef struct

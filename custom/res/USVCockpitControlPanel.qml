@@ -94,6 +94,7 @@ USVCockpitSurface {
                 text: root.operations.validSignal ? qsTr("设置当前基线") : qsTr("启动信号采集")
                 visible: root.preparing
                 enabled: root.commands.allowed(root.operations.validSignal ? 31017 : 31018)
+                helpText: root.commands.helpTextFor(root.operations.validSignal ? 31017 : 31018, "")
                 onClicked: root.commands.send(root.operations.validSignal ? 31017 : 31018, 0)
             }
             GridLayout {
@@ -102,10 +103,11 @@ USVCockpitSurface {
                 columnSpacing: root.theme.unit
                 rowSpacing: root.theme.unit
                 USVOperationsButton { Layout.fillWidth: true; Layout.preferredWidth: 1; theme: root.theme; primary: true; symbol: root.operations.payloadStatus === 11 ? "play" : "pause"; text: root.operations.payloadStatus === 11 ? qsTr("恢复采样") : qsTr("暂停采样"); enabled: root.commands.allowed(root.operations.payloadStatus === 11 ? 31013 : 31012); onClicked: root.commands.send(root.operations.payloadStatus === 11 ? 31013 : 31012, 0) }
-                USVOperationsButton { Layout.fillWidth: true; Layout.preferredWidth: 1; theme: root.theme; symbol: "stop"; text: qsTr("停止采样"); enabled: root.commands.allowed(31011) && !root.controller.emergencyPending; helpText: qsTr("取消采样作业；不会停止推进电机"); onClicked: root.commands.send(31011, 0) }
+                USVOperationsButton { Layout.fillWidth: true; Layout.preferredWidth: 1; theme: root.theme; symbol: "stop"; text: qsTr("停止采样"); enabled: root.commands.allowed(31011) && !root.controller.emergencyPending; helpText: root.commands.helpTextFor(31011, qsTr("取消采样作业；不会停止推进电机")); onClicked: root.commands.send(31011, 0) }
             }
-            USVOperationsButton { Layout.fillWidth: true; theme: root.theme; symbol: "hand"; text: qsTr("手动点采样"); visible: !root.compact || !root.operations.payloadWorking && root.operations.payloadStatus !== 11; enabled: root.commands.allowed(31010); helpText: qsTr("有效信号与基线就绪后执行一次点采样"); onClicked: root.commands.send(31010, 0) }
+            USVOperationsButton { Layout.fillWidth: true; theme: root.theme; symbol: "hand"; text: qsTr("手动点采样"); visible: !root.compact || !root.operations.payloadWorking && root.operations.payloadStatus !== 11; enabled: root.commands.allowed(31010); helpText: root.commands.helpTextFor(31010, qsTr("有效信号与基线就绪后执行一次点采样")); onClicked: root.commands.send(31010, 0) }
             QGCLabel { Layout.fillWidth: true; visible: !root.operations.payloadOnline; text: qsTr("等待载荷遥测，开始与恢复操作不可用"); color: root.theme.warning; font.pointSize: root.theme.captionPointSize; wrapMode: Text.WordWrap }
+            QGCLabel { Layout.fillWidth: true; visible: !root.compact && text.length > 0; color: root.theme.secondary; font.pointSize: root.theme.captionPointSize; wrapMode: Text.WordWrap; text: root.commands.helpTextFor(root.operations.validSignal ? 31017 : 31018, ""); objectName: "usvCommandBlockedReason" }
             QGCLabel { font.pointSize: root.theme.bodyPointSize; Layout.fillWidth: true; text: root.commands.feedback.length ? root.commands.feedback : root.controller.feedback; color: root.commands.feedback.length ? root.commands.warning ? root.theme.warning : root.theme.secondary : root.controller.feedbackWarning ? root.theme.warning : root.theme.secondary; visible: text.length > 0; wrapMode: Text.WordWrap; objectName: "usvCommandFeedback" }
             Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; Layout.topMargin: root.theme.unit; color: root.theme.divider }
             Loader {

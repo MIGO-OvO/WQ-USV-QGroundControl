@@ -144,6 +144,7 @@ public:
     Q_PROPERTY(QGeoCoordinate       armedPosition               READ armedPosition                                                  NOTIFY armedPositionChanged)
     Q_PROPERTY(bool                 armed                       READ armed                      WRITE setArmedShowError             NOTIFY armedChanged)
     Q_PROPERTY(bool                 usvSafetyLocked             READ usvSafetyLocked            WRITE setUsvSafetyLocked            NOTIFY usvSafetyLockedChanged)
+    Q_PROPERTY(QString              usvSafetyLockSource         READ usvSafetyLockSource        WRITE setUsvSafetyLockSource        NOTIFY usvSafetyLockedChanged)
     Q_PROPERTY(bool                 autoDisarm                  READ autoDisarm                                                     NOTIFY autoDisarmChanged)
     Q_PROPERTY(bool                 flightModeSetAvailable      READ flightModeSetAvailable                                         CONSTANT)
     Q_PROPERTY(QStringList          flightModes                 READ flightModes                                                    NOTIFY flightModesChanged)
@@ -480,6 +481,8 @@ public:
 
     bool usvSafetyLocked() const;
     void setUsvSafetyLocked(bool locked);
+    QString usvSafetyLockSource() const;
+    void setUsvSafetyLockSource(const QString &source);
 
     bool flightModeSetAvailable             ();
     QStringList flightModes                 ();
@@ -1209,6 +1212,10 @@ private:
             float param1, float param2, float param3, float param4, double param5, double param6, float param7);
     bool _usvSafetyCommandAllowed(int compId, MAV_CMD command, float param1) const;
     void _rejectUsvSafetyCommand(int compId, MAV_CMD command, const MavCmdAckHandlerInfo_t* handler, bool showError);
+    // Payload commands carry their own correlated result and user-facing text
+    // through the payload event channel; generic command toasts would duplicate
+    // and contradict them.
+    static bool _isUsvPayloadCommand(int compId, MAV_CMD command);
     void _sendMavCommandFromList(int index);
     int  _findMavCommandListEntryIndex(int targetCompId, MAV_CMD command);
     bool _sendMavCommandShouldRetry(MAV_CMD command);

@@ -40,10 +40,13 @@ USVCockpitSurface {
             Layout.fillWidth: true
             theme: root.theme
             text: qsTr("核验并解除锁定")
+            // Never hide the only recovery entry: show it disabled together
+            // with the condition that is still missing.
             enabled: root.controller.canVerifyStop
-            visible: root.controller.canVerifyStop
+            visible: root.controller.safetyLocked
             helpText: qsTr("收到未解锁与采样结束遥测后，现场确认设备停止")
             onClicked: root.controller.requestVerifyStop()
         }
+        QGCLabel { Layout.fillWidth: true; color: root.theme.warning; font.pointSize: root.theme.captionPointSize; text: root.controller.verifyBlockedReason; visible: text.length > 0; wrapMode: Text.WordWrap; objectName: "usvVerifyBlockedReason" }
     }
 }

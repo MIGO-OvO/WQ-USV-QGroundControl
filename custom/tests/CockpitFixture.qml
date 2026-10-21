@@ -37,6 +37,9 @@ ApplicationWindow {
         mock.payload.sampleCount = {rawValue: 2};
         guided.missionController.currentMissionIndex = 3;
         layer.commands.reset();
+        mock.pendingCommands = [];
+        other.pendingCommands = [];
+        reconnected.pendingCommands = [];
         layer.controller.vehicleSafety = [];
         mock.usvSafetyLocked = false;
         other.usvSafetyLocked = false;
@@ -72,10 +75,10 @@ ApplicationWindow {
     function verifyBehavior() {
         const checks = [];
         function check(value, description) { if (!value) throw new Error(description); checks.push(description); }
-        function accepted() {
+        function accepted(outcome) {
             const request = layer.commands.request;
             mock.payload.payloadEventReceived(Object.assign({}, request, {
-                seq: 1, phase: "request", outcome: "accepted", reason: "", attempt_id: "", preflight_phase: ""
+                seq: 1, phase: "request", outcome: outcome || "accepted", reason: "fixture_result", attempt_id: "", preflight_phase: ""
             }));
         }
         scenario("ready");
@@ -99,7 +102,7 @@ ApplicationWindow {
         mock.mavCommandResult(1, 191, 31018, 0, 0);
         check(commands.pendingCommand === 31018, "standard ACK alone does not confirm request identity");
         accepted();
-        check(commands.awaitedCommand === 31018 && !commands.allowed(31010), "accepted ACK waits for measurement telemetry");
+        check(!commands.busy && !commands.allowed(31010), "accepted start ends the wait; sampling still needs measurement");
         mock.payload.spectrometerValid = {rawValue: 1};
         mock.payload.receive("spectrometerValid");
         mock.payload.receive("voltage");
@@ -107,7 +110,7 @@ ApplicationWindow {
         commands.send(31017, 0);
         mock.mavCommandResult(1, 191, 31017, 0, 0);
         accepted();
-        check(commands.awaitedCommand === 31017 && !commands.allowed(31010), "baseline ACK cannot authorize sampling");
+        check(!commands.busy && !commands.allowed(31010), "baseline ACK cannot authorize sampling");
         mock.payload.baselineSet = {rawValue: 1};
         mock.payload.receive("baselineSet");
         mock.payload.status = {rawValue: 0};
@@ -123,10 +126,53 @@ ApplicationWindow {
         commands.send(31012, 0);
         mock.mavCommandResult(1, 191, 31012, 0, 0);
         accepted();
-        check(commands.awaitedCommand === 31012, "pause waits for actual paused status");
+        check(!commands.busy && !commands.allowed(31013), "pause ACK ends the wait; resume needs paused status");
         mock.payload.status = {rawValue: 11};
         mock.payload.receive("status");
         check(commands.allowed(31013), "paused telemetry permits resume");
+        scenario("ready");
+        commands.send(31010);
+        mock.mavCommandResult(1, 191, 31010, 0, 0);
+        accepted();
+        mock.payload.status = {rawValue: 1};
+        const lostTask = Object.assign({}, commands.activeTask);
+        commands.send(31011);
+        const oldStop = Object.assign({}, commands.request);
+        mock.vehicleLinkManager.communicationLost = true;
+        check(mock.usvSafetyLockSource === "communication" && controller.emergencyPhase === "communication", "whole-link loss retains communication source across controllers");
+        mock.vehicleLinkManager.communicationLost = false;
+        mock.payload.status = {rawValue: 0};
+        check(mock.usvSafetyLocked, "reconnection and Idle cannot recover without this stop");
+        mock.mavCommandResult(1, 191, 31011, 0, 0);
+        mock.payload.payloadEventReceived(Object.assign({}, oldStop, {seq: 1, phase: "request", outcome: "accepted"}));
+        mock.payload.receive("status");
+        check(mock.usvSafetyLocked, "late stop from before disconnect cannot recover the new lock");
+        commands.send(31019);
+        mock.mavCommandResult(1, 191, 31019, 0, 0);
+        accepted();
+        mock.payload.adsState = {rawValue: 1};
+        mock.payload.receive("status");
+        check(mock.usvSafetyLocked, "ADS-only success does not confirm pump outputs");
+        commands.send(31011);
+        mock.mavCommandResult(1, 191, 31011, 4, 0);
+        accepted("failed");
+        mock.payload.receive("status");
+        check(mock.usvSafetyLocked && commands.warning, "failed stop plus Idle cannot become recovery");
+        commands.send(31011);
+        mock.mavCommandResult(1, 191, 31011, 0, 0);
+        accepted();
+        check(!commands.busy && mock.usvSafetyLocked, "accepted stop ends its wait but needs synchronized status");
+        mock.payload.receive("status");
+        check(mock.armed && !mock.usvSafetyLocked && !controller.safetyLocked && commands.allowed(31018), "confirmed ordinary stop recovers while armed without manual verification");
+        check(commands.activeTask === null && commands.request === null, "recovery retires old task and receipt occupancy");
+        mock.payload.payloadEventReceived(Object.assign({}, lostTask, {seq: 8, phase: "terminal", outcome: "failed", cleanup_failed: true}));
+        check(!mock.usvSafetyLocked && commands.allowed(31018), "retired old task cannot relock ordinary recovery");
+        commands.send(31010);
+        mock.mavCommandResult(1, 191, 31010, 0, 0);
+        accepted();
+        mock.payload.status = {rawValue: 1};
+        mock.payload.linkActive = {rawValue: 0};
+        check(ops.connected && !mock.usvSafetyLocked, "payload-only loss does not create a vessel lock");
         scenario("ready");
         guided.confirming = true;
         const cancellations = nativeConfirm.cancellations;
@@ -147,8 +193,12 @@ ApplicationWindow {
         check(controller.customActionAllowed({command: 31011, targetComponent: 191}, mock), "native action menu retains safe payload stop");
         controller.executeCustomAction({command: 31011, targetComponent: 191, param1: 0}, mock);
         check(commands.pendingCommand === 31011 && mock.lastComponent === 191, "native payload action shares receipt and duplicate tracking");
+        mock.mavCommandResult(1, 191, 31011, 0, 0);
+        accepted();
         commands.reset();
         commands.send(31019, 0);
+        mock.mavCommandResult(1, 191, 31019, 0, 0);
+        accepted();
         check(controller.emergencyPhase === "accepted", "ordinary command feedback does not erase emergency receipt");
         const confirmations = guided.confirmations;
         controller.startMission(); controller.returnHome(); controller.confirmMode("Auto");
@@ -185,6 +235,13 @@ ApplicationWindow {
         controller.emergencyStop(mock);
         mock.vehicleLinkManager.communicationLost = true;
         check(!controller.emergencyPending && controller.safetyLocked && !commands.allowed(31011), "disconnect cancels waits and preserves emergency lock");
+        mock.vehicleLinkManager.communicationLost = false;
+        mock.mavCommandResult(1, 191, 31011, 0, 0);
+        commands.send(31011);
+        mock.mavCommandResult(1, 191, 31011, 0, 0);
+        accepted();
+        mock.payload.status = {rawValue: 0};
+        check(mock.usvSafetyLockSource === "emergency" && controller.safetyLocked, "ordinary stop and Idle cannot bypass an active emergency verification");
         scenario("sampling");
         check(ops.waypointText === "03 / 08" && ops.stepText === "4 / 12" && ops.sampleCountText === "2", "waypoint, step and sample count are independent");
         check(ops.observedStages.indexOf(0) < 0 && ops.observedStages.indexOf(1) < 0, "sampling cannot manufacture prior phase evidence");
