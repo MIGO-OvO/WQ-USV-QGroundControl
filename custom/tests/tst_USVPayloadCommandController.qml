@@ -112,6 +112,17 @@ Item {
             operations.payloadStatus = Status.StatusPaused;
             payload.receive("status");
         }
+        function surveyBetweenRounds() {
+            controller.send(31015);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            operations.payloadStatus = Status.StatusSurveying;
+            payload.receive("status");
+            payload.payloadEventReceived(event(2, "terminal", "succeeded"));
+            operations.payloadStatus = Status.StatusIdle;
+            payload.receive("status");
+            verify(!!controller.activeTask, "one sample does not end the survey schedule");
+            return Object.assign({}, controller.activeTask);
+        }
         function test_correlatedProgressProvesExecutionWithoutAccepted() {
             controller.send(31010);
             operations.payloadStatus = Status.StatusSampling;
@@ -514,9 +525,12 @@ Item {
             compare(controller.request.terminal, null);
         }
         function test_compatibleStopKeepsItsResultAcrossTelemetry_data() {
-            return [{tag: "ADS", command: 31019}, {tag: "outputs", command: 31011}];
+            return [{tag: "ADS", command: 31019}, {tag: "outputs", command: 31011},
+                    {tag: "survey", command: 31016}];
         }
         function test_compatibleStopKeepsItsResultAcrossTelemetry(data) {
+            if (data.command === 31016)
+                surveyBetweenRounds();
             payload.protocolVersion = {rawValue: 0};
             controller.send(data.command);
             vehicle.mavCommandResult(2, 191, data.command, 0, 0);
@@ -537,6 +551,8 @@ Item {
                 compare(controller.request.accepted, true);
                 verify(controller.feedback.indexOf(qsTr("等待关联回执")) < 0);
                 compare(controller.request.physicalStopVerified, undefined);
+                if (data.command === 31016)
+                    compare(controller.activeTask, null);
             }
             vehicle.mavCommandResult(1, 191, data.command, 4, 0);
             compare(controller.request.ack.result, 0, "late ACK cannot replace a final result");
@@ -556,36 +572,197 @@ Item {
             compare(controller.warning, true);
             compare(controller.request.ack.result, data.ack);
         }
-        function test_stopSurveyThenStopSpectrometerBothFinishWithoutALeftoverGate() {
-            controller.send(31015);
-            payload.payloadEventReceived(event(1, "request", "accepted"));
-            operations.payloadStatus = Status.StatusSurveying;
-            payload.receive("status");
-            const surveyTask = controller.activeTask;
-            verify(!!surveyTask);
-            // Survey is waiting between rounds; the operator stops it and then
-            // stops the detector straight away.
+        function test_overlappingSurveyAndDetectorStops_data() {
+            return [{tag: "survey_result_first", detectorFirst: false},
+                    {tag: "detector_result_first", detectorFirst: true}];
+        }
+        function test_overlappingSurveyAndDetectorStops(data) {
+            const surveyTask = surveyBetweenRounds();
             controller.send(31016);
             const surveyStop = Object.assign({}, controller.request);
-            vehicle.mavCommandResult(1, 191, 31016, 0, 0);
-            payload.payloadEventReceived(Object.assign({}, surveyStop, {seq: 2, phase: "request", outcome: "accepted"}));
-            compare(controller.busy, false);
-            compare(controller.allowed(31019), true);
+            // Both sends precede either transport ACK or correlated result.
             controller.send(31019);
             const detectorStop = Object.assign({}, controller.request);
-            vehicle.mavCommandResult(1, 191, 31019, 0, 0);
-            payload.payloadEventReceived(Object.assign({}, detectorStop, {seq: 2, phase: "request", outcome: "accepted"}));
+            verify(vehicle.isMavCommandPending(191, 31016));
+            verify(vehicle.isMavCommandPending(191, 31019));
+            payload.receive("status");  // Idle before the results is insufficient.
+            const order = data.detectorFirst ? [detectorStop, surveyStop] : [surveyStop, detectorStop];
+            for (const stop of order) {
+                const feedback = controller.feedback;
+                const pending = controller.pendingCommand;
+                vehicle.mavCommandResult(1, 191, stop.command, 0, 0);
+                payload.payloadEventReceived(Object.assign({}, stop, {seq: 1, phase: "request", outcome: "accepted"}));
+                if (stop.command === 31016) {
+                    compare(controller.feedback, feedback, "historical STOP must not replace the current receipt");
+                    compare(controller.pendingCommand, pending);
+                }
+                compare(controller.activeTask.request, surveyTask.request,
+                        "only a state received after the stop result may retire the task");
+            }
+            const stopRecord = controller.history.find(record => record.request === surveyStop.request);
+            compare(stopRecord.accepted, true);
+            compare(controller.request.request, detectorStop.request);
+            compare(controller.request.accepted, true);
+            compare(vehicle.pending.length, 0);
             compare(controller.busy, false);
-            // ROS then publishes the stopped state for both scopes.
-            operations.payloadStatus = Status.StatusIdle;
+            compare(controller.activeTask.stoppedByRequest, 31016);
             payload.adsState = {rawValue: 1};
-            payload.receive("status");
             payload.receive("adsState");
+            verify(!!controller.activeTask, "ADS-only state is not an output stop state");
+            for (let i = 0; i < 3; ++i) {
+                payload.receive("status");
+                payload.receive("adsState");
+                compare(controller.activeTask, null);
+                compare(controller.allowed(31010), true, "no second survey STOP may be required");
+            }
             compare(vehicle.usvSafetyLocked, false);
-            compare(controller.allowed(31010), true, "no leftover survey gate may survive");
-            const surveyRecord = controller.history.find(record => record.command === 31015);
-            verify(!!surveyRecord);
+            const surveyRecord = controller.history.find(record => record.request === surveyTask.request);
             compare(surveyRecord.retired, true);
+            compare(surveyRecord.terminal.outcome, "succeeded");
+            compare(surveyRecord.stoppedByRequest, 31016);
+            controller.send(31010);
+            compare(controller.activeTask.command, 31010);
+        }
+        function test_lateSurveyStopCannotStopANewerSample() {
+            const survey = surveyBetweenRounds();
+            controller.send(31016);
+            const oldStop = Object.assign({}, controller.request);
+            vehicle.mavCommandResult(1, 191, 31016, 0, 0);
+            // The schedule ends on a later attempt while its STOP answer is lost.
+            const attempt = "22222222222222222222222222222222";
+            payload.payloadEventReceived(Object.assign({}, survey, {
+                seq: 3, phase: "progress", outcome: "", attempt_id: attempt, state: "running"
+            }));
+            payload.payloadEventReceived(Object.assign({}, survey, {
+                seq: 4, phase: "terminal", outcome: "failed", attempt_id: attempt,
+                reason: "old_survey_ended", cleanup_failed: false
+            }));
+            payload.receive("status");
+            compare(controller.activeTask, null);
+            payload.clock = controller.request.deadline + 1;
+            controller.expire();
+            controller.send(31010);
+            const current = Object.assign({}, controller.request);
+            verify(current.request !== oldStop.request);
+            for (let seq = 1; seq <= 2; ++seq) {
+                const feedback = controller.feedback;
+                const warning = controller.warning;
+                const pending = controller.pendingCommand;
+                payload.payloadEventReceived(Object.assign({}, oldStop, {
+                    seq: seq, phase: "request", outcome: "accepted"
+                }));
+                compare(controller.request.request, current.request);
+                compare(controller.activeTask.request, current.request);
+                compare(controller.activeTask.retired, undefined);
+                compare(controller.activeTask.stoppedByRequest, undefined);
+                compare(controller.activeTask.surveyStopped, false);
+                compare(controller.feedback, feedback);
+                compare(controller.warning, warning);
+                compare(controller.pendingCommand, pending);
+                if (seq === 1) {
+                    compare(controller.busy, true);
+                    payload.payloadEventReceived(event(1, "request", "accepted"));
+                    operations.payloadStatus = Status.StatusSampling;
+                    payload.receive("status");
+                }
+            }
+            compare(controller.history.find(record => record.request === oldStop.request).accepted, true);
+        }
+        function test_detectorStopAloneCannotCloseSurvey_data() {
+            return [{tag: "survey_stop_unanswered", rejected: false},
+                    {tag: "survey_stop_rejected", rejected: true}];
+        }
+        function test_detectorStopAloneCannotCloseSurvey(data) {
+            const survey = surveyBetweenRounds();
+            controller.send(31016);
+            const surveyStop = Object.assign({}, controller.request);
+            controller.send(31019);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            if (data.rejected) {
+                vehicle.mavCommandResult(1, 191, 31016, 4, 0);
+                payload.payloadEventReceived(Object.assign({}, surveyStop, {
+                    seq: 1, phase: "request", outcome: "rejected", reason: "survey_stop_failed"
+                }));
+            }
+            payload.adsState = {rawValue: 1};
+            for (let i = 0; i < 3; ++i) {
+                payload.receive("adsState");
+                payload.receive("status");
+            }
+            compare(controller.activeTask.request, survey.request);
+            compare(controller.activeTask.surveyStopped, false);
+            compare(controller.activeTask.stoppedByRequest, undefined);
+            compare(controller.activeTask.physicalStopVerified, undefined);
+            compare(controller.allowed(31010), false);
+        }
+        function test_retiredFailureDoesNotOverrideACompleteNewSamplingCycle() {
+            const old = startSample();
+            payload.payloadEventReceived(event(2, "terminal", "failed", {
+                reason: "old_spectrometer_stale", preflight_phase: "injecting", cleanup_failed: false
+            }));
+            operations.payloadStatus = Status.StatusIdle;
+            payload.receive("status");
+            compare(controller.activeTask, null);
+            controller.send(31011);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            payload.receive("status");
+            operations.validSignal = false;
+            operations.baselineSet = false;
+            controller.send(31018);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            payload.receive("voltage");
+            operations.validSignal = true;
+            payload.receive("spectrometerValid");
+            controller.send(31017);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            operations.baselineSet = true;
+            payload.receive("baselineSet");
+            controller.send(31010);
+            const current = Object.assign({}, controller.request);
+            verify(current.request !== old.request);
+            const sending = controller.commandFeedback;
+            payload.payloadEventReceived(Object.assign({}, old, {
+                seq: 3, phase: "terminal", outcome: "failed", reason: "late_old_failure", cleanup_failed: true
+            }));
+            compare(controller.feedback, sending);
+            compare(controller.busy, true);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            operations.payloadStatus = Status.StatusSampling;
+            payload.receive("status");
+            payload.payloadEventReceived(event(2, "progress", "", {state: "new_sampling"}));
+            compare(controller.activeTask.request, current.request);
+            compare(controller.activeTask.terminal, null);
+            compare(controller.feedback, controller.commandFeedback);
+            compare(controller.taskFailed, false);
+            compare(controller.warning, false);
+            compare(vehicle.usvSafetyLocked, false);
+            const record = controller.history.find(item => item.request === old.request);
+            compare(record.retired, true);
+            compare(record.physicalStopVerified, undefined);
+            compare(record.terminal.reason, "old_spectrometer_stale");
+            compare(record.terminal.preflight_phase, "injecting");
+            compare(record.terminal.outcome, "failed");
+            // A failure belonging to the new task still owns the live bindings.
+            payload.payloadEventReceived(event(3, "terminal", "failed", {reason: "new_runtime_failure"}));
+            verify(controller.feedback.indexOf("new_runtime_failure") >= 0);
+            compare(controller.taskFailed, true);
+            compare(controller.warning, true);
+        }
+        function test_retiredCleanupFailureStillRequiresVerifiedStop() {
+            startSample();
+            payload.payloadEventReceived(event(2, "terminal", "failed", {
+                reason: "outputs_unconfirmed", cleanup_failed: true
+            }));
+            operations.payloadStatus = Status.StatusIdle;
+            payload.receive("status");
+            compare(controller.activeTask, null);
+            compare(controller.history[0].retired, true);
+            compare(controller.taskFailed, true);
+            compare(controller.warning, true);
+            verify(controller.feedback.indexOf("outputs_unconfirmed") >= 0);
+            compare(vehicle.usvSafetyLockSource, "outputs");
+            compare(controller.allowed(31010), false);
+            compare(controller.allowed(31018), false);
         }
         function test_ordinaryFailureRecoversFromCurrentStateAlone() {
             controller.send(31010);
@@ -602,7 +779,10 @@ Item {
             payload.receive("status");
             compare(controller.activeTask, null);
             compare(controller.allowed(31018), true, "the detector may be started again");
-            verify(controller.feedback.indexOf("spectrometer_stale") >= 0);
+            const record = controller.history.find(item => item.command === 31010);
+            compare(record.retired, true);
+            compare(record.terminal.reason, "spectrometer_stale", "the failure remains in history");
+            compare(controller.taskFailed, false);
         }
         function test_disabledControlsNameTheMissingCondition() {
             compare(controller.blockedReason(31010), "");

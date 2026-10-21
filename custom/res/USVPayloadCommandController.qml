@@ -78,14 +78,14 @@ Item {
     function activeFailure() {
         const task = activeTask && activeTask.vehicle === operations.vehicle ? activeTask : null;
         if (task && !task.physicalStopVerified && task.terminal
-                && (task.terminal.cleanup_failed || task.terminal.outcome === "failed"))
+                && (task.terminal.cleanup_failed || !task.retired && task.terminal.outcome === "failed"))
             return task;
         if (!operations.vehicle)
             return null;
         for (let index = history.length - 1; index >= 0; --index) {
             const record = history[index];
             if (record.vehicle === operations.vehicle && !record.physicalStopVerified && record.terminal
-                    && (record.terminal.cleanup_failed || record.terminal.outcome === "failed"))
+                    && (record.terminal.cleanup_failed || !record.retired && record.terminal.outcome === "failed"))
                 return record;
         }
         return null;
@@ -94,6 +94,18 @@ Item {
         request = candidate;
         if (sameRequest(activeTask, candidate))
             activeTask = candidate;
+    }
+    function applyTaskStop(stop) {
+        const task = activeTask;
+        if (!stop || !stop.accepted || stop.retired || stop.terminal
+                || !sameRequest(task, stop.stopTarget) || task.retired || task.physicalStopVerified
+                || (stop.command !== 31011 && (stop.command !== 31016 || task.command !== 31015)))
+            return;
+        // The captured task identity survives moving this STOP into history.
+        // Only status newer than its result may finish that task.
+        activeTask = Object.assign({}, task, { stoppedByRequest: stop.command,
+            surveyStopped: task.surveyStopped || stop.command === 31016,
+            evidenceStatus: Math.max(task.evidenceStatus || 0, stop.evidenceStatus || 0) });
     }
     function terminalFeedback(event) {
         return qsTr("任务未成功：%1；准备阶段：%2").arg(event.reason).arg(event.preflight_phase || "—");
@@ -360,6 +372,7 @@ Item {
                                // Receive sequence of the newest fact we hold about
                                // this task; an idle reading older than it proves nothing.
                                evidenceStatus: baseline.status, surveyStopped: false,
+                               stopTarget: stopCommand(command) ? activeTask : null,
                                vehicle: operations.vehicle, attemptId: "", latestEvent: null,
                                stages: [], deadline: now() + commandTimeoutFor(command) });
         request.communicationRecovery = command === 31011 && !!identity.session
@@ -397,6 +410,7 @@ Item {
     }
     function observeTelemetry() {
         recoverCommunication();
+        applyTaskStop(request);
         reconcileState();
         if (!request || request.retired || request.terminal || !telemetryMatches(request.command))
             return;
@@ -417,9 +431,6 @@ Item {
         if (executionProven) {
             pendingCommand = 0;
             timeout.stop();
-            if (request.command === 31016 && activeTask && activeTask.command === 31015
-                    && activeTask.vehicle === operations.vehicle)
-                activeTask = Object.assign({}, activeTask, { surveyStopped: true });
         }
     }
     function observeEvent(event) {
@@ -477,6 +488,8 @@ Item {
         if (task || retainedTask)
             activeTask = updated;
         history = history.map(record => sameRequest(record, updated) ? updated : record);
+        if (event.phase === "request" && event.outcome === "accepted")
+            applyTaskStop(updated);
         if (event.phase === "terminal") {
             if (current) {
                 pendingCommand = 0;
@@ -494,14 +507,6 @@ Item {
         } else if (current && event.phase === "request") {
             if (event.outcome === "accepted") {
                 settleReceipt();
-                // A confirmed sampling/survey stop is closing evidence for the
-                // physical task that was running: a later idle reading may end
-                // it without waiting for a terminal that may never come. A
-                // detector-only stop (31019) says nothing about the pumps.
-                if ((request.command === 31011 || request.command === 31016 && activeTask && activeTask.command === 31015)
-                        && activeTask && activeTask.vehicle === operations.vehicle)
-                    activeTask = Object.assign({}, activeTask, { stoppedByRequest: request.command,
-                        evidenceStatus: operations.payload.fieldSequence("status") });
                 observeTelemetry();
             } else {
                 commandWarning = true;
@@ -556,7 +561,8 @@ Item {
         }
         const accepted = ackResult === 0 && failureCode === 0;
         if (accepted)
-            saveRequest(Object.assign({}, request, { accepted: true }));
+            saveRequest(Object.assign({}, request, { accepted: true,
+                evidenceStatus: operations.payload ? operations.payload.fieldSequence("status") : 0 }));
         commandWarning = !accepted;
         pendingCommand = 0;
         timeout.stop();
