@@ -2608,6 +2608,13 @@ void Vehicle::payloadCommandReceipt(const QVariantMap &event)
             || entry.rgParam3 != event.value("request").toInt() || entry.rgParam4 != event.value("session").toInt()) {
         return;
     }
+    if (event.value("phase").toString() == "progress"
+            && (entry.command == 31011 || entry.command == 31016 || entry.command == 31019)) {
+        if (!entry.ackHandlerInfo.resultHandler) {
+            emit mavCommandResult(_id, 191, entry.command, MAV_RESULT_IN_PROGRESS, MavCmdResultCommandResultOnly);
+        }
+        return;
+    }
     // A validated, correlated receipt ends transport waiting only. Progress and
     // terminal events continue through the FactGroup for the physical task.
     _mavCommandList.removeAt(index);
@@ -2618,6 +2625,8 @@ void Vehicle::payloadCommandReceipt(const QVariantMap &event)
     ack.result = (outcome.isEmpty() || outcome == "accepted" || outcome == "succeeded") ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
     if (entry.ackHandlerInfo.resultHandler) {
         (*entry.ackHandlerInfo.resultHandler)(entry.ackHandlerInfo.resultHandlerData, 191, ack, MavCmdResultCommandResultOnly);
+    } else {
+        emit mavCommandResult(_id, 191, entry.command, ack.result, MavCmdResultCommandResultOnly);
     }
 }
 

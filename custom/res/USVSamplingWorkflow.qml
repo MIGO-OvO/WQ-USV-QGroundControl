@@ -376,7 +376,7 @@ Rectangle {
                 QGCLabel {
                     Layout.fillWidth: true
                     color: root.theme.secondary
-                    text: qsTr("泵组角度  X %1°   Y %2°   Z %3°   A %4°").arg(root.operations.payloadMetric("pumpX", 1, "")).arg(root.operations.payloadMetric("pumpY", 1, "")).arg(root.operations.payloadMetric("pumpZ", 1, "")).arg(root.operations.payloadMetric("pumpA", 1, ""))
+                    text: qsTr("泵组角度  X %1   Y %2   Z %3   A %4").arg(root.operations.payloadMetric("pumpX", 1, "°")).arg(root.operations.payloadMetric("pumpY", 1, "°")).arg(root.operations.payloadMetric("pumpZ", 1, "°")).arg(root.operations.payloadMetric("pumpA", 1, "°"))
                     wrapMode: Text.WordWrap
                 }
                 Flow {

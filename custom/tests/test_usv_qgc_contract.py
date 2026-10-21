@@ -148,6 +148,50 @@ class USVQGCContractTests(unittest.TestCase):
             assert.equal(_loopProgressText(), '--');
             ''')
 
+    def test_uncalibrated_angles_execute_every_display_formatter(self):
+        for filename, function, calibrated in (
+                ('USVSamplingDataView.qml', '_formatPump', '12.3'),
+                ('USVPayloadPanel.qml', '_pumpString', '12.3°')):
+            with self.subTest(filename=filename):
+                self._run_qml_functions(filename, [function], '''
+                    const assert = require('node:assert/strict');
+                    var _linkOk = true;
+                    function qsTr(text) { return text; }
+                    const format = ''' + function + ''';
+                    assert.equal(format({value: -1}), '未校准');
+                    assert.equal(format(null), '--');
+                    assert.equal(format({value: 12.3}), ''' + json.dumps(calibrated) + ''');
+                    ''')
+        self._run_qml_functions('USVOperationsState.qml', ['payloadMetric'], '''
+            const assert = require('node:assert/strict');
+            var payload = {};
+            function qsTr(text) { return text; }
+            function fresh(name) { return true; }
+            function factNumber(fact, fallback) { return fact ? fact.value : fallback; }
+            function metric(fact, digits, suffix) { return fact.value.toFixed(digits) + suffix; }
+            for (const name of ['pumpX', 'pumpY', 'pumpZ', 'pumpA']) {
+                payload[name] = {value: -1};
+                assert.equal(payloadMetric(name, 1, '°'), '未校准');
+                payload[name].value = 12.3;
+                assert.equal(payloadMetric(name, 1, '°'), '12.3°');
+            }
+            ''')
+        detail = (REPO_ROOT / 'custom/res/USVPayloadDetailPanel.qml').read_text(encoding='utf-8')
+        expression = re.search(r'^\s*text: (.*Number\(modelData.fact.value\).*)$', detail, re.M).group(1)
+        self._run_qml_functions('USVPayloadDetailPanel.qml', [], '''
+            const assert = require('node:assert/strict');
+            var modelData = {fact: {value: -1}};
+            function qsTr(text) { return text; }
+            assert.equal(eval(''' + json.dumps(expression) + '''), '未校准');
+            modelData.fact.value = 12.3;
+            assert.equal(eval(''' + json.dumps(expression) + '''), '12.3°');
+            ''')
+
+    def test_android_forwards_explicit_speech_setting_to_each_abi(self):
+        source = (REPO_ROOT / 'cmake/platform/Android.cmake').read_text(encoding='utf-8')
+        forwarded = re.search(r'list\(APPEND QT_ANDROID_MULTI_ABI_FORWARD_VARS ([^)]+)\)', source).group(1).split()
+        self.assertIn('DISABLE_SPEECH', forwarded)
+
     def test_spectro_timeout_is_per_command_and_late_ack_does_not_clear_another(self):
         source = (REPO_ROOT / 'custom/res/USVPayloadPanel.qml').read_text(encoding='utf-8')
         self.assertIn('interval: _commandTimeoutFor(_pendingCommand)', source)

@@ -19,6 +19,7 @@ Item {
     function startSurvey() { commands.send(31015); }
     function stopSample() { commands.send(31011); }
     function stopDetector() { commands.send(31019); }
+    function emergencyStop() { safety.emergencyStop(state.vehicle); }
     function expireReceipt() {
         commands.request = Object.assign({}, commands.request, { deadline: 0 });
         commands.expire();
