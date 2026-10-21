@@ -106,7 +106,6 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         Qt6::Network
         Qt6::Sensors
         Qt6::Svg
-        Qt6::TextToSpeech
         Qt6::Widgets
         Qt6::Xml
         Qt6::StateMachine
@@ -250,4 +249,8 @@ if(QGC_CUSTOM_BUILD)
     endif()
 
     message(STATUS "QGC: Custom build configuration applied")
+endif()
+
+if(NOT DISABLE_SPEECH)
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Qt6::TextToSpeech)
 endif()

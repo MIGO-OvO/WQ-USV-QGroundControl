@@ -150,6 +150,13 @@ endif()
 # Qt6 Configuration
 # ============================================================================
 
+option(DISABLE_SPEECH "Build without Qt TextToSpeech" OFF)
+if(DISABLE_SPEECH)
+    add_compile_definitions(DISABLE_SPEECH)
+else()
+    find_package(Qt6 ${QGC_QT_MINIMUM_VERSION}...${QGC_QT_MAXIMUM_VERSION} REQUIRED COMPONENTS TextToSpeech)
+endif()
+
 set(QT_NO_PRIVATE_MODULE_WARNING ON)
 
 find_package(Qt6
@@ -175,7 +182,6 @@ find_package(Qt6
         Sensors
         Sql
         Svg
-        TextToSpeech
         Widgets
         Xml
         StateMachine

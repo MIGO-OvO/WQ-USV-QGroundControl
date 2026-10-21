@@ -60,6 +60,7 @@ Item {
     property int id: 1
     property int lastCommand: 0
     property var pendingCommands: []
+    readonly property var pendingMavCommands: pendingCommands.map(entry => entry.component + ":" + entry.command)
     function isMavCommandPending(component, command) {
         return pendingCommands.some(entry => entry.component === component && entry.command === command);
     }

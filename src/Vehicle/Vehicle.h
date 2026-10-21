@@ -90,6 +90,7 @@ Q_DECLARE_LOGGING_CATEGORY(VehicleLog)
 class Vehicle : public VehicleFactGroup
 {
     Q_OBJECT
+    Q_PROPERTY(QStringList pendingMavCommands READ pendingMavCommands NOTIFY mavCommandPendingChanged)
     QML_ELEMENT
     QML_UNCREATABLE("")
     Q_MOC_INCLUDE("AutoPilotPlugin.h")
@@ -623,6 +624,9 @@ public:
     Autotune*                       autotune            () const { return _autotune; }
     RemoteIDManager*                remoteIDManager     () { return _remoteIDManager; }
 
+    QStringList pendingMavCommands() const;
+    Q_SLOT void payloadCommandReceipt(const QVariantMap &event);
+
     static void showCommandAckError(const mavlink_command_ack_t& ack);
 
     /// Sends the specified MAV_CMD to the vehicle. If no Ack is received command will be retried. If a sendMavCommand is already in progress
@@ -894,6 +898,7 @@ signals:
     ///     @param command          Command which was sent
     ///     @param ackResult        MAV_RESULT returned in ack
     ///     @param failureCode      More detailed failure code Vehicle::MavCmdResultFailureCode_t
+    void mavCommandPendingChanged();
     void mavCommandResult               (int vehicleId, int targetComponent, int command, int ackResult, int failureCode);
 
     // MAVlink Serial Data

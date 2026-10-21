@@ -146,6 +146,8 @@ Rectangle {
     }
 
     function _pumpString(fact) {
+        if (_linkOk && fact && Number(fact.value) < 0)
+            return qsTr("未校准");
         return (_linkOk && fact && fact.value !== undefined) ? Number(fact.value).toFixed(1) + "\u00B0" : "--"
     }
 

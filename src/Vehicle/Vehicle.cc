@@ -350,6 +350,9 @@ void Vehicle::_commonInit(LinkInterface* link)
     if (fwFactGroups) {
         for (auto it = fwFactGroups->keyValueBegin(); it != fwFactGroups->keyValueEnd(); ++it) {
             _addFactGroup(it->second, it->first);
+            if (it->first == QStringLiteral("usvPayload")) {
+                connect(it->second, SIGNAL(payloadEventReceived(QVariantMap)), this, SLOT(payloadCommandReceipt(QVariantMap)));
+            }
         }
     }
 
@@ -2581,6 +2584,43 @@ void Vehicle::sendMavCommandWithLambdaFallback(std::function<void()> lambda, int
     }
 }
 
+QStringList Vehicle::pendingMavCommands() const
+{
+    QStringList commands;
+    for (const auto &entry : _mavCommandList) {
+        commands.append(QString::number(entry.targetCompId) + ':' + QString::number(entry.command));
+    }
+    return commands;
+}
+
+void Vehicle::payloadCommandReceipt(const QVariantMap &event)
+{
+    if (event.value("sender_system").toInt() != MAVLinkProtocol::instance()->getSystemId()
+            || event.value("sender_component").toInt() != MAVLinkProtocol::getComponentId()) {
+        return;
+    }
+    const int index = _findMavCommandListEntryIndex(191, static_cast<MAV_CMD>(event.value("command").toInt()));
+    if (index < 0) {
+        return;
+    }
+    const auto entry = _mavCommandList[index];
+    if (entry.rgParam3 <= 0 || entry.rgParam4 <= 0
+            || entry.rgParam3 != event.value("request").toInt() || entry.rgParam4 != event.value("session").toInt()) {
+        return;
+    }
+    // A validated, correlated receipt ends transport waiting only. Progress and
+    // terminal events continue through the FactGroup for the physical task.
+    _mavCommandList.removeAt(index);
+    emit mavCommandPendingChanged();
+    const QString outcome = event.value("outcome").toString();
+    mavlink_command_ack_t ack{};
+    ack.command = entry.command;
+    ack.result = (outcome.isEmpty() || outcome == "accepted" || outcome == "succeeded") ? MAV_RESULT_ACCEPTED : MAV_RESULT_FAILED;
+    if (entry.ackHandlerInfo.resultHandler) {
+        (*entry.ackHandlerInfo.resultHandler)(entry.ackHandlerInfo.resultHandlerData, 191, ack, MavCmdResultCommandResultOnly);
+    }
+}
+
 bool Vehicle::isMavCommandPending(int targetCompId, int command)
 {
     bool pending = ((-1) < _findMavCommandListEntryIndex(targetCompId, static_cast<MAV_CMD>(command)));
@@ -2780,22 +2820,13 @@ void Vehicle::_sendMavCommandWorker(
     entry.rgParam7          = param7;
     entry.maxTries          = _sendMavCommandShouldRetry(command) ? _mavCommandMaxRetryCount : 1;
     entry.ackTimeoutMSecs   = sharedLink->linkConfiguration()->isHighLatency() ? _mavCommandAckTimeoutMSecsHighLatency : _mavCommandAckTimeoutMSecs;
-    // Payload startup includes bounded configuration retries and the first frame.
-    // Stop verifies firmware ACKs after cleanup; keep UI and transport aligned.
-    if (targetCompId == 191 && command == 31018) {
-        entry.maxTries = 1;
-        entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 40000);
-        entry.usvTotalTimeoutMSecs = 40000;
-    } else if (targetCompId == 191 && (command == 31011 || command == 31016 || command == 31019)) {
-        entry.ackTimeoutMSecs = 5000;
-        entry.usvTotalTimeoutMSecs = 15000;
-        // Repeating a stop is safe. Never automatically repeat acquisition,
-        // calibration or baseline changes without receiver-side deduplication.
-        entry.maxTries = _mavCommandMaxRetryCount;
-    } else if (targetCompId == 191 && command >= 31010 && command <= 31019) {
-        entry.maxTries = 1;
-        entry.ackTimeoutMSecs = qMax(entry.ackTimeoutMSecs, 5000);
-        entry.usvTotalTimeoutMSecs = 5000;
+    if (_isUsvPayloadCommand(targetCompId, command)) {
+        const bool stopping = command == 31011 || command == 31016 || command == 31019;
+        entry.usvTotalTimeoutMSecs = command == 31018 ? 40000
+                : stopping ? 15000 : 5000;
+        const bool correlated = param3 > 0 && param4 > 0;
+        entry.maxTries = (correlated || stopping) ? _mavCommandMaxRetryCount : 1;
+        entry.ackTimeoutMSecs = correlated ? 1000 : stopping ? 5000 : entry.usvTotalTimeoutMSecs;
     }
     entry.elapsedTimer.start();
     entry.usvTotalTimer.start();
@@ -2803,6 +2834,7 @@ void Vehicle::_sendMavCommandWorker(
     qCDebug(VehicleLog) << Q_FUNC_INFO << "command:param1-7" << command << param1 << param2 << param3 << param4 << param5 << param6 << param7;
 
     _mavCommandList.append(entry);
+    emit mavCommandPendingChanged();
     _sendMavCommandFromList(_mavCommandList.count() - 1);
 }
 
@@ -2812,6 +2844,7 @@ void Vehicle::_sendMavCommandFromList(int index)
 
     if (!_usvSafetyCommandAllowed(commandEntry.targetCompId, commandEntry.command, commandEntry.rgParam1)) {
         _mavCommandList.removeAt(index);
+        emit mavCommandPendingChanged();
         _rejectUsvSafetyCommand(commandEntry.targetCompId, commandEntry.command, &commandEntry.ackHandlerInfo, commandEntry.showError);
         return;
     }
@@ -2822,6 +2855,7 @@ void Vehicle::_sendMavCommandFromList(int index)
     if (++_mavCommandList[index].tryCount > commandEntry.maxTries) {
         qCDebug(VehicleLog) << Q_FUNC_INFO << "giving up after max retries" << rawCommandName;
         _mavCommandList.removeAt(index);
+        emit mavCommandPendingChanged();
         if (commandEntry.ackHandlerInfo.resultHandler) {
             mavlink_command_ack_t ack = {};
             ack.result = MAV_RESULT_FAILED;
@@ -2912,7 +2946,10 @@ void Vehicle::_sendMavCommandResponseTimeoutCheck(void)
             _sendMavCommandFromList(i);
             continue;
         }
-        if (commandEntry.elapsedTimer.elapsed() > commandEntry.ackTimeoutMSecs) {
+        if (commandEntry.usvTotalTimeoutMSecs > 0 && commandEntry.tryCount >= commandEntry.maxTries) {
+            continue; // Last copy still gets the remaining execution/receipt budget.
+        }
+        if (commandEntry.elapsedTimer.elapsed() >= commandEntry.ackTimeoutMSecs) {
             // Try sending command again
             _sendMavCommandFromList(i);
         }
@@ -2985,11 +3022,18 @@ void Vehicle::_handleCommandAck(mavlink_message_t& message)
 
     int entryIndex = _findMavCommandListEntryIndex(message.compid, static_cast<MAV_CMD>(ack.command));
     if (entryIndex != -1) {
+        const auto &pending = _mavCommandList[entryIndex];
+        if (_isUsvPayloadCommand(message.compid, pending.command) && pending.rgParam3 > 0 && pending.rgParam4 > 0) {
+            // COMMAND_ACK carries no request identity. It may belong to an old
+            // request with the same command, so cannot retire or renew this one.
+            return;
+        }
         if (ack.result == MAV_RESULT_IN_PROGRESS) {
             MavCommandListEntry_t commandEntry;
             if (px4Firmware() && ack.command == MAV_CMD_DO_AUTOTUNE_ENABLE) {
                 // HacK to support PX4 autotune which does not send final result ack and just sends in progress
                 commandEntry = _mavCommandList.takeAt(entryIndex);
+                emit mavCommandPendingChanged();
             } else {
                 // Command has not completed yet, don't remove
                 MavCommandListEntry_t& commandEntryRef = _mavCommandList[entryIndex];
@@ -3003,6 +3047,7 @@ void Vehicle::_handleCommandAck(mavlink_message_t& message)
             }
         } else {
             MavCommandListEntry_t commandEntry = _mavCommandList.takeAt(entryIndex);
+            emit mavCommandPendingChanged();
 
             if (commandEntry.ackHandlerInfo.resultHandler) {
                 (*commandEntry.ackHandlerInfo.resultHandler)(commandEntry.ackHandlerInfo.resultHandlerData, message.compid, ack, MavCmdResultCommandResultOnly);
@@ -3048,6 +3093,7 @@ void Vehicle::_waitForMavlinkMessageMessageReceivedHandler(const mavlink_message
             int entryIndex = _findMavCommandListEntryIndex(message.compid, MAV_CMD_REQUEST_MESSAGE);
             if (entryIndex != -1) {
                 _mavCommandList.takeAt(entryIndex);
+                emit mavCommandPendingChanged();
             } else {
                 qWarning() << Q_FUNC_INFO << "Removing request message command from list failed - not found in list";
             }

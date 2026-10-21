@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import USV
 
 Item {
@@ -8,12 +9,20 @@ Item {
     property alias taskPanel: taskPanel
     property alias operations: state
     property alias cockpit: safety
+    property alias detectorButton: detectorButton
+    property alias stopButton: stopButton
+    Button { id: detectorButton; enabled: commands.allowed(31018); onClicked: commands.send(31018) }
+    Button { id: stopButton; enabled: commands.allowed(31011); onClicked: commands.send(31011) }
 
     function startSample() { commands.send(31010); }
     function pauseSample() { commands.send(31012); }
     function startSurvey() { commands.send(31015); }
     function stopSample() { commands.send(31011); }
     function stopDetector() { commands.send(31019); }
+    function expireReceipt() {
+        commands.request = Object.assign({}, commands.request, { deadline: 0 });
+        commands.expire();
+    }
     function confirmStopped() {
         commands.confirmPhysicalStop(state.vehicle);
         state.vehicle.usvSafetyLocked = false;

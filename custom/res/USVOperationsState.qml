@@ -101,6 +101,8 @@ QtObject {
         return USVLayout.workflowDock(viewportWidth, viewportHeight, fontWidth, insets);
     }
     function payloadMetric(name, digits, suffix, available) {
+        if (name.indexOf("pump") === 0 && payload && fresh(name) && factNumber(payload[name], -1) < 0)
+            return qsTr("未校准");
         return metric(payload ? payload[name] : null, digits, suffix, fresh(name) && available !== false);
     }
 }

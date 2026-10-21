@@ -12,7 +12,9 @@
 #include <QtCore/QLoggingCategory>
 #include <QtCore/QObject>
 
+#ifndef DISABLE_SPEECH
 class QTextToSpeech;
+#endif
 class Fact;
 class AudioOutputTest;
 
@@ -62,7 +64,9 @@ public:
     void say(const QString &text, TextMods textMods = TextMod::None);
 
 private:
+#ifndef DISABLE_SPEECH
     QTextToSpeech *_engine = nullptr;
+#endif
     QAtomicInteger<qsizetype> _textQueueSize = 0;
     bool _initialized = false;
     std::atomic_bool _muted = false;

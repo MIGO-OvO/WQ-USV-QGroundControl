@@ -21,6 +21,7 @@ class SendMavCommandWithSignallingTest : public UnitTest
     void _duplicateCommand(void);
     void _retryRestartsAckDeadline(void);
     void _payloadRetryPolicy(void);
+    void _payloadReceiptOrderingAndButtons();
     void _payloadStopRetirementAndTotalDeadline(void);
     void _payloadFactsFreshnessAndEvents(void);
     void _payloadRequestIdentity(void);

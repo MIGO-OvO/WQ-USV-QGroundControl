@@ -24,13 +24,17 @@ Item {
     property var activeTask: null
     readonly property bool taskFailed: !!activeFailure()
     property var history: []
-    property int transportTick: 0
     readonly property bool protocolReady: operations.fresh("protocolVersion") && operations.factNumber(operations.payload ? operations.payload.protocolVersion : null, 0) === 1
     readonly property bool stopsPending: {
-        transportTick;
-        return !!operations.vehicle && [31011, 31016, 31019].some(command => operations.vehicle.isMavCommandPending(_payloadCompId, command));
+        return !!operations.vehicle && [31011, 31016, 31019].some(command => transportPending(command));
     }
 
+    function transportPending(command) {
+        return !!operations.vehicle && operations.vehicle.pendingMavCommands.indexOf(_payloadCompId + ":" + command) >= 0;
+    }
+    function executingFeedback(command) {
+        return command === 31014 ? qsTr("正在校准") : physicalCommand(command) ? qsTr("正在采样") : qsTr("等待设备状态");
+    }
     function now() {
         return operations.payload ? operations.payload.monotonicMs() : 0;
     }
@@ -138,7 +142,7 @@ Item {
     function recoverCommunication() {
         const target = operations.vehicle;
         if (!target || !operations.connected || target.usvSafetyLockSource !== "communication"
-                || target.isMavCommandPending(_payloadCompId, 31011))
+                || transportPending(31011))
             return;
         const statusSeq = idleReading();
         const confirmed = [request].concat(history).some(record => record && record.vehicle === target
@@ -219,7 +223,7 @@ Item {
         if (!operations.hasPayload)
             return qsTr("载荷未接入");
         if (stopCommand(command))
-            return operations.vehicle.isMavCommandPending(_payloadCompId, command)
+            return transportPending(command)
                     ? qsTr("同类停止仍在处理中") : qsTr("当前不可用");
         if (safetyLocked || operations.vehicle.usvSafetyLocked)
             return operations.vehicle.usvSafetyLockSource === "communication"
@@ -258,7 +262,7 @@ Item {
         // old protocol version is still being resolved. Hiding them would hide
         // the only exit the operator has.
         if (stopCommand(command))
-            return !operations.vehicle.isMavCommandPending(_payloadCompId, command);
+            return !transportPending(command);
         if (safetyLocked || operations.vehicle.usvSafetyLocked || !protocolReady || stopsPending)
             return false;
         const observedStart = command === 31017 && request && request.command === 31018 && request.observed && !request.terminal;
@@ -268,7 +272,7 @@ Item {
         // the detector or re-baselining is how the operator clears it.
         if (operations.payloadFault && movesOutputs(command))
             return false;
-        if (operations.vehicle.isMavCommandPending(_payloadCompId, command))
+        if (transportPending(command))
             return false;
         if (physicalCommand(command) && unresolvedMotion())
             return false;
@@ -324,8 +328,8 @@ Item {
         if (command === 31018)
             return qsTr("启动已确认，等待有效数据");
         if (stopCommand(command))
-            return commandName(command) + qsTr("已接受");
-        return commandName(command) + qsTr("已接受，等待设备状态更新");
+            return qsTr("已完成");
+        return executingFeedback(command);
     }
     function settleReceipt() {
         // The command answered. The device state is a separate, asynchronous
@@ -342,7 +346,7 @@ Item {
             settleReceipt();
             return;
         }
-        if (now() < request.deadline)
+        if (now() < request.deadline || transportPending(request.command))
             return;
         // End only this send wait. Nothing here proves the vessel is idle, so
         // nothing is locked and no new request is invented. A periodic Idle
@@ -350,7 +354,7 @@ Item {
         commandWarning = true;
         saveRequest(Object.assign({}, request, {
                                       unacknowledged: true }));
-        commandFeedback = commandName(request.command) + qsTr("未收到回执；继续按设备状态判断");
+        commandFeedback = qsTr("响应超时");
         pendingCommand = 0;
         timeout.stop();
     }
@@ -382,7 +386,7 @@ Item {
         pendingCommand = command;
         pendingSince = now();
         commandWarning = false;
-        commandFeedback = commandName(command) + qsTr("发送中，等待载荷响应");
+        commandFeedback = qsTr("等待响应");
         timeout.restart();
         operations.vehicle.sendCommand(_payloadCompId, command, true, param1 || 0, 0, identity.request || 0, identity.session || 0);
     }
@@ -426,8 +430,8 @@ Item {
                                                  evidenceStatus: Math.max(request.evidenceStatus || 0, statusSeq) }));
         const executionProven = request.accepted || request.executing;
         commandWarning = !executionProven;
-        commandFeedback = executionProven ? commandName(request.command) + qsTr("已确认进入执行并观察到新状态；不代表任务完成")
-                                    : commandName(request.command) + qsTr("已观察到新状态，等待关联回执");
+        commandFeedback = executionProven ? executingFeedback(request.command)
+                                    : qsTr("等待响应");
         if (executionProven) {
             pendingCommand = 0;
             timeout.stop();
@@ -498,7 +502,7 @@ Item {
             if (current || task) {
                 commandWarning = event.outcome !== "succeeded";
                 commandFeedback = commandWarning ? terminalFeedback(event)
-                                   : commandName(updated.command) + qsTr("已完成；软件清理结果已记录");
+                                   : qsTr("已完成");
             }
             // Only an unconfirmed output shutdown escalates to the vessel lock.
             // A failed run whose stop was confirmed is history, not a lock.
@@ -510,7 +514,7 @@ Item {
                 observeTelemetry();
             } else {
                 commandWarning = true;
-                commandFeedback = qsTr("请求未确认执行：%1").arg(event.reason);
+                commandFeedback = qsTr("操作失败：%1").arg(event.reason);
                 pendingCommand = 0;
                 timeout.stop();
                 // The request never became work, so it must not keep blocking
@@ -523,7 +527,7 @@ Item {
                     lockUnknown();
             }
         } else if (event.phase === "progress") {
-            commandFeedback = event.preflight_phase ? qsTr("设备准备：%1").arg(event.preflight_phase) : qsTr("执行阶段：%1").arg(event.state || "—");
+            commandFeedback = executingFeedback(updated.command);
             if (current) {
                 pendingCommand = 0;
                 timeout.stop();
@@ -547,7 +551,7 @@ Item {
             // Correlated requests have their own event; the standard ACK stays
             // evidence and must not complete or reject them.
             commandWarning = ackResult !== 0 && ackResult !== 5 || failureCode !== 0;
-            commandFeedback = commandName(command) + qsTr("收到标准回执，仍待关联结果");
+            commandFeedback = qsTr("等待响应");
             return;
         }
         // Compatible STOP clients get only the standard ACK. It is this
@@ -592,7 +596,7 @@ Item {
         activeTask = null;
         request = null;
         pendingCommand = 0;
-        commandFeedback = history.length ? qsTr("连接或无人船已切换；旧请求结果保留，禁止自动续跑") : "";
+        commandFeedback = history.length ? qsTr("连接或无人船已切换，请确认设备状态") : "";
         commandWarning = history.length > 0;
         timeout.stop();
     }
@@ -641,10 +645,5 @@ Item {
         repeat: true
         onTriggered: root.expire()
     }
-    Timer {
-        interval: 250
-        running: root.operations.connected
-        repeat: true
-        onTriggered: root.transportTick++
-    }
+
 }

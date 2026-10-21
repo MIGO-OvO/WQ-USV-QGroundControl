@@ -57,9 +57,14 @@ endif()
 # Qt Creator runs from the build tree, without executing the install rules.
 # Deploy plugins and QML alongside the DLLs so that run does not need SDK paths.
 if(TARGET Qt6::windeployqt)
+    set(_qgc_speech_deploy_args)
+    if(DISABLE_SPEECH)
+        list(APPEND _qgc_speech_deploy_args --no-texttospeech --skip-plugin-types texttospeech)
+    endif()
     add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
         COMMAND $<TARGET_FILE:Qt6::windeployqt>
             $<IF:$<CONFIG:Debug>,--debug,--release>
+            ${_qgc_speech_deploy_args}
             --no-compiler-runtime
             --qmldir "${CMAKE_SOURCE_DIR}/src"
             --qmlimport "${QT_QML_OUTPUT_DIRECTORY}"
@@ -71,6 +76,7 @@ if(TARGET Qt6::windeployqt)
         add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
             COMMAND $<TARGET_FILE:Qt6::windeployqt>
                 $<IF:$<CONFIG:Debug>,--debug,--release>
+                ${_qgc_speech_deploy_args}
                 --no-compiler-runtime
                 --qmldir "${CMAKE_SOURCE_DIR}/custom/res"
                 --qmlimport "${QT_QML_OUTPUT_DIRECTORY}"
