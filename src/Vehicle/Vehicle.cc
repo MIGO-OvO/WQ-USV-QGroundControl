@@ -2937,6 +2937,14 @@ void Vehicle::_sendMavCommandFromList(int index)
     }
 
     // Each actual transmission gets a full ACK window, including the last retry.
+    if (_isUsvPayloadCommand(commandEntry.targetCompId, commandEntry.command)) {
+        qCDebug(VehicleLog) << "USV command tx" << "command" << commandEntry.command
+                           << "request" << commandEntry.rgParam3 << "session" << commandEntry.rgParam4
+                           << "source" << int(MAVLinkProtocol::instance()->getSystemId()) << int(MAVLinkProtocol::getComponentId())
+                           << "target" << _id << commandEntry.targetCompId
+                           << "attempt" << _mavCommandList[index].tryCount << "mavSeq" << int(msg.seq)
+                           << "channel" << int(sharedLink->mavlinkChannel());
+    }
     _mavCommandList[index].elapsedTimer.restart();
     sendMessageOnLinkThreadSafe(sharedLink.get(), msg);
 }

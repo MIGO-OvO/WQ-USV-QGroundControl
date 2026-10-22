@@ -12,6 +12,8 @@
 
 验证：`qmltestrunner -input custom/tests`（控制器/布局逻辑，不加载地图）；Debug 应用 `--allow-multiple --unittest:StatusTextHandlerTest`、`--unittest:SendMavCommandWithSignallingTest`、`--unittest:SendMavCommandWithHandlerTest`。所有结果必须包含实际测试数，零用例退出不算通过。没有设备或实船验收。
 
+ROS 断线取消的 `transport_session_lost` 显示为“载荷通信中断，采样已取消”；清理失败时显示“停止未确认，请核验设备”，保留安全锁。配套 ROS 支持同身份查询缓存结果，重连恢复不重新启动采样。QGC `Vehicle.Vehicle` 调试日志记录命令/request/session/目标/重试/MAVLink seq，`MAVLink.StatusTextHandler` 记录 source、chunk id/seq、尾片和组包结果。原有重试次数、响应预算与 1 秒组包期限保持原值。
+
 `_cockpitEmergencyStopReceipts` 实际调用驾驶舱 `emergencyStop()`，以真实 Vehicle/FactGroup 验证载荷成功/失败、ACK/USVE1 顺序、progress 和旧 ACK 隔离。无 handler 的关联结果通过 `mavCommandResult` 通知驾驶舱；停止 progress 继续等待最终结果。基线、启停分光、暂停/恢复和停止在匹配新遥测后显示具体确认状态；未设零轴在各页面显示“未校准”。
 
 ## safety1 匹配固件

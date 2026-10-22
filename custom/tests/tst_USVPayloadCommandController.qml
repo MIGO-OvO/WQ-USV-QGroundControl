@@ -166,6 +166,26 @@ Item {
             payload.payloadEventReceived(event(2, "progress", "", {preflight_phase: "complete"}));
             compare(controller.feedback, "正在采样");
         }
+        function test_transportCancellationRecoveryKeepsReasonAndNewTaskIsolated() {
+            startSample();
+            const original = event(2, "terminal", "cancelled", {tcp_session: 85, reason: "transport_session_lost"});
+            payload.payloadEventReceived(original);
+            compare(controller.feedback, "载荷通信中断，采样已取消");
+            compare(controller.request.terminal.reason, "transport_session_lost");
+            verify(!controller.busy);
+            operations.payloadStatus = Status.StatusIdle;
+            payload.receive("status");
+            controller.send(31010);
+            const next = controller.request.request;
+            payload.payloadEventReceived(original);
+            compare(controller.request.request, next);
+            verify(!controller.request.terminal);
+            payload.payloadEventReceived(event(1, "request", "accepted"));
+            payload.payloadEventReceived(event(2, "terminal", "cancelled", {
+                tcp_session: 86, reason: "transport_session_lost", cleanup_failed: true}));
+            compare(controller.feedback, "载荷通信中断，停止未确认，请核验设备");
+            verify(vehicle.usvSafetyLocked);
+        }
         function pauseSample() {
             controller.send(31012);
             payload.payloadEventReceived(event(1, "request", "accepted"));
