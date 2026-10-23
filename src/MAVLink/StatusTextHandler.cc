@@ -270,11 +270,10 @@ void StatusTextHandler::_handleStatusText(const mavlink_message_t &message)
     }
     const MAV_COMPONENT compId = static_cast<MAV_COMPONENT>(message.compid);
     if (message.compid == 191) {
-        qCDebug(StatusTextHandlerLog) << "USV chunk rx" << "handler" << this
-                                    << "source" << int(message.sysid) << int(message.compid)
-                                    << "mavSeq" << int(message.seq) << "id" << statustext.id
-                                    << "chunk" << int(statustext.chunk_seq) << "bytes" << bytes.size()
-                                    << "tail" << (terminator >= 0);
+        qCDebug(StatusTextHandlerLog) << "USV chunk rx" << "handler" << this << "source" << int(message.sysid)
+                                      << int(message.compid) << "mavSeq" << int(message.seq) << "id" << statustext.id
+                                      << "chunk" << int(statustext.chunk_seq) << "bytes" << bytes.size() << "tail"
+                                      << (terminator >= 0);
     }
     if (m_chunkedStatusTextInfoMap.contains(compId)
             && (m_chunkedStatusTextInfoMap.value(compId).chunkId != statustext.id
@@ -336,9 +335,9 @@ void StatusTextHandler::_chunkedStatusTextCompleted(MAV_COMPONENT compId, bool c
     const MAV_SEVERITY severity = chunkedInfo.severity;
     if (compId == 191) {
         qCDebug(StatusTextHandlerLog) << "USV assembly" << "handler" << this << "id" << chunkedInfo.chunkId
-                                    << "complete" << complete << "invalid" << chunkedInfo.invalid
-                                    << "tail" << chunkedInfo.lastSequence << "received" << chunkedInfo.received
-                                    << "ageMs" << chunkedInfo.age.elapsed();
+                                      << "complete" << complete << "invalid" << chunkedInfo.invalid << "tail"
+                                      << chunkedInfo.lastSequence << "received" << chunkedInfo.received << "ageMs"
+                                      << chunkedInfo.age.elapsed();
     }
 
     QByteArray joined;

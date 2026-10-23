@@ -31,7 +31,7 @@ if(MACOS OR WIN32)
     endif()
 endif()
 if(WIN32 AND DISABLE_SPEECH)
-    list(APPEND deploy_tool_options_arg --no-texttospeech --skip-plugin-types texttospeech)
+    list(APPEND deploy_tool_options_arg --skip-plugin-types texttospeech)
 endif()
 
 qt_generate_deploy_qml_app_script(

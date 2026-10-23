@@ -131,6 +131,9 @@ void MockLink::disconnect()
     _missionItemHandler->shutdown();
 
     if (_connected) {
+        // LinkManager releases the channels from disconnected(). Finish any
+        // in-flight timer callback before publishing that signal.
+        (void)QMetaObject::invokeMethod(_worker, &MockLinkWorker::stopWork, Qt::BlockingQueuedConnection);
         _connected = false;
         if (!_disconnectedEmitted.exchange(true)) {
             emit disconnected();
