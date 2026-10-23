@@ -124,6 +124,8 @@ Rectangle {
     }
 
     function _formatPump(fact) {
+        if (fact && Number(fact.value) < 0)
+            return qsTr("未校准")
         return (fact && fact.value !== undefined) ? Number(fact.value).toFixed(1) : "--"
     }
 
@@ -886,6 +888,7 @@ Rectangle {
 
                                     QGCLabel {
                                         text: "°"
+                                        visible: modelData.fact && modelData.fact.value !== undefined && Number(modelData.fact.value) >= 0
                                         opacity: SDTokens.Tokens.opacity.subtle
                                     }
                                 }

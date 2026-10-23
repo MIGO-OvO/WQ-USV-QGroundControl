@@ -33,7 +33,27 @@ Item {
         return !!operations.vehicle && operations.vehicle.pendingMavCommands.indexOf(_payloadCompId + ":" + command) >= 0;
     }
     function executingFeedback(command) {
-        return command === 31014 ? qsTr("正在校准") : physicalCommand(command) ? qsTr("正在采样") : qsTr("等待设备状态");
+        if (command === 31014)
+            return qsTr("正在校准");
+        if (physicalCommand(command)) {
+            const task = activeTask && activeTask.command === command ? activeTask : request;
+            const phase = task && task.latestEvent ? task.latestEvent.preflight_phase : "";
+            return ["checking", "homing", "compensating", "separating", "injection", "settling"].indexOf(phase) >= 0
+                    ? qsTr("正在准备") : qsTr("正在采样");
+        }
+        return qsTr("等待设备状态");
+    }
+    function confirmedFeedback(command) {
+        switch (command) {
+        case 31017: return qsTr("基线已设置");
+        case 31018: return qsTr("信号采集中");
+        case 31011:
+        case 31016:
+        case 31019: return qsTr("已停止");
+        case 31012: return qsTr("已暂停");
+        case 31013: return qsTr("已恢复");
+        default: return executingFeedback(command);
+        }
     }
     function now() {
         return operations.payload ? operations.payload.monotonicMs() : 0;
@@ -430,7 +450,7 @@ Item {
                                                  evidenceStatus: Math.max(request.evidenceStatus || 0, statusSeq) }));
         const executionProven = request.accepted || request.executing;
         commandWarning = !executionProven;
-        commandFeedback = executionProven ? executingFeedback(request.command)
+        commandFeedback = executionProven ? confirmedFeedback(request.command)
                                     : qsTr("等待响应");
         if (executionProven) {
             pendingCommand = 0;

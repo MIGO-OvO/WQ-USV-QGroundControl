@@ -112,6 +112,60 @@ Item {
             payload.receive("status");
             return Object.assign({}, controller.request);
         }
+        function test_confirmedFeedback_data() {
+            const commands = [
+                {command: 31011, initial: Status.StatusSampling, final: Status.StatusIdle, field: "status", text: "已停止"},
+                {command: 31016, initial: Status.StatusSurveying, final: Status.StatusIdle, field: "status", text: "已停止"},
+                {command: 31012, initial: Status.StatusSampling, final: Status.StatusPaused, field: "status", text: "已暂停"},
+                {command: 31013, initial: Status.StatusPaused, final: Status.StatusSampling, field: "status", text: "已恢复"},
+                {command: 31017, initial: Status.StatusIdle, final: Status.StatusIdle, field: "baselineSet", text: "基线已设置"},
+                {command: 31018, initial: Status.StatusIdle, final: Status.StatusIdle, field: "spectrometerValid", text: "信号采集中"},
+                {command: 31019, initial: Status.StatusIdle, final: Status.StatusIdle, field: "adsState", text: "已停止"}
+            ];
+            const rows = [];
+            for (const row of commands) {
+                for (const telemetryFirst of [false, true])
+                    rows.push(Object.assign({}, row, {
+                        tag: row.command + (telemetryFirst ? "-telemetry-first" : "-accepted-first"), telemetryFirst: telemetryFirst
+                    }));
+            }
+            return rows;
+        }
+        function test_confirmedFeedback(data) {
+            operations.payloadStatus = data.initial;
+            controller.send(data.command);
+            compare(controller.pendingCommand, data.command);
+            const accepted = event(1, "request", "accepted");
+            function telemetry() {
+                operations.payloadStatus = data.final;
+                payload.adsState = {rawValue: data.command === 31019 ? 1 : 3};
+                payload.receive("voltage");
+                payload.receive(data.field);
+            }
+            if (data.telemetryFirst) {
+                telemetry();
+                compare(controller.feedback, "等待响应");
+                payload.payloadEventReceived(accepted);
+            } else {
+                payload.payloadEventReceived(accepted);
+                telemetry();
+            }
+            compare(controller.feedback, data.text);
+            verify(!controller.busy);
+            verify(!controller.warning);
+            payload.receive(data.field);
+            compare(controller.feedback, data.text);
+        }
+        function test_preparationAndSamplingFeedbackKeepTheirPhase() {
+            controller.send(31010);
+            payload.payloadEventReceived(event(1, "progress", "", {preflight_phase: "homing"}));
+            compare(controller.feedback, "正在准备");
+            operations.payloadStatus = Status.StatusSampling;
+            payload.receive("status");
+            compare(controller.feedback, "正在准备");
+            payload.payloadEventReceived(event(2, "progress", "", {preflight_phase: "complete"}));
+            compare(controller.feedback, "正在采样");
+        }
         function pauseSample() {
             controller.send(31012);
             payload.payloadEventReceived(event(1, "request", "accepted"));

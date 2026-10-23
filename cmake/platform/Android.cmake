@@ -84,7 +84,7 @@ set_target_properties(${CMAKE_PROJECT_NAME}
 #     set(QT_ANDROID_APPLICATION_ARGUMENTS)
 # endif()
 
-list(APPEND QT_ANDROID_MULTI_ABI_FORWARD_VARS QGC_STABLE_BUILD QT_HOST_PATH)
+list(APPEND QT_ANDROID_MULTI_ABI_FORWARD_VARS QGC_STABLE_BUILD QT_HOST_PATH DISABLE_SPEECH)
 
 # ----------------------------------------------------------------------------
 # Android OpenSSL Libraries

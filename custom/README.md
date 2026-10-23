@@ -12,6 +12,8 @@
 
 验证：`qmltestrunner -input custom/tests`（控制器/布局逻辑，不加载地图）；Debug 应用 `--allow-multiple --unittest:StatusTextHandlerTest`、`--unittest:SendMavCommandWithSignallingTest`、`--unittest:SendMavCommandWithHandlerTest`。所有结果必须包含实际测试数，零用例退出不算通过。没有设备或实船验收。
 
+`_cockpitEmergencyStopReceipts` 实际调用驾驶舱 `emergencyStop()`，以真实 Vehicle/FactGroup 验证载荷成功/失败、ACK/USVE1 顺序、progress 和旧 ACK 隔离。无 handler 的关联结果通过 `mavCommandResult` 通知驾驶舱；停止 progress 继续等待最终结果。基线、启停分光、暂停/恢复和停止在匹配新遥测后显示具体确认状态；未设零轴在各页面显示“未校准”。
+
 ## safety1 匹配固件
 
 Plan 中定点采样的超时说明已改为 HOLD，须配套 safety1 ArduRover 与 ROS；UI 文案不会让旧固件自动获得安全行为。当前 26 个显示遥测字段，component 191、手动命令 31010..31019 保持不变。链路整体超时会清除分光有效位，源测量过期由 ROS 的 `USV_VLD=0` 传递。完整验收仍需要端到端链路与台架测试。
@@ -55,7 +57,7 @@ Plan 中定点采样的超时说明已改为 HOLD，须配套 safety1 ArduRover 
 Android 平板测试 APK 优先通过 GitHub Actions 获取，无需本地 Qt/NDK。
 参见 [Android 构建、侧载与现场验收](ANDROID.md)（签名/升级限制、链路边界及验证矩阵）。
 
-USV 构建默认 `DISABLE_SPEECH=ON`，也可显式传入 `-DDISABLE_SPEECH=ON`。此模式定义同名编译宏，不查找、链接或初始化 Qt TextToSpeech，隐藏语音设置、跳过声音起航检查及 Windows 语音打包依赖；其他多媒体保留。需要语音时先安装 Qt `qtspeech` 模块，再配置 `-DDISABLE_SPEECH=OFF`；CI 默认模块列表不再安装 qtspeech。
+USV 构建默认 `DISABLE_SPEECH=ON`，也可显式传入 `-DDISABLE_SPEECH=ON`。此模式定义同名编译宏，不查找、链接或初始化 Qt TextToSpeech，隐藏语音设置、跳过声音起航检查及 Windows 语音打包依赖；其他多媒体保留。需要语音时先安装 Qt `qtspeech` 模块，再配置 `-DDISABLE_SPEECH=OFF`；Android 多 ABI 子构建转发同一变量，保留显式 OFF；CI 默认模块列表不再安装 qtspeech。
 
 1. 确保 `custom` 目录位于 QGC 源码根目录
 2. 清理之前的构建：

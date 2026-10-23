@@ -324,7 +324,7 @@ Item {
         contentItem: ColumnLayout {
             spacing: root.theme.gap
             QGCLabel { color: root.theme.text; font.bold: true; text: qsTr("核验停止 · 无人船 %1").arg(verifyDialog.targetVehicle ? verifyDialog.targetVehicle.id : "—") }
-            QGCLabel { Layout.fillWidth: true; color: root.theme.text; wrapMode: Text.WordWrap; text: qsTr("飞控已返回未解锁，载荷已停止或已结束本次任务。泵角度不能证明电机停止，请现场核验。解除锁定后需重新启动分光并建立基线才能再次采样。") }
+            QGCLabel { Layout.fillWidth: true; color: root.theme.text; wrapMode: Text.WordWrap; text: qsTr("飞控未解锁，载荷已停止或任务已结束。请现场确认电机和泵已停止。解除锁定后，重新启动分光并设置基线。") }
             CheckBox { id: onsiteCheck; Layout.fillWidth: true; text: qsTr("已现场确认推进与采样装置停止"); palette.windowText: root.theme.text }
             RowLayout {
                 Layout.fillWidth: true

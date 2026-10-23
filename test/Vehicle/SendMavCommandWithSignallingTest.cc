@@ -353,6 +353,98 @@ void SendMavCommandWithSignallingTest::_payloadCommunicationRecovery()
     QVERIFY(!cockpit->property("canVerifyStop").toBool());  // still armed
 }
 
+void SendMavCommandWithSignallingTest::_cockpitEmergencyStopReceipts()
+{
+    for (const bool eventFirst : {false, true}) {
+        for (const bool success : {false, true}) {
+            _connectMockLinkNoInitialConnectSequence();
+            auto* vehicle = MultiVehicleManager::instance()->activeVehicle();
+            vehicle->setUsvSafetyLocked(false);
+            const auto restore = qScopeGuard([&] {
+                vehicle->setUsvSafetyLocked(false);
+                _disconnectMockLink();
+            });
+            USVPayloadFactGroup facts;
+            facts.setVehicleId(vehicle->id());
+            connect(&facts, &USVPayloadFactGroup::payloadEventReceived, vehicle, &Vehicle::payloadCommandReceipt);
+            const auto value = [&](const char* name, float number) {
+                mavlink_message_t message{};
+                char field[10]{};
+                memcpy(field, name, qMin(size_t(10), strlen(name)));
+                mavlink_msg_named_value_float_pack(vehicle->id(), 191, &message, 0, field, number);
+                facts.handleMessage(vehicle, message);
+            };
+            value("USV_PROTO", 1);
+            value("USV_STAT", success ? 0 : 1);
+            QQmlEngine engine;
+            engine.addImportPath("qrc:/qml");
+            QQmlEngine::setObjectOwnership(vehicle, QQmlEngine::CppOwnership);
+            QQmlEngine::setObjectOwnership(&facts, QQmlEngine::CppOwnership);
+            engine.rootContext()->setContextProperty("testVehicle", vehicle);
+            engine.rootContext()->setContextProperty("testFacts", &facts);
+            QQmlComponent component(&engine, QUrl::fromLocalFile(QFINDTESTDATA("USVPayloadLifecycleFixture.qml")));
+            QVERIFY2(component.isReady(), qPrintable(component.errorString()));
+            std::unique_ptr<QObject> fixture(component.create());
+            QVERIFY2(fixture, qPrintable(component.errorString()));
+            auto* commands = fixture->property("commands").value<QObject*>();
+            auto* cockpit = fixture->property("cockpit").value<QObject*>();
+            QVERIFY(commands && cockpit);
+            vehicle->_updateArmed(true);
+            QVERIFY(QMetaObject::invokeMethod(fixture.get(), "emergencyStop"));
+            QVERIFY(cockpit->property("payloadPending").toBool());
+            QVERIFY(!cockpit->property("canVerifyStop").toBool());
+            const QVariantMap request = commands->property("request").value<QJSValue>().toVariant().toMap();
+            QJsonObject event{{"v", 1}, {"tcp_session", 1}, {"seq", 1}, {"phase", "progress"},
+                              {"outcome", ""}, {"reason", ""}, {"attempt_id", ""}, {"preflight_phase", ""}};
+            for (const QString& key : {"session", "request", "command", "sender_system", "sender_component"})
+                event[key] = QJsonValue::fromVariant(request.value(key));
+            deliverPayloadFrames(facts, vehicle, payloadEventFrames(event, vehicle->id()));
+            QVERIFY(cockpit->property("payloadPending").toBool());
+            QVERIFY(vehicle->isMavCommandPending(191, 31011));
+            mavlink_message_t ack{};
+            mavlink_msg_command_ack_pack(vehicle->id(), 191, &ack, 31011, MAV_RESULT_ACCEPTED, 0, 0, 255, 190);
+            if (!eventFirst) {
+                vehicle->_handleCommandAck(ack);
+                QVERIFY(cockpit->property("payloadPending").toBool());
+            }
+            event["seq"] = 2;
+            event["phase"] = "request";
+            event["outcome"] = success ? "accepted" : "failed";
+            event["reason"] = success ? "" : "stop_confirmation_failed";
+            deliverPayloadFrames(facts, vehicle, payloadEventFrames(event, vehicle->id()));
+            QVERIFY(!cockpit->property("payloadPending").toBool());
+            QVERIFY(!vehicle->isMavCommandPending(191, 31011));
+            if (eventFirst)
+                vehicle->_handleCommandAck(ack);
+            mavlink_message_t disarm{};
+            mavlink_msg_command_ack_pack(vehicle->id(), vehicle->defaultComponentId(), &disarm,
+                                        MAV_CMD_COMPONENT_ARM_DISARM, MAV_RESULT_ACCEPTED, 0, 0, 255, 190);
+            vehicle->_handleCommandAck(disarm);
+            vehicle->_updateArmed(false);
+            value("USV_STAT", success ? 0 : 1);
+            QVERIFY(!cockpit->property("emergencyPending").toBool());
+            const QString expected = success ? QStringLiteral("accepted") : QStringLiteral("failed");
+            QCOMPARE(cockpit->property("emergencyPhase").toString(), expected);
+            QCOMPARE(cockpit->property("canVerifyStop").toBool(), success);
+            QVERIFY(QMetaObject::invokeMethod(cockpit, "expireEmergencyRequest"));
+            QCOMPARE(cockpit->property("emergencyPhase").toString(), expected);
+            if (success) {
+                QVERIFY(QMetaObject::invokeMethod(fixture.get(), "emergencyStop"));
+                const QVariantMap next = commands->property("request").value<QJSValue>().toVariant().toMap();
+                QVERIFY(next.value("request") != request.value("request"));
+                deliverPayloadFrames(facts, vehicle, payloadEventFrames(event, vehicle->id()));
+                vehicle->_handleCommandAck(ack);
+                QVERIFY(cockpit->property("payloadPending").toBool());
+                QVERIFY(vehicle->isMavCommandPending(191, 31011));
+                event["request"] = QJsonValue::fromVariant(next.value("request"));
+                event["seq"] = 1;
+                deliverPayloadFrames(facts, vehicle, payloadEventFrames(event, vehicle->id()));
+                QVERIFY(!cockpit->property("payloadPending").toBool());
+            }
+        }
+    }
+}
+
 void SendMavCommandWithSignallingTest::_payloadRequestIdentity()
 {
     const QString originalName = QCoreApplication::applicationName();

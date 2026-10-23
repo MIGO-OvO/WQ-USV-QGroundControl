@@ -23,5 +23,5 @@ ColumnLayout {
     USVCockpitValueRow { Layout.fillWidth: true; theme: root.theme; label: qsTr("接收消息"); value: root.payload ? String(root.payload.rxMsgTotal) : "—" }
     USVCockpitValueRow { Layout.fillWidth: true; theme: root.theme; label: qsTr("命名遥测"); value: root.payload ? String(root.payload.rxNamedValue) : "—" }
     USVCockpitValueRow { Layout.fillWidth: true; theme: root.theme; label: qsTr("伴随心跳"); value: root.payload ? String(root.payload.rxHeartbeat) : "—" }
-    QGCLabel { Layout.fillWidth: true; color: root.theme.warning; font.pointSize: root.theme.captionPointSize; wrapMode: Text.WordWrap; text: qsTr("节点健康与硬件自检尚未接入；通信统计不能证明设备工作正常。") }
+    QGCLabel { Layout.fillWidth: true; color: root.theme.warning; font.pointSize: root.theme.captionPointSize; wrapMode: Text.WordWrap; text: qsTr("节点健康与硬件自检：未接入") }
 }
