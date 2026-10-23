@@ -132,6 +132,8 @@ Item {
             evidenceStatus: Math.max(task.evidenceStatus || 0, stop.evidenceStatus || 0) });
     }
     function terminalFeedback(event) {
+        if (event.reason === "transport_session_lost")
+            return event.cleanup_failed ? qsTr("载荷通信中断，停止未确认，请核验设备") : qsTr("载荷通信中断，采样已取消");
         return qsTr("任务未成功：%1；准备阶段：%2").arg(event.reason).arg(event.preflight_phase || "—");
     }
     function confirmPhysicalStop(targetVehicle) {
@@ -534,7 +536,7 @@ Item {
                 observeTelemetry();
             } else {
                 commandWarning = true;
-                commandFeedback = qsTr("操作失败：%1").arg(event.reason);
+                commandFeedback = event.reason === "transport_session_lost" ? terminalFeedback(event) : qsTr("操作失败：%1").arg(event.reason);
                 pendingCommand = 0;
                 timeout.stop();
                 // The request never became work, so it must not keep blocking

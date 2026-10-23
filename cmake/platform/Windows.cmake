@@ -59,7 +59,7 @@ endif()
 if(TARGET Qt6::windeployqt)
     set(_qgc_speech_deploy_args)
     if(DISABLE_SPEECH)
-        list(APPEND _qgc_speech_deploy_args --no-texttospeech --skip-plugin-types texttospeech)
+        list(APPEND _qgc_speech_deploy_args --skip-plugin-types texttospeech)
     endif()
     add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
         COMMAND $<TARGET_FILE:Qt6::windeployqt>

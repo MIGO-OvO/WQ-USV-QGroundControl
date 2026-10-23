@@ -23,6 +23,7 @@ protected:
 
 private slots:
     void _simpleLinkTest();
+    void _disconnectWaitsForMockWorker();
     void _simpleCommLossTest();
     void _multiLinkSingleVehicleTest();
     void _connectionRemovedTest();

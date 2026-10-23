@@ -8,14 +8,20 @@
  ****************************************************************************/
 
 #include "VehicleLinkManagerTest.h"
-#include "MockLink.h"
+
+#include <QtCore/QSemaphore>
+#include <QtCore/QThread>
+#include <QtTest/QSignalSpy>
+#include <QtTest/QTest>
+
+#include <atomic>
+#include <thread>
+
 #include "LinkManager.h"
+#include "MockLink.h"
+#include "MultiSignalSpyV2.h"
 #include "MultiVehicleManager.h"
 #include "Vehicle.h"
-#include "MultiSignalSpyV2.h"
-
-#include <QtTest/QTest>
-#include <QtTest/QSignalSpy>
 
 void VehicleLinkManagerTest::init()
 {
@@ -86,6 +92,50 @@ void VehicleLinkManagerTest::_simpleLinkTest()
     QCOMPARE(mockLink.use_count(), 0);
     QCOMPARE(spyLinkDelete.count(), 1);
     QCOMPARE(spyConfigDelete.count(), 1);
+}
+
+void VehicleLinkManagerTest::_disconnectWaitsForMockWorker()
+{
+    SharedLinkConfigurationPtr mockConfig;
+    SharedLinkInterfacePtr mockLink;
+    _startMockLink(1, false, true, mockConfig, mockLink);
+    QVERIFY(mockLink);
+
+    QSemaphore entered, release, disconnected;
+    std::atomic_bool paused{false}, finished{false};
+    bool disconnectedDuringFrame = false;
+    const auto frameConnection = connect(
+        mockLink.get(), &LinkInterface::bytesReceived, mockLink.get(),
+        [&](LinkInterface*, const QByteArray&) {
+            if (QThread::currentThread() != mockLink->thread() && !paused.exchange(true)) {
+                entered.release();
+                release.acquire();
+                finished = true;
+            }
+        },
+        Qt::DirectConnection);
+    const bool frameEntered = QTest::qWaitFor([&] { return entered.available() != 0; }, 5000);
+    if (!frameEntered) {
+        release.release();
+        QObject::disconnect(frameConnection);
+        QVERIFY(frameEntered);
+    }
+    const auto disconnectedConnection = connect(mockLink.get(), &LinkInterface::disconnected, mockLink.get(), [&] {
+        disconnectedDuringFrame = !finished;
+        disconnected.release();
+    });
+    // The old implementation publishes disconnected immediately; the fixed
+    // implementation waits for the blocked callback before releasing channels.
+    std::thread unblock([&] {
+        disconnected.tryAcquire(1, 200);
+        release.release();
+    });
+    mockLink->disconnect();
+    unblock.join();
+    QObject::disconnect(frameConnection);
+    QObject::disconnect(disconnectedConnection);
+    QVERIFY(!disconnectedDuringFrame);
+    QVERIFY(finished);
 }
 
 void VehicleLinkManagerTest::_simpleCommLossTest()
