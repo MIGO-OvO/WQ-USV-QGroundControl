@@ -164,6 +164,10 @@ set(QGC_QT_ENABLE_STRICT_MODE_UP_TO "0x061000" CACHE STRING "Enable strict Qt AP
 # CMake Package Manager (CPM)
 # ============================================================================
 
+set(CPM_SOURCE_CACHE "${CMAKE_SOURCE_DIR}/.cache/cpm" CACHE PATH "Shared CPM dependency cache")
+set(FETCHCONTENT_UPDATES_DISCONNECTED ON CACHE BOOL "Avoid updating already-populated FetchContent dependencies during configure")
+set(QGC_ULOG_CPP_GIT_TAG "af366a91cb90a454f8840cc019ae82571cc4cef6" CACHE STRING "ulog_cpp repository commit/tag")
+
 # Uncomment to use named cache directories for better organization
 # set(CPM_USE_NAMED_CACHE_DIRECTORIES ON CACHE BOOL "Use package name subdirectories in CPM cache")
 
